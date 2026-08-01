@@ -93,6 +93,29 @@ export function Navbar() {
               <Link to="/admin">Admin</Link>
             </li>
           )}
+
+          {/* Auth lives inside the drawer on small screens — the desktop
+              .auth_buttons are display:none below 992px, so without this block
+              mobile users could open the menu but never reach Log In / Sign Up. */}
+          <li className="mobile_auth">
+            {isAuthenticated ? (
+              <div className="mobile_auth_actions">
+                <span className="nav_greeting">Hi, {user.username.split(' ')[0]}</span>
+                <button type="button" className="btn btn-login" onClick={handleLogout}>
+                  Log Out
+                </button>
+              </div>
+            ) : (
+              <div className="mobile_auth_actions">
+                <Link to="/login" className="btn btn-login">
+                  Log In
+                </Link>
+                <Link to="/register" className="btn btn-primary">
+                  Sign Up
+                </Link>
+              </div>
+            )}
+          </li>
         </ul>
 
         <div className="auth_buttons">

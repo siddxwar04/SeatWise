@@ -1,4 +1,4 @@
-import { NotFoundError } from '../../errors/AppError.js';
+import { BadRequestError, NotFoundError } from '../../errors/AppError.js';
 import { CACHE_KEYS, cached, invalidatePrefix } from '../../lib/cache.js';
 import { prisma } from '../../lib/prisma.js';
 
@@ -27,6 +27,7 @@ function toPublicMenuItem(item) {
     allergens: item.allergens,
     dietaryTags: item.dietaryTags,
     isAvailable: item.isAvailable,
+    sortOrder: item.sortOrder,
   };
 }
 
@@ -43,7 +44,7 @@ function toPublicMenuItem(item) {
  */
 export async function listMenu({ restaurantId, category, includeUnavailable = false } = {}) {
   if (!restaurantId) {
-    throw new NotFoundError('Restaurant not specified.');
+    throw new BadRequestError('Restaurant is required.');
   }
 
   const key = category
@@ -98,7 +99,7 @@ export async function findSafeItems({
   category,
 } = {}) {
   if (!restaurantId) {
-    throw new NotFoundError('Restaurant not specified.');
+    throw new BadRequestError('Restaurant is required.');
   }
 
   const items = await prisma.menuItem.findMany({

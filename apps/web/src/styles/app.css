@@ -742,6 +742,44 @@ select[aria-invalid='true'] {
 
 /* --- Narrow screens ------------------------------------------------------ */
 
+@media (max-width: 992px) {
+  .page_wrapper {
+    padding: 40px 16px 64px;
+  }
+
+  .stat_grid {
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
+  }
+
+  .stat_value {
+    font-size: 1.7rem;
+  }
+
+  .chart_panel,
+  .admin_panel {
+    padding: 20px 16px;
+  }
+
+  .admin_table {
+    min-width: 640px;
+  }
+
+  .restaurant_switcher {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .restaurant_switcher select {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .booking_summary {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 @media (max-width: 768px) {
   .reservation_card {
     flex-direction: column;
@@ -760,6 +798,65 @@ select[aria-invalid='true'] {
   }
 
   .page_header h1 {
-    font-size: 2rem;
+    font-size: clamp(1.75rem, 7vw, 2rem);
+  }
+
+  .auth_wrapper {
+    min-height: calc(100vh - 180px);
+    padding: 16px 0 40px;
+  }
+
+  .menu_admin_form .form_row {
+    grid-template-columns: 1fr;
+  }
+
+  .admin_toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin_search {
+    width: 100%;
+  }
+
+  .admin_search input,
+  .admin_search select {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .bar_chart {
+    height: 160px;
+    gap: 6px;
+  }
+
+  .booking_reference {
+    font-size: 1.4rem;
+    letter-spacing: 2px;
+    word-break: break-all;
+  }
+
+  .booking_confirmation {
+    padding: 24px 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .stat_grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .booking_summary {
+    grid-template-columns: 1fr;
+  }
+
+  .chip_row {
+    gap: 6px;
+  }
+
+  .chip_option {
+    font-size: 0.72rem;
+    padding: 5px 10px;
   }
 }

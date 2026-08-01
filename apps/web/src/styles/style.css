@@ -182,6 +182,38 @@ nav {
   font-size: 1.5rem;
   cursor: pointer;
   color: var(--text-dark);
+  background: none;
+  border: none;
+  padding: 8px;
+  line-height: 1;
+  border-radius: 8px;
+}
+
+.mobile_menu_icon:hover,
+.mobile_menu_icon:focus-visible {
+  color: var(--primary);
+}
+
+/* Auth actions inside the hamburger drawer — hidden on desktop where the
+   separate .auth_buttons row is visible. */
+.mobile_auth {
+  display: none;
+  list-style: none;
+}
+
+.mobile_auth_actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  width: 100%;
+  margin-top: 8px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.mobile_auth_actions .btn {
+  width: 100%;
 }
 
 /* --- Buttons --- */
@@ -590,13 +622,21 @@ footer {
   margin-bottom: 20px;
 }
 
-.social_icons i {
+.social_icons a {
+  color: inherit;
+  text-decoration: none;
   margin-right: 15px;
+  display: inline-flex;
+}
+
+.social_icons i {
+  margin-right: 0;
   font-size: 1.2rem;
   cursor: pointer;
   transition: 0.3s;
 }
 
+.social_icons a:hover i,
 .social_icons i:hover {
   color: var(--primary);
 }
@@ -608,16 +648,20 @@ footer {
 .footer_col ul li {
   margin-bottom: 12px;
   color: #b2bec3;
-  cursor: pointer;
   transition: 0.3s;
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.footer_col ul li:hover {
+.footer_col ul li a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.footer_col ul li:hover,
+.footer_col ul li a:hover {
   color: var(--primary);
-  padding-left: 5px;
 }
 
 .footer_bottom {
@@ -738,25 +782,40 @@ footer {
 
 /* --- Responsive Design --- */
 @media (max-width: 992px) {
+  .container {
+    padding: 0 20px;
+  }
+
+  .logo_icon_circle {
+    width: 56px;
+    height: 56px;
+  }
+
+  .brand_text {
+    font-size: 1.45rem;
+  }
+
   .hero {
     grid-template-columns: 1fr;
     text-align: center;
-    padding-top: 40px;
-    gap: 40px;
+    padding-top: 32px;
+    gap: 32px;
   }
 
   .hero_content h1 {
-    font-size: 3rem;
+    font-size: clamp(2.25rem, 6vw, 3rem);
   }
   .hero_content p {
     margin: 0 auto 30px;
+    max-width: 36rem;
   }
   .hero_btns {
     justify-content: center;
+    flex-wrap: wrap;
   }
 
   .hero_image img {
-    width: 90%;
+    width: min(90%, 420px);
     margin: 0 auto;
     transform: rotate(0deg);
   }
@@ -782,35 +841,126 @@ footer {
   .nav_links.active {
     display: flex;
     flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
     position: absolute;
     top: 100%;
     left: 0;
+    right: 0;
     width: 100%;
+    max-height: min(80vh, 560px);
+    overflow-y: auto;
     background: white;
-    padding: 30px;
+    padding: 24px 20px 28px;
     box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
     text-align: center;
     z-index: 999;
     border-bottom: 2px solid var(--primary);
   }
 
-  .mobile_menu_icon {
+  .nav_links.active li {
+    width: 100%;
+  }
+
+  .nav_links.active a {
     display: block;
+    padding: 12px 8px;
+  }
+
+  .mobile_auth {
+    display: list-item;
+  }
+
+  .mobile_menu_icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .menu_tabs {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .footer_container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 32px;
+  }
+
+  .footer_col {
+    width: 100%;
+    max-width: none;
+  }
+
+  .footer_col p {
+    max-width: none;
   }
 
   .reservation_container {
-    padding: 30px;
+    padding: 28px 20px;
+  }
+
+  footer {
+    padding: 56px 0 20px;
+    margin-top: 56px;
+    border-radius: 28px 28px 0 0;
   }
 }
 
 @media (max-width: 576px) {
-  .hero_content h1 {
-    font-size: 2.5rem;
+  .container {
+    padding: 0 16px;
   }
+
+  .logo_icon_circle {
+    width: 48px;
+    height: 48px;
+  }
+
+  .brand_text {
+    font-size: 1.25rem;
+  }
+
+  .hero {
+    padding-top: 20px;
+    gap: 24px;
+  }
+
+  .hero_content h1 {
+    font-size: clamp(1.9rem, 9vw, 2.5rem);
+  }
+
+  .hero_btns {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hero_btns .btn {
+    width: 100%;
+  }
+
   .reservation_form .input_row {
     grid-template-columns: 1fr;
   }
+
   .menu_grid {
     grid-template-columns: 1fr;
+  }
+
+  .menu_section h2,
+  .spotlight_content h2,
+  .reservation_form_wrapper h2 {
+    font-size: 1.75rem;
+  }
+
+  .auth_card {
+    padding: 28px 20px;
+    margin: 24px 0;
+  }
+
+  footer {
+    border-radius: 20px 20px 0 0;
   }
 }

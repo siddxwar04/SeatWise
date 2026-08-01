@@ -47,8 +47,8 @@ function pickInitialSlug(venues) {
 }
 
 export function AdminDashboardPage() {
-  const { managedRestaurants } = useAuth();
-  const [restaurantSlug, setRestaurantSlug] = useState(() => pickInitialSlug(managedRestaurants));
+  const { managedRestaurants, loading: authLoading } = useAuth();
+  const [restaurantSlug, setRestaurantSlug] = useState('');
   const [stats, setStats] = useState(null);
   const [today, setToday] = useState(null);
   const [reservations, setReservations] = useState([]);
@@ -58,14 +58,21 @@ export function AdminDashboardPage() {
   const [busyId, setBusyId] = useState(null);
   const toast = useToast();
 
-  // When managed restaurants load (or change after login), keep the selection valid.
+  // Wait for /restaurants/mine before picking a slug. Otherwise a venue manager
+  // briefly requests DEFAULT_RESTAURANT_SLUG (Koramangala) and gets a 403 toast
+  // even when they only administer a different restaurant.
   useEffect(() => {
-    if (!managedRestaurants.length) return;
+    if (authLoading) return;
+    if (!managedRestaurants.length) {
+      setRestaurantSlug('');
+      setLoading(false);
+      return;
+    }
     setRestaurantSlug((current) => {
-      if (managedRestaurants.some((v) => v.slug === current)) return current;
+      if (current && managedRestaurants.some((v) => v.slug === current)) return current;
       return pickInitialSlug(managedRestaurants);
     });
-  }, [managedRestaurants]);
+  }, [managedRestaurants, authLoading]);
 
   const activeVenue = managedRestaurants.find((v) => v.slug === restaurantSlug);
   const showSwitcher = managedRestaurants.length > 1;
@@ -95,9 +102,10 @@ export function AdminDashboardPage() {
   }, [restaurantSlug, statusFilter, search, toast]);
 
   useEffect(() => {
+    if (authLoading || !restaurantSlug) return;
     loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, restaurantSlug]);
+  }, [statusFilter, restaurantSlug, authLoading]);
 
   const changeStatus = async (reservation, nextStatus) => {
     setBusyId(reservation.id);
@@ -128,6 +136,12 @@ export function AdminDashboardPage() {
             : 'Service overview and booking management for the last 30 days.'}
         </p>
       </header>
+
+      {!authLoading && managedRestaurants.length === 0 && (
+        <p className="menu_state menu_state_error">
+          Your account is not assigned to a restaurant. Ask a platform admin for access.
+        </p>
+      )}
 
       {showSwitcher && (
         <div className="restaurant_switcher">

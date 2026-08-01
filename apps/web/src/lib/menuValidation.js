@@ -60,7 +60,11 @@ export function validateCreateMenuItem(input) {
     .trim()
     .toUpperCase();
   const price = Number(input.price);
-  const sortOrder = Number(input.sortOrder);
+  // Coerce like Zod (z.coerce.number): "" / undefined become 0 so the form's
+  // default sortOrder does not fail Number.isInteger(NaN) after a cleared input.
+  const rawSort = input.sortOrder;
+  const sortOrder =
+    rawSort === '' || rawSort === null || rawSort === undefined ? 0 : Number(rawSort);
   const allergens = filterEnumList(MENU_ALLERGENS, input.allergens ?? []);
   const dietaryTags = filterEnumList(MENU_DIETARY_TAGS, input.dietaryTags ?? []);
   const isAvailable = input.isAvailable === undefined ? true : Boolean(input.isAvailable);
@@ -89,7 +93,7 @@ export function validateCreateMenuItem(input) {
   if (imageAlt.length < 2 || imageAlt.length > 160) {
     errors.imageAlt = 'Alt text must be between 2 and 160 characters';
   }
-  if (!Number.isInteger(sortOrder) || sortOrder < 0) {
+  if (!Number.isFinite(sortOrder) || !Number.isInteger(sortOrder) || sortOrder < 0) {
     errors.sortOrder = 'Sort order must be a non-negative integer';
   }
 

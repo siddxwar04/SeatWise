@@ -1,4 +1,4 @@
-import { NotFoundError } from '../../errors/AppError.js';
+import { BadRequestError, NotFoundError } from '../../errors/AppError.js';
 import { prisma } from '../../lib/prisma.js';
 
 /**
@@ -6,12 +6,13 @@ import { prisma } from '../../lib/prisma.js';
  *
  * Public APIs speak in slugs (URL-safe, stable); admin tooling may pass UUIDs.
  * Every menu / availability / booking path must go through this so a missing
- * restaurant becomes a clean 404 rather than an unscoped query across all
+ * restaurant becomes a clean error rather than an unscoped query across all
  * venues.
  */
 export async function resolveRestaurant({ restaurantId, restaurantSlug } = {}) {
   if (!restaurantId && !restaurantSlug) {
-    throw new NotFoundError('Restaurant not specified.');
+    // Client forgot the venue key — that is a bad request, not a missing row.
+    throw new BadRequestError('Restaurant is required.');
   }
 
   const restaurant = await prisma.restaurant.findFirst({

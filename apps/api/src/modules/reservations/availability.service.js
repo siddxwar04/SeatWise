@@ -1,4 +1,4 @@
-import { NotFoundError } from '../../errors/AppError.js';
+import { BadRequestError } from '../../errors/AppError.js';
 import { prisma } from '../../lib/prisma.js';
 import {
   bookingInterval,
@@ -27,7 +27,7 @@ const OCCUPYING_STATUSES = ['PENDING', 'CONFIRMED', 'SEATED', 'COMPLETED'];
  */
 export async function getDayAvailability(restaurantId, dateStr, partySize) {
   if (!restaurantId) {
-    throw new NotFoundError('Restaurant not specified.');
+    throw new BadRequestError('Restaurant is required.');
   }
 
   const [tables, bookings] = await Promise.all([
