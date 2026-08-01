@@ -1,0 +1,30 @@
+{
+  "name": "tastyfood",
+  "version": "2.0.0",
+  "private": true,
+  "description": "AI-assisted restaurant reservation platform — React, Express, PostgreSQL, Python ML",
+  "license": "MIT",
+  "workspaces": [
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "npm-run-all --parallel dev:api dev:web",
+    "dev:api": "npm run dev --workspace @tastyfood/api",
+    "dev:web": "npm run dev --workspace @tastyfood/web",
+    "build": "npm run build --workspace @tastyfood/web",
+    "format": "prettier --write \"**/*.{js,jsx,json,css,md}\"",
+    "format:check": "prettier --check \"**/*.{js,jsx,json,css,md}\"",
+    "test": "npm run test --workspace @tastyfood/api",
+    "db:migrate": "npm run db:migrate --workspace @tastyfood/api",
+    "db:seed": "npm run db:seed --workspace @tastyfood/api",
+    "db:studio": "npm run db:studio --workspace @tastyfood/api",
+    "db:reset": "npm run db:reset --workspace @tastyfood/api"
+  },
+  "devDependencies": {
+    "npm-run-all": "^4.1.5",
+    "prettier": "^3.4.2"
+  }
+}

@@ -1,0 +1,111 @@
+# TastyFood — local development stack.
+#
+#   docker compose up -d postgres redis      # just the datastores
+#   docker compose up                        # the whole stack
+#
+# The pgvector image is stock PostgreSQL 16 with the vector extension already
+# compiled in, so the Phase 8 migration can CREATE EXTENSION without a rebuild.
+
+name: tastyfood
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: tastyfood-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-tastyfood}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tastyfood}
+      POSTGRES_DB: ${POSTGRES_DB:-tastyfood}
+      # Deterministic collation so ORDER BY behaves identically across machines.
+      POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C'
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-tastyfood} -d ${POSTGRES_DB:-tastyfood}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    container_name: tastyfood-redis
+    restart: unless-stopped
+    # Cache-first configuration: bounded memory, LRU eviction, no persistence.
+    # Losing this data is a cache miss, not data loss.
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --save ''
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: development
+    container_name: tastyfood-api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://${POSTGRES_USER:-tastyfood}:${POSTGRES_PASSWORD:-tastyfood}@postgres:5432/${POSTGRES_DB:-tastyfood}?schema=public
+      REDIS_URL: redis://redis:6379
+      ML_SERVICE_URL: http://ml:8000
+    ports:
+      - '${API_PORT:-4000}:4000'
+    volumes:
+      - ./apps/api/src:/app/apps/api/src
+      - ./apps/api/prisma:/app/apps/api/prisma
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: development
+    container_name: tastyfood-web
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: http://localhost:${API_PORT:-4000}
+    ports:
+      - '${WEB_PORT:-5173}:5173'
+    volumes:
+      - ./apps/web/src:/app/apps/web/src
+      - ./apps/web/public:/app/apps/web/public
+    depends_on:
+      - api
+
+  ml:
+    build:
+      context: ./services/ml
+    container_name: tastyfood-ml
+    restart: unless-stopped
+    # Opt-in until Phase 7 builds it: `docker compose --profile ml up`.
+    # Without this, `docker compose up` would fail on a missing build context.
+    profiles: ['ml']
+    ports:
+      - '${ML_PORT:-8000}:8000'
+    volumes:
+      - ./services/ml/app:/app/app
+      - ml_models:/app/models
+    healthcheck:
+      test: ['CMD', 'python', '-c', "import urllib.request;urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  postgres_data:
+  ml_models:

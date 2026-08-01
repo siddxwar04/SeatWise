@@ -1,0 +1,16 @@
+node_modules/
+dist/
+build/
+coverage/
+
+# Legacy PHP app — preserved untouched as the "before" snapshot.
+*.php
+index.html
+login.html
+register.html
+style.css
+Images/
+
+# Generated
+apps/api/prisma/migrations/
+package-lock.json

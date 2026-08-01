@@ -1,0 +1,718 @@
+/* ===========================================================================
+   app.css — additions only.
+   ---------------------------------------------------------------------------
+   style.css is the original stylesheet and is treated as read-only apart from
+   the two defects the audit named (the duplicate @import and scroll-behavior
+   on the wrong element). Nothing in this file overrides an existing rule; it
+   styles UI that did not exist before — toasts, the reservations list, the
+   admin dashboard, form validation — and it does so with the same custom
+   properties, radii and shadows so the new screens read as one design.
+   =========================================================================== */
+
+/* --- Accessibility ------------------------------------------------------- */
+
+/* Audit #29: no skip link, and no visible :focus anywhere except one input. */
+.skip_link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 10000;
+  padding: 12px 24px;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  border-radius: 0 0 12px 0;
+  text-decoration: none;
+}
+
+.skip_link:focus {
+  left: 0;
+}
+
+/* :focus-visible, not :focus — a mouse click should not leave a ring behind,
+   but a Tab press must always show where you are. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.visually_hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Respect a user's reduced-motion preference. The site is full of transitions
+   and a blob keyframe animation; for someone with vestibular sensitivity that
+   is not decoration, it is a problem. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* --- Toasts (replaces every alert()) ------------------------------------- */
+
+.toast_stack {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: min(380px, calc(100vw - 48px));
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: var(--white);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+  border-left: 5px solid var(--primary);
+  font-size: 0.95rem;
+  line-height: 1.45;
+  animation: toast_in 0.25s ease-out;
+}
+
+@keyframes toast_in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.toast_success {
+  border-left-color: #26a65b;
+}
+.toast_error {
+  border-left-color: #d63031;
+}
+.toast_info {
+  border-left-color: var(--primary);
+}
+
+.toast_close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--text-light);
+  padding: 0 2px;
+}
+
+/* --- Form fields --------------------------------------------------------- */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+
+/* Audit #28: the reservation inputs were placeholder-only. Placeholders vanish
+   on focus and are not reliably announced, so date/time/people had no
+   accessible name at all. Real labels now, and they need styling. */
+.field label {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-dark);
+}
+
+.reservation_form .field label {
+  color: var(--text-dark);
+}
+
+.field_optional {
+  font-weight: 400;
+  color: var(--text-light);
+  font-size: 0.8rem;
+}
+
+.field_error {
+  color: #d63031;
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.field_hint {
+  font-size: 0.82rem;
+  color: var(--text-light);
+  margin: -6px 0 4px;
+}
+
+input[aria-invalid='true'],
+select[aria-invalid='true'] {
+  border-color: #d63031 !important;
+}
+
+.password_rules {
+  list-style: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+  margin-top: 10px;
+  font-size: 0.78rem;
+}
+
+.rule_passed {
+  color: #26a65b;
+  font-weight: 600;
+}
+.rule_pending {
+  color: var(--text-light);
+}
+
+.auth_subtitle {
+  color: var(--text-light);
+  font-size: 0.92rem;
+  margin-bottom: 28px;
+}
+
+/* .auth_wrapper existed in style.css but relied on .auth_body being on <body>,
+   which no page ever applied. In a single-page app the body is shared, so the
+   wrapper carries its own minimum height instead. */
+.auth_wrapper {
+  min-height: calc(100vh - 220px);
+}
+
+.nav_greeting {
+  font-weight: 600;
+  color: var(--text-dark);
+  font-size: 0.9rem;
+  margin-right: 4px;
+}
+
+/* --- Booking confirmation ------------------------------------------------ */
+
+.booking_confirmation {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 32px;
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.booking_reference {
+  font-family: 'Courier New', monospace;
+  font-size: 1.9rem;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: var(--primary);
+  margin: 12px 0 20px;
+}
+
+.booking_summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.booking_summary dt {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-light);
+  margin-bottom: 4px;
+}
+
+.booking_summary dd {
+  font-weight: 700;
+  margin: 0;
+}
+
+.booking_hint {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  margin-bottom: 20px;
+}
+
+/* --- Generic page scaffolding -------------------------------------------- */
+
+.page_wrapper {
+  padding: 60px 20px 80px;
+  min-height: 60vh;
+}
+
+.page_header {
+  text-align: center;
+  margin-bottom: 36px;
+}
+
+.page_header h1 {
+  font-size: 2.6rem;
+  margin: 12px 0 8px;
+}
+
+.page_header p {
+  color: var(--text-light);
+}
+
+.menu_state {
+  text-align: center;
+  color: var(--text-light);
+  padding: 32px 0;
+}
+
+.menu_state_error {
+  color: #d63031;
+  font-weight: 600;
+}
+
+.empty_state {
+  text-align: center;
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 48px 24px;
+  box-shadow: var(--shadow);
+}
+
+.empty_state p {
+  color: var(--text-light);
+  margin-bottom: 20px;
+}
+
+.filter_row {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+
+.btn-small {
+  padding: 8px 18px;
+  font-size: 0.85rem;
+}
+
+.mono {
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+}
+
+/* --- Menu card overlay content ------------------------------------------- */
+
+.card_allergens {
+  font-size: 0.78rem !important;
+  text-transform: capitalize;
+  opacity: 0.85;
+}
+
+/* --- My Reservations ----------------------------------------------------- */
+
+.reservation_list {
+  display: grid;
+  gap: 18px;
+}
+
+.reservation_card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 24px 28px;
+  box-shadow: var(--shadow);
+  flex-wrap: wrap;
+}
+
+.reservation_ref {
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: 1.5px;
+  font-size: 0.9rem;
+}
+
+.reservation_card_main h3 {
+  font-size: 1.25rem;
+  margin: 6px 0;
+}
+
+.reservation_meta {
+  color: var(--text-light);
+  font-size: 0.9rem;
+}
+
+.reservation_note {
+  font-style: italic;
+  color: var(--text-light);
+  font-size: 0.85rem;
+  margin-top: 8px;
+}
+
+.reservation_card_side {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.status_pill {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 30px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: #f1f2f6;
+  color: var(--text-light);
+}
+
+.status_confirmed {
+  background: #e3f9ec;
+  color: #1a7a44;
+}
+.status_pending {
+  background: #fff0db;
+  color: #b35c14;
+}
+.status_seated {
+  background: #e6f0ff;
+  color: #1c4f9c;
+}
+.status_completed {
+  background: #eef0f2;
+  color: #4a5257;
+}
+.status_cancelled {
+  background: #ffe9e9;
+  color: #b02121;
+}
+.status_no_show {
+  background: #3d3d3d;
+  color: #ffb3b3;
+}
+
+/* --- Admin dashboard ----------------------------------------------------- */
+
+.stat_grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 18px;
+  margin-bottom: 36px;
+}
+
+.stat_card {
+  background: var(--white);
+  border-radius: 20px;
+  padding: 24px 20px;
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.stat_value {
+  font-size: 2.1rem;
+  font-weight: 800;
+  color: var(--primary);
+  line-height: 1.1;
+}
+
+.stat_label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-light);
+  margin-top: 6px;
+}
+
+.chart_panel,
+.admin_panel {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 28px;
+  box-shadow: var(--shadow);
+  margin-bottom: 32px;
+}
+
+.chart_panel h2,
+.admin_panel h2 {
+  font-size: 1.3rem;
+  margin-bottom: 20px;
+}
+
+.bar_chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  height: 200px;
+}
+
+.bar_column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  height: 100%;
+  position: relative;
+}
+
+.bar_fill {
+  width: 100%;
+  max-width: 56px;
+  background: linear-gradient(180deg, var(--primary) 0%, var(--primary-dark) 100%);
+  border-radius: 10px 10px 0 0;
+  min-height: 4px;
+  transition: height 0.4s ease;
+}
+
+.bar_value {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-top: 6px;
+}
+
+.bar_label {
+  font-size: 0.75rem;
+  color: var(--text-light);
+}
+
+.admin_toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.admin_search {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin_search input,
+.admin_search select {
+  padding: 10px 14px;
+  border: 2px solid #f1f2f6;
+  border-radius: 12px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.admin_search input:focus,
+.admin_search select:focus {
+  border-color: var(--primary);
+}
+
+/* Tables do not reflow. Rather than hiding columns, let the table scroll
+   horizontally inside its own container on narrow screens. */
+.table_scroll {
+  overflow-x: auto;
+}
+
+.admin_table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  min-width: 900px;
+}
+
+.admin_table th {
+  text-align: left;
+  padding: 12px;
+  border-bottom: 2px solid #f1f2f6;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-light);
+}
+
+.admin_table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid #f6f7f9;
+  vertical-align: top;
+}
+
+.admin_table tr:hover td {
+  background: #fffaf5;
+}
+
+.cell_sub {
+  color: var(--text-light);
+  font-size: 0.8rem;
+}
+
+.cell_empty {
+  text-align: center;
+  color: var(--text-light);
+  padding: 32px 0;
+}
+
+.action_cell {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.flag_warning {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #b02121;
+}
+
+.risk_pill {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.risk_low {
+  background: #e3f9ec;
+  color: #1a7a44;
+}
+.risk_medium {
+  background: #fff0db;
+  color: #b35c14;
+}
+.risk_high {
+  background: #ffe9e9;
+  color: #b02121;
+}
+
+/* --- Admin menu CRUD ----------------------------------------------------- */
+
+.menu_admin_form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 28px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #f1f2f6;
+}
+
+.menu_admin_form .form_row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.menu_admin_form .form_group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.menu_admin_form label,
+.chip_fieldset legend {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-light);
+}
+
+.menu_admin_form input,
+.menu_admin_form select,
+.menu_admin_form textarea {
+  padding: 10px 14px;
+  border: 2px solid #f1f2f6;
+  border-radius: 12px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.95rem;
+  outline: none;
+  width: 100%;
+}
+
+.menu_admin_form input:focus,
+.menu_admin_form select:focus,
+.menu_admin_form textarea:focus {
+  border-color: var(--primary);
+}
+
+.chip_fieldset {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.chip_row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.chip_option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #fff0db;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #b35c14;
+  cursor: pointer;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.chip_option input {
+  width: auto;
+  accent-color: var(--primary);
+}
+
+/* --- Narrow screens ------------------------------------------------------ */
+
+@media (max-width: 768px) {
+  .reservation_card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .password_rules {
+    grid-template-columns: 1fr;
+  }
+
+  .toast_stack {
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    max-width: none;
+  }
+
+  .page_header h1 {
+    font-size: 2rem;
+  }
+}

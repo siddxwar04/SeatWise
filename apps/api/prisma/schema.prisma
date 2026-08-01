@@ -1,0 +1,256 @@
+// TastyFood — data model
+//
+// The legacy app split its data across two MySQL databases (`user_auth` for
+// users, `tastyfood` for reservations), which made it impossible to relate a
+// booking to the person who made it. That was the single most consequential
+// defect in the audit. Everything below lives in ONE database with real
+// foreign keys, so `user -> reservations` is a first-class relationship.
+//
+// Every column is explicitly @map'd to snake_case. Prisma does not do this
+// automatically, and the booking service issues raw SQL for row locking —
+// unquoted identifiers in Postgres fold to lowercase, so a "createdAt" column
+// would have to be written "createdAt" in every raw query. snake_case avoids
+// that entirely.
+//
+// pgvector (for the Phase 8 menu assistant) is added in its own later
+// migration so this baseline runs on any stock PostgreSQL 14+.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum MenuCategory {
+  BREAKFAST
+  LUNCH
+  DESSERT
+}
+
+/// Allergens are a closed enum on purpose. The menu assistant filters on these
+/// with a hard SQL WHERE clause — an LLM is never the safety boundary for an
+/// allergy question. A free-text column could not be filtered reliably.
+enum Allergen {
+  GLUTEN
+  DAIRY
+  EGG
+  PEANUT
+  TREE_NUT
+  SOY
+  FISH
+  SHELLFISH
+  SESAME
+}
+
+enum DietaryTag {
+  VEGETARIAN
+  VEGAN
+  JAIN
+  HALAL
+  CONTAINS_EGG
+  NON_VEGETARIAN
+  SPICY
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  SEATED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+/// Where the booking came from. Also an ML feature — walk-ins and AI-assisted
+/// bookings have measurably different no-show behaviour.
+enum BookingChannel {
+  WEB
+  AI_ASSISTANT
+  PHONE
+  WALK_IN
+}
+
+enum TableZone {
+  INDOOR
+  OUTDOOR
+  PRIVATE
+  BAR
+}
+
+// ---------------------------------------------------------------------------
+// Models
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String  @id @default(uuid()) @db.Uuid
+  email        String  @unique
+  username     String  @db.VarChar(60)
+  passwordHash String  @map("password_hash")
+  phone        String? @db.VarChar(20)
+  role         Role    @default(USER)
+
+  // Denormalised counters maintained by the booking service. They are ML
+  // features (`customer_prior_bookings`, `customer_prior_noshows`) read on
+  // every prediction, so recomputing them with COUNT(*) per request would be
+  // wasteful. Kept in the same transaction as the status change.
+  priorBookings Int @default(0) @map("prior_bookings")
+  priorNoShows  Int @default(0) @map("prior_no_shows")
+
+  emailVerifiedAt DateTime? @map("email_verified_at")
+  lastLoginAt     DateTime? @map("last_login_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  reservations  Reservation[]
+  refreshTokens RefreshToken[]
+
+  @@index([email])
+  @@map("users")
+}
+
+/// Refresh tokens are stored hashed, one row per active session, so logout and
+/// "sign out everywhere" actually revoke access instead of relying on the
+/// client to discard the token.
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  userAgent String?   @map("user_agent") @db.VarChar(255)
+  ipAddress String?   @map("ip_address") @db.VarChar(45)
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+model RestaurantTable {
+  id       String    @id @default(uuid()) @db.Uuid
+  /// Human-facing label: "T1", "P2", "BAR-3".
+  label    String    @unique @db.VarChar(16)
+  capacity Int
+  zone     TableZone @default(INDOOR)
+  isActive Boolean   @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  reservations Reservation[]
+
+  @@index([capacity, isActive])
+  @@map("restaurant_tables")
+}
+
+model Reservation {
+  id String @id @default(uuid()) @db.Uuid
+
+  /// Short human-quotable code, e.g. "TF-7QX4M2". The audit flagged that a
+  /// user who booked had no record of it at all.
+  reference String @unique @db.VarChar(12)
+
+  /// Nullable so staff can enter phone and walk-in bookings for people who
+  /// have no account. Web bookings always carry a userId.
+  userId String? @map("user_id") @db.Uuid
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Contact details are snapshotted onto the reservation rather than always
+  // read through the user, so a later profile edit cannot silently rewrite the
+  // name on a historical booking.
+  guestName  String  @map("guest_name") @db.VarChar(80)
+  guestPhone String  @map("guest_phone") @db.VarChar(20)
+  guestEmail String? @map("guest_email")
+
+  /// INT, not "5+ People". The legacy schema stored party size as display text,
+  /// which made capacity arithmetic permanently impossible.
+  partySize Int @map("party_size")
+
+  /// Half-open interval [startsAt, endsAt). Overlap for the same table is
+  /// `existing.startsAt < new.endsAt AND existing.endsAt > new.startsAt`,
+  /// which is the interval-scheduling check the booking service runs under a
+  /// row lock.
+  startsAt DateTime @map("starts_at")
+  endsAt   DateTime @map("ends_at")
+
+  /// Local calendar date of `startsAt`, denormalised so availability queries
+  /// for a day hit an index instead of computing a timezone-sensitive cast.
+  serviceDate DateTime @map("service_date") @db.Date
+
+  status  ReservationStatus @default(PENDING)
+  channel BookingChannel    @default(WEB)
+
+  tableId String?          @map("table_id") @db.Uuid
+  table   RestaurantTable? @relation(fields: [tableId], references: [id], onDelete: SetNull)
+
+  specialRequests String? @map("special_requests") @db.VarChar(500)
+
+  // --- ML fields (Phase 7) --------------------------------------------------
+  /// P(no-show) in [0,1] from the FastAPI model. Null when the service was
+  /// unreachable — booking must never fail because prediction failed.
+  noShowRisk       Float?  @map("no_show_risk")
+  riskModelVersion String? @map("risk_model_version") @db.VarChar(32)
+
+  /// True when this booking was accepted against released overbooking capacity
+  /// rather than a physically free table.
+  isOverbooked Boolean @default(false) @map("is_overbooked")
+
+  cancelledAt DateTime? @map("cancelled_at")
+  seatedAt    DateTime? @map("seated_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  /// Optimistic-lock counter for low-contention edits (status changes from the
+  /// admin panel). High-contention seat allocation uses SELECT ... FOR UPDATE
+  /// instead — blocking beats retrying when collisions are likely.
+  version Int @default(0)
+
+  @@index([serviceDate, status])
+  @@index([tableId, startsAt, endsAt])
+  @@index([userId, startsAt])
+  @@index([reference])
+  @@map("reservations")
+}
+
+model MenuItem {
+  id          String @id @default(uuid()) @db.Uuid
+  slug        String @unique @db.VarChar(80)
+  name        String @db.VarChar(120)
+  description String @db.VarChar(600)
+
+  /// Paise, not rupees. Integer money — no floating-point rounding on prices.
+  priceInPaise Int @map("price_in_paise")
+
+  category MenuCategory
+  imageUrl String       @map("image_url") @db.VarChar(255)
+  imageAlt String       @map("image_alt") @db.VarChar(160)
+
+  allergens   Allergen[]
+  dietaryTags DietaryTag[] @map("dietary_tags")
+
+  isAvailable Boolean @default(true) @map("is_available")
+  /// Manual ordering within a category; ties fall back to name.
+  sortOrder   Int     @default(0) @map("sort_order")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([category, isAvailable])
+  @@map("menu_items")
+}
