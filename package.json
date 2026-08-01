@@ -18,10 +18,15 @@
     "format": "prettier --write \"**/*.{js,jsx,json,css,md}\"",
     "format:check": "prettier --check \"**/*.{js,jsx,json,css,md}\"",
     "test": "npm run test --workspace @tastyfood/api",
+    "test:concurrency": "npm run test:concurrency --workspace @tastyfood/api",
     "db:migrate": "npm run db:migrate --workspace @tastyfood/api",
     "db:seed": "npm run db:seed --workspace @tastyfood/api",
     "db:studio": "npm run db:studio --workspace @tastyfood/api",
-    "db:reset": "npm run db:reset --workspace @tastyfood/api"
+    "db:reset": "npm run db:reset --workspace @tastyfood/api",
+    "db:test:up": "docker compose --profile test up -d postgres-test",
+    "db:test:migrate": "npm run db:test:migrate --workspace @tastyfood/api",
+    "db:test": "npm run db:test:up && npm run db:test:wait && npm run db:test:migrate",
+    "db:test:wait": "node scripts/wait-for-postgres-test.js"
   },
   "devDependencies": {
     "npm-run-all": "^4.1.5",

@@ -23,31 +23,31 @@ Express (routes → controllers → services → Prisma)
 
 ## Tier 1 — Core (ship this)
 
-| Phase | Item | Status |
-|---|---|---|
-| 1 | Scaffold, Prisma schema, migration + exclusion constraint, seed | Done |
-| 2 | Auth — JWT + refresh cookie + bcrypt + Zod + rate limits | Done |
-| 3 | Reservations — `FOR UPDATE` + best-fit + conflict handling | Done |
-| 4 | React UI — CSS port, hamburger, auth-aware nav, toasts | Done |
-| 5 | Menu from DB + admin bookings + menu CRUD UI | Done |
-| — | Vitest unit tests (slots + best-fit) | Done |
-| — | README rewrite | Done |
+| Phase | Item                                                            | Status |
+| ----- | --------------------------------------------------------------- | ------ |
+| 1     | Scaffold, Prisma schema, migration + exclusion constraint, seed | Done   |
+| 2     | Auth — JWT + refresh cookie + bcrypt + Zod + rate limits        | Done   |
+| 3     | Reservations — `FOR UPDATE` + best-fit + conflict handling      | Done   |
+| 4     | React UI — CSS port, hamburger, auth-aware nav, toasts          | Done   |
+| 5     | Menu from DB + admin bookings + menu CRUD UI                    | Done   |
+| —     | Vitest unit tests (slots + best-fit)                            | Done   |
+| —     | README rewrite                                                  | Done   |
 
 ## Tier 2 — Differentiators (later)
 
-| Phase | Item | Status |
-|---|---|---|
-| 6 | FastAPI no-show model → overbooking rule | Not started |
-| 7 | Claude NL booking + allergen RAG (hard SQL filter) | Not started |
-| 8 | Email confirmations, SSE slots, CI, ADRs, deploy | Not started |
+| Phase | Item                                               | Status      |
+| ----- | -------------------------------------------------- | ----------- |
+| 6     | FastAPI no-show model → overbooking rule           | Not started |
+| 7     | Claude NL booking + allergen RAG (hard SQL filter) | Not started |
+| 8     | Email confirmations, SSE slots, CI, ADRs, deploy   | Not started |
 
 ---
 
 ## Interview talking points
 
-1. Why pessimistic locking for booking vs optimistic `@version` for admin status edits  
-2. Why allergen filtering is SQL, not an LLM judgment  
-3. Why refresh tokens are hashed and rotated  
+1. Why pessimistic locking for booking vs optimistic `@version` for admin status edits
+2. Why allergen filtering is SQL, not an LLM judgment
+3. Why refresh tokens are hashed and rotated
 4. Audit → rebuild story (SQLi, XSS, split DB)
 
 **Rule:** if you cannot explain a line, do not claim it in the interview.

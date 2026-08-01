@@ -30,6 +30,35 @@ services:
       retries: 10
       start_period: 10s
 
+  # Isolated Postgres for concurrency / integration tests.
+  # Never shares a volume with the dev `postgres` service, so a failed test
+  # cannot leave phantom rows in your local restaurant data.
+  #
+  #   docker compose --profile test up -d postgres-test
+  #   npm run db:test:migrate
+  #   npm run test:concurrency
+  postgres-test:
+    image: pgvector/pgvector:pg16
+    container_name: tastyfood-postgres-test
+    profiles: ['test']
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tastyfood
+      POSTGRES_PASSWORD: tastyfood
+      POSTGRES_DB: tastyfood_test
+      POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C'
+    ports:
+      # 5433 so it can run beside the dev DB on 5432.
+      - '${POSTGRES_TEST_PORT:-5433}:5432'
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U tastyfood -d tastyfood_test']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
   redis:
     image: redis:7-alpine
     container_name: tastyfood-redis
@@ -108,4 +137,5 @@ services:
 
 volumes:
   postgres_data:
+  postgres_test_data:
   ml_models:

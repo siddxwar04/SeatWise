@@ -34,17 +34,32 @@ const partySize = z.coerce
   .min(1, 'A booking needs at least one guest')
   .max(env.MAX_PARTY_SIZE, `For parties over ${env.MAX_PARTY_SIZE}, please call us directly`);
 
+/** Public venue key — preferred over UUID on guest-facing forms. */
+export const restaurantSlugSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .min(2)
+  .max(80)
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Restaurant slug must be lowercase hyphenated words');
+
 export const createReservationSchema = z.object({
+  restaurantSlug: restaurantSlugSchema,
   guestName,
   guestPhone,
   guestEmail: z.string().trim().toLowerCase().email('Enter a valid email').max(254).optional(),
   partySize,
   date: isoDate,
   time: slotTime,
-  specialRequests: z.string().trim().max(500, 'Please keep requests under 500 characters').optional(),
+  specialRequests: z
+    .string()
+    .trim()
+    .max(500, 'Please keep requests under 500 characters')
+    .optional(),
 });
 
 export const availabilityQuerySchema = z.object({
+  restaurant: restaurantSlugSchema,
   date: isoDate,
   partySize: partySize.optional().default(2),
 });
@@ -58,6 +73,7 @@ export const idParamSchema = z.object({
 });
 
 export const listReservationsQuerySchema = z.object({
+  restaurant: restaurantSlugSchema.optional(),
   status: z
     .enum(['PENDING', 'CONFIRMED', 'SEATED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'])
     .optional(),

@@ -417,6 +417,53 @@ select[aria-invalid='true'] {
 
 /* --- Admin dashboard ----------------------------------------------------- */
 
+.restaurant_switcher {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 28px;
+  padding: 14px 18px;
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.restaurant_switcher label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-light);
+}
+
+.restaurant_switcher select {
+  min-width: 220px;
+  padding: 10px 14px;
+  border: 2px solid #f1f2f6;
+  border-radius: 12px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.95rem;
+  outline: none;
+  background: var(--white);
+}
+
+.restaurant_switcher select:focus {
+  border-color: var(--primary);
+}
+
+.restaurant_badge {
+  margin-bottom: 24px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.availability_toggle {
+  align-self: flex-start;
+  margin-bottom: 4px;
+}
+
 .stat_grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));

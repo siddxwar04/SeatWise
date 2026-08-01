@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { menuApi } from '../lib/api.js';
+import { DEFAULT_RESTAURANT_SLUG, menuApi } from '../lib/api.js';
 
 /**
  * The menu, from the database.
@@ -34,7 +34,7 @@ export function MenuSection() {
     let cancelled = false;
 
     menuApi
-      .list()
+      .list(DEFAULT_RESTAURANT_SLUG)
       .then((data) => {
         if (cancelled) return;
         setItems(data.items);
@@ -114,7 +114,8 @@ export function MenuSection() {
               <p>{item.description}</p>
               {item.allergens.length > 0 && (
                 <p className="card_allergens">
-                  Contains: {item.allergens.map((a) => a.replace('_', ' ').toLowerCase()).join(', ')}
+                  Contains:{' '}
+                  {item.allergens.map((a) => a.replace('_', ' ').toLowerCase()).join(', ')}
                 </p>
               )}
             </div>

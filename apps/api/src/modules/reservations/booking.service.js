@@ -5,6 +5,7 @@ import { logger } from '../../lib/logger.js';
 import { prisma } from '../../lib/prisma.js';
 import { generateBookingReference } from '../../lib/reference.js';
 import { bookingInterval, serviceDateFor, validateBookingTime } from '../../lib/slots.js';
+import { isRestaurantAdmin } from '../restaurants/restaurant.service.js';
 
 /**
  * ===========================================================================
@@ -42,6 +43,11 @@ import { bookingInterval, serviceDateFor, validateBookingTime } from '../../lib/
  *      store two active reservations whose time ranges overlap on one table.
  *      Correctness should not depend solely on the application remembering.
  *
+ * Multi-restaurant: the FOR UPDATE set is filtered by restaurant_id, so two
+ * venues booking the same wall-clock slot lock disjoint table rows and never
+ * block each other. The exclusion constraint keys on table_id, which is
+ * already per-restaurant, so it also never contends across venues.
+ *
  * Why pessimistic and not optimistic here: contention is genuinely high — a
  * popular Friday 8pm slot has many people racing for few tables. Optimistic
  * locking would mean most of them do the work, fail the version check, and
@@ -78,13 +84,19 @@ export function selectBestFitTable(candidates, busyTableIds) {
  * Creates a reservation, or throws ConflictError if nothing is free.
  *
  * `actor` is the signed-in user, or null for a guest booking.
+ * `input.restaurantId` is required — bookings are never cross-venue.
  */
 export async function createReservation(input, actor = null, channel = 'WEB') {
+  if (!input.restaurantId) {
+    throw new BadRequestError('Restaurant is required to make a booking.');
+  }
+
   const timeProblem = validateBookingTime(input.date, input.time);
   if (timeProblem) throw new BadRequestError(timeProblem);
 
   const { startsAt, endsAt } = bookingInterval(input.date, input.time);
   const serviceDate = serviceDateFor(input.date);
+  const restaurantId = input.restaurantId;
 
   // Retry only for the astronomically unlikely reference collision. A booking
   // conflict is a real answer and is never retried.
@@ -95,15 +107,20 @@ export async function createReservation(input, actor = null, channel = 'WEB') {
       return await prisma.$transaction(
         async (tx) => {
           /**
-           * Step 1 — lock every table that could seat this party.
+           * Step 1 — lock every table that could seat this party *at this
+           * restaurant*.
            *
            * ORDER BY id is the deadlock guard described above. FOR UPDATE
            * blocks any concurrent transaction that wants the same rows.
+           * restaurant_id in the WHERE keeps Venue A's lock set disjoint from
+           * Venue B's, so identical wall-clock slots do not serialise across
+           * tenants.
            */
           const candidates = await tx.$queryRaw`
             SELECT id, label, capacity
             FROM restaurant_tables
-            WHERE is_active = true
+            WHERE restaurant_id = ${restaurantId}::uuid
+              AND is_active = true
               AND capacity >= ${input.partySize}
             ORDER BY id
             FOR UPDATE
@@ -124,6 +141,8 @@ export async function createReservation(input, actor = null, channel = 'WEB') {
            *
            * This read is safe from phantoms because every candidate table is
            * locked — no other transaction can be mid-insert against them.
+           * Candidates are already restaurant-scoped, so clashes cannot pull
+           * in another venue's bookings.
            */
           const candidateIds = candidates.map((t) => t.id);
           const clashes = await tx.reservation.findMany({
@@ -165,7 +184,16 @@ export async function createReservation(input, actor = null, channel = 'WEB') {
               channel,
               specialRequests: input.specialRequests ?? null,
             },
-            include: { table: { select: { label: true, zone: true, capacity: true } } },
+            include: {
+              table: {
+                select: {
+                  label: true,
+                  zone: true,
+                  capacity: true,
+                  restaurantId: true,
+                },
+              },
+            },
           });
 
           /**
@@ -209,7 +237,7 @@ export async function createReservation(input, actor = null, channel = 'WEB') {
         const cause = String(err.meta?.code ?? '');
         if (cause === '23P01') {
           logger.error(
-            { startsAt, partySize: input.partySize },
+            { startsAt, partySize: input.partySize, restaurantId },
             'exclusion constraint rejected a booking the app thought was free',
           );
           throw new ConflictError('That table was taken a moment ago. Please pick another time.');
@@ -227,19 +255,29 @@ export async function createReservation(input, actor = null, channel = 'WEB') {
  * Cancels a booking and frees the table.
  *
  * Guarded by ownership: a user may cancel only their own reservation, and
- * admins may cancel any. The legacy app had no concept of this because
- * bookings were not linked to users at all.
+ * global / restaurant admins may cancel within their scope. The legacy app
+ * had no concept of this because bookings were not linked to users at all.
  */
 export async function cancelReservation(reservationId, actor) {
   return prisma.$transaction(async (tx) => {
-    const reservation = await tx.reservation.findUnique({ where: { id: reservationId } });
+    const reservation = await tx.reservation.findUnique({
+      where: { id: reservationId },
+      include: { table: { select: { restaurantId: true } } },
+    });
 
     if (!reservation) {
       throw new ConflictError('That reservation no longer exists.');
     }
 
     const isOwner = reservation.userId && actor?.id === reservation.userId;
-    const isAdmin = actor?.role === 'ADMIN';
+    let isAdmin = actor?.role === 'ADMIN';
+
+    // Restaurant admins (role USER + join row) can cancel for their venue;
+    // checked against the table's restaurant, not a JWT claim.
+    if (!isAdmin && actor?.id && reservation.table?.restaurantId) {
+      isAdmin = await isRestaurantAdmin(actor.id, reservation.table.restaurantId, actor.role);
+    }
+
     if (!isOwner && !isAdmin) {
       // Deliberately the same message a missing booking gets, so this cannot
       // be used to probe which reservation ids exist.
@@ -266,10 +304,7 @@ export async function cancelReservation(reservationId, actor) {
       },
     });
 
-    logger.info(
-      { reservationId, hoursNotice: Math.round(hoursNotice) },
-      'reservation cancelled',
-    );
+    logger.info({ reservationId, hoursNotice: Math.round(hoursNotice) }, 'reservation cancelled');
     return updated;
   });
 }

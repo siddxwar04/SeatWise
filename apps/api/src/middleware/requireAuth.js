@@ -1,5 +1,7 @@
 import { ForbiddenError, UnauthorizedError } from '../errors/AppError.js';
 import { verifyAccessToken } from '../lib/tokens.js';
+import { prisma } from '../lib/prisma.js';
+import { resolveRestaurant } from '../modules/restaurants/restaurant.service.js';
 
 function readBearerToken(req) {
   const header = req.headers.authorization;
@@ -66,5 +68,97 @@ export function requireRole(...allowedRoles) {
       return;
     }
     next();
+  };
+}
+
+/**
+ * Pulls restaurant identity from the usual request surfaces. Callers pass
+ * either a public slug or a UUID; we never invent a default here — silent
+ * cross-restaurant behaviour is exactly what multi-tenant scoping forbids.
+ */
+function readRestaurantRef(req) {
+  return {
+    restaurantId:
+      req.params?.restaurantId ??
+      req.query?.restaurantId ??
+      req.body?.restaurantId ??
+      req.restaurantId ??
+      null,
+    restaurantSlug:
+      req.params?.restaurantSlug ??
+      req.params?.slug ??
+      req.query?.restaurant ??
+      req.query?.restaurantSlug ??
+      req.body?.restaurantSlug ??
+      req.body?.restaurant ??
+      null,
+  };
+}
+
+/**
+ * Venue-scoped admin gate. Must be mounted after requireAuth.
+ *
+ * Looks up RestaurantAdmin by (userId, restaurantId) on every request rather
+ * than reading memberships from the JWT. That keeps token payloads stable and
+ * means granting/revoking a venue takes effect immediately — embedding
+ * restaurantIds in the access token would leave stale grants valid until the
+ * 15-minute TTL expired.
+ *
+ * Global Role.ADMIN bypasses the join table on purpose: platform operators
+ * need to inspect any venue without a seed row per restaurant. Venue owners
+ * (role USER + RestaurantAdmin) are strictly scoped to their memberships.
+ *
+ * On success sets `req.restaurant` so handlers do not re-resolve the slug.
+ */
+export function requireRestaurantAdmin(options = {}) {
+  const { resolveFromMenuItemId = false } = options;
+
+  return async (req, _res, next) => {
+    try {
+      if (!req.user) {
+        next(new UnauthorizedError('Please sign in to continue.'));
+        return;
+      }
+
+      let ref = readRestaurantRef(req);
+
+      // PATCH/DELETE /menu/:id — the item itself carries restaurantId, so the
+      // client does not have to re-send the venue on every edit.
+      if (!ref.restaurantId && !ref.restaurantSlug && resolveFromMenuItemId && req.params?.id) {
+        const item = await prisma.menuItem.findUnique({
+          where: { id: req.params.id },
+          select: { restaurantId: true },
+        });
+        if (!item) {
+          next(new ForbiddenError('You do not have access to this area.'));
+          return;
+        }
+        ref = { restaurantId: item.restaurantId, restaurantSlug: null };
+      }
+
+      const restaurant = await resolveRestaurant(ref);
+      req.restaurant = restaurant;
+
+      if (req.user.role === 'ADMIN') {
+        next();
+        return;
+      }
+
+      const membership = await prisma.restaurantAdmin.findUnique({
+        where: {
+          userId_restaurantId: { userId: req.user.id, restaurantId: restaurant.id },
+        },
+        select: { id: true },
+      });
+
+      if (!membership) {
+        next(new ForbiddenError('You do not have access to this restaurant.'));
+        return;
+      }
+
+      next();
+    } catch (err) {
+      next(err);
+    }
   };
 }

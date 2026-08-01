@@ -28,16 +28,12 @@ export function durationToMs(value) {
 }
 
 export function signAccessToken(user) {
-  return jwt.sign(
-    { email: user.email, role: user.role },
-    env.JWT_ACCESS_SECRET,
-    {
-      subject: user.id,
-      expiresIn: env.ACCESS_TOKEN_TTL,
-      issuer: 'tastyfood',
-      audience: 'tastyfood-web',
-    },
-  );
+  return jwt.sign({ email: user.email, role: user.role }, env.JWT_ACCESS_SECRET, {
+    subject: user.id,
+    expiresIn: env.ACCESS_TOKEN_TTL,
+    issuer: 'tastyfood',
+    audience: 'tastyfood-web',
+  });
 }
 
 /**

@@ -4,7 +4,8 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.js'],
-    // Env is loaded by src/config/env.js from the repo-root .env.
+    // Real-Postgres concurrency proof — run via `npm run test:concurrency` only.
+    exclude: ['src/**/*.concurrency.test.js'],
     fileParallelism: false,
   },
 });

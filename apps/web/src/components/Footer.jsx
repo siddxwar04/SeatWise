@@ -19,17 +19,32 @@ export function Footer() {
         <div className="footer_col">
           <h3>TastyFood.</h3>
           <p>
-            Bringing the world&apos;s finest flavors to your table. Fresh ingredients, expert
-            chefs, and a passion for food.
+            Bringing the world&apos;s finest flavors to your table. Fresh ingredients, expert chefs,
+            and a passion for food.
           </p>
           <div className="social_icons">
-            <a href="https://facebook.com" aria-label="TastyFood on Facebook" rel="noreferrer noopener" target="_blank">
+            <a
+              href="https://facebook.com"
+              aria-label="TastyFood on Facebook"
+              rel="noreferrer noopener"
+              target="_blank"
+            >
               <i className="fa-brands fa-facebook" aria-hidden="true" />
             </a>
-            <a href="https://instagram.com" aria-label="TastyFood on Instagram" rel="noreferrer noopener" target="_blank">
+            <a
+              href="https://instagram.com"
+              aria-label="TastyFood on Instagram"
+              rel="noreferrer noopener"
+              target="_blank"
+            >
               <i className="fa-brands fa-instagram" aria-hidden="true" />
             </a>
-            <a href="https://twitter.com" aria-label="TastyFood on X" rel="noreferrer noopener" target="_blank">
+            <a
+              href="https://twitter.com"
+              aria-label="TastyFood on X"
+              rel="noreferrer noopener"
+              target="_blank"
+            >
               <i className="fa-brands fa-twitter" aria-hidden="true" />
             </a>
           </div>

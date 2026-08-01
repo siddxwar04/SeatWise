@@ -120,33 +120,51 @@ export const authApi = {
 };
 
 export const menuApi = {
-  list: (category) => api.get(category ? `/menu?category=${category}` : '/menu'),
-  listAll: () => api.get('/menu?includeUnavailable=true'),
+  list: (restaurant, category) => {
+    const params = new URLSearchParams({ restaurant });
+    if (category) params.set('category', category);
+    return api.get(`/menu?${params}`);
+  },
+  listAll: (restaurant) =>
+    api.get(`/menu?${new URLSearchParams({ restaurant, includeUnavailable: 'true' })}`),
   create: (data) => api.post('/menu', data),
   update: (id, data) => api.patch(`/menu/${id}`, data),
-  setAvailability: (id, isAvailable) =>
-    api.patch(`/menu/${id}/availability`, { isAvailable }),
+  setAvailability: (id, isAvailable) => api.patch(`/menu/${id}/availability`, { isAvailable }),
   remove: (id) => api.delete(`/menu/${id}`),
   safe: (params) => api.get(`/menu/safe?${new URLSearchParams(params)}`),
 };
 
 export const reservationApi = {
   rules: () => api.get('/reservations/rules'),
-  availability: (date, partySize) =>
-    api.get(`/reservations/availability?date=${date}&partySize=${partySize}`),
+  availability: (restaurant, date, partySize) =>
+    api.get(`/reservations/availability?${new URLSearchParams({ restaurant, date, partySize })}`),
   create: (data) => api.post('/reservations', data),
   mine: (params = {}) => api.get(`/reservations/mine?${new URLSearchParams(params)}`),
   cancel: (id) => api.post(`/reservations/${id}/cancel`),
   lookup: (reference, phone) => api.post('/reservations/lookup', { reference, phone }),
 };
 
+export const restaurantApi = {
+  list: () => api.get('/restaurants'),
+  /** Venues the current user may administer (ADMIN → all; else RestaurantAdmin). */
+  mine: () => api.get('/restaurants/mine'),
+  get: (slug) => api.get(`/restaurants/${slug}`),
+};
+
 export const adminApi = {
   reservations: (params = {}) => api.get(`/admin/reservations?${new URLSearchParams(params)}`),
-  updateStatus: (id, status, version) =>
-    api.patch(`/admin/reservations/${id}/status`, { status, version }),
-  today: () => api.get('/admin/service/today'),
-  stats: (days = 30) => api.get(`/admin/stats?days=${days}`),
+  updateStatus: (id, status, version, restaurant) =>
+    api.patch(`/admin/reservations/${id}/status?${new URLSearchParams({ restaurant })}`, {
+      status,
+      version,
+    }),
+  today: (restaurant) => api.get(`/admin/service/today?${new URLSearchParams({ restaurant })}`),
+  stats: (restaurant, days = 30) =>
+    api.get(`/admin/stats?${new URLSearchParams({ restaurant, days })}`),
 };
+
+/** Default venue for the marketing site until a picker is wired. */
+export const DEFAULT_RESTAURANT_SLUG = 'tastyfood-koramangala';
 
 /**
  * Called once at startup. A valid refresh cookie yields a new access token and

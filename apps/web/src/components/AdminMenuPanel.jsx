@@ -1,10 +1,20 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useToast } from '../context/ToastContext.jsx';
 import { ApiError, menuApi } from '../lib/api.js';
+import {
+  MENU_ALLERGENS,
+  MENU_CATEGORIES,
+  MENU_DIETARY_TAGS,
+  validateCreateMenuItem,
+  validateUpdateMenuItem,
+} from '../lib/menuValidation.js';
 
 /**
  * Admin menu CRUD — Phase 5. The public menu already reads from the DB;
  * this is how staff add, price-edit, 86, or remove dishes without redeploying.
+ *
+ * Scoped by restaurantSlug from the dashboard switcher. Server still enforces
+ * requireRestaurantAdmin; client validation mirrors menu.schemas.js.
  */
 
 const EMPTY = {
@@ -18,29 +28,8 @@ const EMPTY = {
   allergens: [],
   dietaryTags: [],
   sortOrder: 0,
+  isAvailable: true,
 };
-
-const ALLERGENS = [
-  'GLUTEN',
-  'DAIRY',
-  'EGG',
-  'PEANUT',
-  'TREE_NUT',
-  'SOY',
-  'FISH',
-  'SHELLFISH',
-  'SESAME',
-];
-
-const DIETARY_TAGS = [
-  'VEGETARIAN',
-  'VEGAN',
-  'JAIN',
-  'HALAL',
-  'CONTAINS_EGG',
-  'NON_VEGETARIAN',
-  'SPICY',
-];
 
 function slugify(name) {
   return name
@@ -55,37 +44,52 @@ function toggleInList(list, value) {
   return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
 }
 
-export function AdminMenuPanel() {
+export function AdminMenuPanel({ restaurantSlug }) {
   const toast = useToast();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(EMPTY);
+  const [fieldErrors, setFieldErrors] = useState({});
   const [editingId, setEditingId] = useState(null);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
+    if (!restaurantSlug) return;
     setLoading(true);
     try {
-      const data = await menuApi.listAll();
+      const data = await menuApi.listAll(restaurantSlug);
       setItems(data.items);
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Could not load menu.');
     } finally {
       setLoading(false);
     }
-  }, [toast]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  }, [restaurantSlug, toast]);
 
   const resetForm = () => {
     setForm(EMPTY);
+    setFieldErrors({});
     setEditingId(null);
+  };
+
+  useEffect(() => {
+    resetForm();
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load]);
+
+  const clearFieldError = (field) => {
+    setFieldErrors((errors) => {
+      if (!errors[field]) return errors;
+      const next = { ...errors };
+      delete next[field];
+      return next;
+    });
   };
 
   const startEdit = (item) => {
     setEditingId(item.id);
+    setFieldErrors({});
     setForm({
       slug: item.slug,
       name: item.name,
@@ -97,31 +101,49 @@ export function AdminMenuPanel() {
       allergens: item.allergens ?? [],
       dietaryTags: item.dietaryTags ?? [],
       sortOrder: item.sortOrder ?? 0,
+      isAvailable: item.isAvailable !== false,
     });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setBusy(true);
-    try {
-      const payload = {
-        ...form,
-        price: Number(form.price),
-        sortOrder: Number(form.sortOrder) || 0,
-        imageAlt: form.imageAlt || form.name,
-      };
+    setFieldErrors({});
 
+    const raw = {
+      ...form,
+      price: form.price,
+      sortOrder: form.sortOrder,
+      imageAlt: form.imageAlt || form.name,
+      restaurantSlug,
+    };
+
+    const validated = editingId ? validateUpdateMenuItem(raw) : validateCreateMenuItem(raw);
+
+    if (!validated.ok) {
+      setFieldErrors(validated.errors);
+      toast.error('Please check the highlighted fields.');
+      setBusy(false);
+      return;
+    }
+
+    try {
       if (editingId) {
-        await menuApi.update(editingId, payload);
-        toast.success(`${payload.name} updated.`);
+        await menuApi.update(editingId, validated.data);
+        toast.success(`${validated.data.name ?? form.name} updated.`);
       } else {
-        await menuApi.create(payload);
-        toast.success(`${payload.name} added to the menu.`);
+        await menuApi.create(validated.data);
+        toast.success(`${validated.data.name} added to the menu.`);
       }
       resetForm();
       await load();
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Save failed.');
+      if (err instanceof ApiError && err.details && typeof err.details === 'object') {
+        setFieldErrors(err.details);
+        toast.error('Please check the highlighted fields.');
+      } else {
+        toast.error(err instanceof ApiError ? err.message : 'Save failed.');
+      }
     } finally {
       setBusy(false);
     }
@@ -162,7 +184,7 @@ export function AdminMenuPanel() {
         )}
       </div>
 
-      <form className="menu_admin_form" onSubmit={handleSubmit}>
+      <form className="menu_admin_form" onSubmit={handleSubmit} noValidate>
         <div className="form_row">
           <div className="form_group">
             <label htmlFor="menu-name">Name</label>
@@ -170,8 +192,11 @@ export function AdminMenuPanel() {
               id="menu-name"
               required
               value={form.name}
+              aria-invalid={Boolean(fieldErrors.name)}
+              aria-describedby={fieldErrors.name ? 'menu-name-error' : undefined}
               onChange={(e) => {
                 const name = e.target.value;
+                clearFieldError('name');
                 setForm((f) => ({
                   ...f,
                   name,
@@ -180,6 +205,11 @@ export function AdminMenuPanel() {
                 }));
               }}
             />
+            {fieldErrors.name && (
+              <p className="field_error" id="menu-name-error">
+                {fieldErrors.name}
+              </p>
+            )}
           </div>
           <div className="form_group">
             <label htmlFor="menu-slug">Slug</label>
@@ -187,8 +217,18 @@ export function AdminMenuPanel() {
               id="menu-slug"
               required
               value={form.slug}
-              onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))}
+              aria-invalid={Boolean(fieldErrors.slug)}
+              aria-describedby={fieldErrors.slug ? 'menu-slug-error' : undefined}
+              onChange={(e) => {
+                clearFieldError('slug');
+                setForm((f) => ({ ...f, slug: e.target.value }));
+              }}
             />
+            {fieldErrors.slug && (
+              <p className="field_error" id="menu-slug-error">
+                {fieldErrors.slug}
+              </p>
+            )}
           </div>
           <div className="form_group">
             <label htmlFor="menu-price">Price (₹)</label>
@@ -199,20 +239,37 @@ export function AdminMenuPanel() {
               step="1"
               required
               value={form.price}
-              onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
+              aria-invalid={Boolean(fieldErrors.price)}
+              aria-describedby={fieldErrors.price ? 'menu-price-error' : undefined}
+              onChange={(e) => {
+                clearFieldError('price');
+                setForm((f) => ({ ...f, price: e.target.value }));
+              }}
             />
+            {fieldErrors.price && (
+              <p className="field_error" id="menu-price-error">
+                {fieldErrors.price}
+              </p>
+            )}
           </div>
           <div className="form_group">
             <label htmlFor="menu-category">Category</label>
             <select
               id="menu-category"
               value={form.category}
-              onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+              aria-invalid={Boolean(fieldErrors.category)}
+              onChange={(e) => {
+                clearFieldError('category');
+                setForm((f) => ({ ...f, category: e.target.value }));
+              }}
             >
-              <option value="BREAKFAST">Breakfast</option>
-              <option value="LUNCH">Lunch</option>
-              <option value="DESSERT">Dessert</option>
+              {MENU_CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c.charAt(0) + c.slice(1).toLowerCase()}
+                </option>
+              ))}
             </select>
+            {fieldErrors.category && <p className="field_error">{fieldErrors.category}</p>}
           </div>
         </div>
 
@@ -225,8 +282,18 @@ export function AdminMenuPanel() {
             minLength={10}
             maxLength={600}
             value={form.description}
-            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+            aria-invalid={Boolean(fieldErrors.description)}
+            aria-describedby={fieldErrors.description ? 'menu-description-error' : undefined}
+            onChange={(e) => {
+              clearFieldError('description');
+              setForm((f) => ({ ...f, description: e.target.value }));
+            }}
           />
+          {fieldErrors.description && (
+            <p className="field_error" id="menu-description-error">
+              {fieldErrors.description}
+            </p>
+          )}
         </div>
 
         <div className="form_row">
@@ -236,8 +303,18 @@ export function AdminMenuPanel() {
               id="menu-image"
               required
               value={form.imageUrl}
-              onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))}
+              aria-invalid={Boolean(fieldErrors.imageUrl)}
+              aria-describedby={fieldErrors.imageUrl ? 'menu-image-error' : undefined}
+              onChange={(e) => {
+                clearFieldError('imageUrl');
+                setForm((f) => ({ ...f, imageUrl: e.target.value }));
+              }}
             />
+            {fieldErrors.imageUrl && (
+              <p className="field_error" id="menu-image-error">
+                {fieldErrors.imageUrl}
+              </p>
+            )}
           </div>
           <div className="form_group">
             <label htmlFor="menu-alt">Image alt text</label>
@@ -245,15 +322,41 @@ export function AdminMenuPanel() {
               id="menu-alt"
               required
               value={form.imageAlt}
-              onChange={(e) => setForm((f) => ({ ...f, imageAlt: e.target.value }))}
+              aria-invalid={Boolean(fieldErrors.imageAlt)}
+              aria-describedby={fieldErrors.imageAlt ? 'menu-alt-error' : undefined}
+              onChange={(e) => {
+                clearFieldError('imageAlt');
+                setForm((f) => ({ ...f, imageAlt: e.target.value }));
+              }}
             />
+            {fieldErrors.imageAlt && (
+              <p className="field_error" id="menu-alt-error">
+                {fieldErrors.imageAlt}
+              </p>
+            )}
+          </div>
+          <div className="form_group">
+            <label htmlFor="menu-sort">Sort order</label>
+            <input
+              id="menu-sort"
+              type="number"
+              min="0"
+              step="1"
+              value={form.sortOrder}
+              aria-invalid={Boolean(fieldErrors.sortOrder)}
+              onChange={(e) => {
+                clearFieldError('sortOrder');
+                setForm((f) => ({ ...f, sortOrder: e.target.value }));
+              }}
+            />
+            {fieldErrors.sortOrder && <p className="field_error">{fieldErrors.sortOrder}</p>}
           </div>
         </div>
 
         <fieldset className="chip_fieldset">
           <legend>Allergens</legend>
           <div className="chip_row">
-            {ALLERGENS.map((a) => (
+            {MENU_ALLERGENS.map((a) => (
               <label key={a} className="chip_option">
                 <input
                   type="checkbox"
@@ -271,7 +374,7 @@ export function AdminMenuPanel() {
         <fieldset className="chip_fieldset">
           <legend>Dietary tags</legend>
           <div className="chip_row">
-            {DIETARY_TAGS.map((t) => (
+            {MENU_DIETARY_TAGS.map((t) => (
               <label key={t} className="chip_option">
                 <input
                   type="checkbox"
@@ -285,6 +388,15 @@ export function AdminMenuPanel() {
             ))}
           </div>
         </fieldset>
+
+        <label className="chip_option availability_toggle">
+          <input
+            type="checkbox"
+            checked={form.isAvailable}
+            onChange={(e) => setForm((f) => ({ ...f, isAvailable: e.target.checked }))}
+          />
+          Available on the public menu
+        </label>
 
         <button type="submit" className="btn btn-primary" disabled={busy}>
           {busy ? 'Saving…' : editingId ? 'Update dish' : 'Add dish'}

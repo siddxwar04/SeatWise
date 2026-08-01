@@ -27,9 +27,8 @@ export function Spotlight() {
           </span>
           <h2>The &quot;Morning Glory&quot;</h2>
           <p>
-            Our award-winning brunch burger. A succulent wagyu beef patty topped with smoked
-            turkey bacon, melted gouda, and a perfectly runny sunny-side-up egg on a toasted
-            brioche.
+            Our award-winning brunch burger. A succulent wagyu beef patty topped with smoked turkey
+            bacon, melted gouda, and a perfectly runny sunny-side-up egg on a toasted brioche.
           </p>
           <ul className="spotlight_list">
             <li>
@@ -42,11 +41,7 @@ export function Spotlight() {
               <i className="fa-solid fa-bread-slice" aria-hidden="true" /> House-Made Brioche
             </li>
           </ul>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => navigate('/#reserve')}
-          >
+          <button type="button" className="btn btn-primary" onClick={() => navigate('/#reserve')}>
             ₹499 - Reserve a Table
           </button>
         </div>

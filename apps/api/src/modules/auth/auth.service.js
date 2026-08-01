@@ -87,10 +87,7 @@ export async function login(input, context) {
   const user = await prisma.user.findUnique({ where: { email: input.email } });
 
   // Always hash, whether or not the account exists — see DUMMY_HASH above.
-  const passwordMatches = await bcrypt.compare(
-    input.password,
-    user?.passwordHash ?? DUMMY_HASH,
-  );
+  const passwordMatches = await bcrypt.compare(input.password, user?.passwordHash ?? DUMMY_HASH);
 
   /**
    * One message for both failure modes.

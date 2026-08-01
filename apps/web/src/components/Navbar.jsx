@@ -19,7 +19,7 @@ import { useToast } from '../context/ToastContext.jsx';
  */
 export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const { user, isAuthenticated, isAdmin, logout } = useAuth();
+  const { user, isAuthenticated, canAccessAdmin, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
@@ -88,7 +88,7 @@ export function Navbar() {
               <Link to="/my-reservations">My Bookings</Link>
             </li>
           )}
-          {isAdmin && (
+          {canAccessAdmin && (
             <li>
               <Link to="/admin">Admin</Link>
             </li>

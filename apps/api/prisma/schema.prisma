@@ -12,6 +12,12 @@
 // would have to be written "createdAt" in every raw query. snake_case avoids
 // that entirely.
 //
+// Multi-restaurant: tables, menus, and restaurant-scoped admins hang off
+// Restaurant. Global Role.ADMIN remains a platform operator; per-venue access
+// is RestaurantAdmin (join table), looked up in middleware rather than baked
+// into the JWT so membership changes take effect without waiting for token
+// expiry.
+//
 // pgvector (for the Phase 8 menu assistant) is added in its own later
 // migration so this baseline runs on any stock PostgreSQL 14+.
 
@@ -114,8 +120,9 @@ model User {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  reservations  Reservation[]
-  refreshTokens RefreshToken[]
+  reservations      Reservation[]
+  refreshTokens     RefreshToken[]
+  restaurantAdmins  RestaurantAdmin[]
 
   @@index([email])
   @@map("users")
@@ -141,10 +148,56 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
+/// A physical venue. Menus, floor plans, and restaurant admins are scoped
+/// here so two locations never share inventory or contend on booking locks.
+model Restaurant {
+  id      String  @id @default(uuid()) @db.Uuid
+  /// URL-safe public key used in API query/body params (not the UUID).
+  slug    String  @unique @db.VarChar(80)
+  name    String  @db.VarChar(120)
+  address String  @db.VarChar(255)
+  phone   String  @db.VarChar(20)
+  isActive Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tables    RestaurantTable[]
+  menuItems MenuItem[]
+  admins    RestaurantAdmin[]
+
+  @@index([isActive])
+  @@map("restaurants")
+}
+
+/// Per-venue staff. Global Role.ADMIN bypasses this table for platform ops;
+/// everyone else must have a row here for the restaurant they manage.
+/// Membership is checked via DB lookup in middleware (not JWT claims) so
+/// granting/revoking access takes effect on the next request.
+model RestaurantAdmin {
+  id           String @id @default(uuid()) @db.Uuid
+  userId       String @map("user_id") @db.Uuid
+  restaurantId String @map("restaurant_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, restaurantId])
+  @@index([userId])
+  @@index([restaurantId])
+  @@map("restaurant_admins")
+}
+
 model RestaurantTable {
-  id       String    @id @default(uuid()) @db.Uuid
-  /// Human-facing label: "T1", "P2", "BAR-3".
-  label    String    @unique @db.VarChar(16)
+  id           String @id @default(uuid()) @db.Uuid
+  restaurantId String @map("restaurant_id") @db.Uuid
+
+  /// Human-facing label: "T1", "P2", "BAR-3". Unique per restaurant so two
+  /// venues can both have a "T1" without colliding.
+  label    String    @db.VarChar(16)
   capacity Int
   zone     TableZone @default(INDOOR)
   isActive Boolean   @default(true) @map("is_active")
@@ -152,9 +205,12 @@ model RestaurantTable {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  restaurant   Restaurant    @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   reservations Reservation[]
 
-  @@index([capacity, isActive])
+  @@unique([restaurantId, label])
+  @@index([restaurantId])
+  @@index([restaurantId, capacity, isActive])
   @@map("restaurant_tables")
 }
 
@@ -229,8 +285,11 @@ model Reservation {
 }
 
 model MenuItem {
-  id          String @id @default(uuid()) @db.Uuid
-  slug        String @unique @db.VarChar(80)
+  id           String @id @default(uuid()) @db.Uuid
+  restaurantId String @map("restaurant_id") @db.Uuid
+
+  /// Unique per restaurant — two venues may both serve "molten-lava".
+  slug        String @db.VarChar(80)
   name        String @db.VarChar(120)
   description String @db.VarChar(600)
 
@@ -251,6 +310,10 @@ model MenuItem {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@index([category, isAvailable])
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@unique([restaurantId, slug])
+  @@index([restaurantId])
+  @@index([restaurantId, category, isAvailable])
   @@map("menu_items")
 }

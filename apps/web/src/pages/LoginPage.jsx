@@ -39,9 +39,10 @@ export function LoginPage() {
     setFieldErrors({});
 
     try {
-      const user = await login(form);
+      const { user, managedRestaurants } = await login(form);
       toast.success(`Welcome back, ${user.username.split(' ')[0]}.`);
-      navigate(user.role === 'ADMIN' ? '/admin' : destination, { replace: true });
+      const goAdmin = user.role === 'ADMIN' || managedRestaurants.length > 0;
+      navigate(goAdmin ? '/admin' : destination, { replace: true });
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.details && typeof err.details === 'object') setFieldErrors(err.details);

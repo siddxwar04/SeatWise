@@ -13,12 +13,7 @@ import {
 export const authRouter = Router();
 
 // --- public -----------------------------------------------------------------
-authRouter.post(
-  '/register',
-  authLimiter,
-  validate({ body: registerSchema }),
-  controller.register,
-);
+authRouter.post('/register', authLimiter, validate({ body: registerSchema }), controller.register);
 
 authRouter.post('/login', authLimiter, validate({ body: loginSchema }), controller.login);
 

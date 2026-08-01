@@ -24,7 +24,7 @@ import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const SOURCE_DIR = path.resolve(here, '../../../Images');
+const SOURCE_DIR = path.resolve(here, '../../../legacy/Images');
 const OUTPUT_DIR = path.resolve(here, '../public/images');
 
 /**
@@ -73,7 +73,9 @@ async function main() {
     const info = await stat(full);
     if (!info.isFile()) continue;
 
-    const digest = createHash('md5').update(await readFile(full)).digest('hex');
+    const digest = createHash('md5')
+      .update(await readFile(full))
+      .digest('hex');
     const seen = hashes.get(digest);
     if (seen) {
       console.log(`  duplicate: ${file} is byte-identical to ${seen}`);
@@ -139,4 +141,3 @@ main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
-

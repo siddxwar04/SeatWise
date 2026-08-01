@@ -2,6 +2,7 @@ import { NotFoundError } from '../../errors/AppError.js';
 import { prisma } from '../../lib/prisma.js';
 import { normaliseReference } from '../../lib/reference.js';
 import { utcToLocalParts } from '../../lib/slots.js';
+import { isRestaurantAdmin } from '../restaurants/restaurant.service.js';
 
 /**
  * Shapes a reservation row for the client.
@@ -25,6 +26,7 @@ export function toPublicReservation(reservation) {
     status: reservation.status,
     channel: reservation.channel,
     specialRequests: reservation.specialRequests,
+    restaurantId: reservation.table?.restaurantId ?? null,
     table: reservation.table
       ? { label: reservation.table.label, zone: reservation.table.zone }
       : null,
@@ -34,16 +36,23 @@ export function toPublicReservation(reservation) {
 }
 
 const PUBLIC_INCLUDE = {
-  table: { select: { label: true, zone: true, capacity: true } },
+  table: { select: { label: true, zone: true, capacity: true, restaurantId: true } },
 };
 
 /**
  * "My Reservations" — the page the audit noted was entirely missing. A guest
  * who booked previously had no record of it anywhere.
+ *
+ * Optional restaurantId filters to one venue; without it the guest sees every
+ * booking they own across locations (that is intentional — "my bookings" is
+ * user-scoped, not venue-scoped).
  */
 export async function listForUser(userId, options) {
   const where = { userId };
 
+  if (options.restaurantId) {
+    where.table = { restaurantId: options.restaurantId };
+  }
   if (options.status) {
     where.status = options.status;
   }
@@ -81,7 +90,11 @@ export async function getById(reservationId, actor) {
   });
 
   const isOwner = reservation?.userId && reservation.userId === actor?.id;
-  const isAdmin = actor?.role === 'ADMIN';
+  let isAdmin = actor?.role === 'ADMIN';
+
+  if (!isAdmin && actor?.id && reservation?.table?.restaurantId) {
+    isAdmin = await isRestaurantAdmin(actor.id, reservation.table.restaurantId, actor.role);
+  }
 
   // A booking that exists but belongs to someone else returns exactly the
   // same 404 as one that does not exist. Distinguishing them would let an

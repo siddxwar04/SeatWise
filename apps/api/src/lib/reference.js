@@ -30,7 +30,9 @@ export function generateBookingReference() {
 
 /** Normalises user input — lowercase, missing prefix, stray spaces or dashes. */
 export function normaliseReference(input) {
-  const cleaned = String(input).toUpperCase().replace(/[^0-9A-Z]/g, '');
+  const cleaned = String(input)
+    .toUpperCase()
+    .replace(/[^0-9A-Z]/g, '');
   const body = cleaned.startsWith('TF') ? cleaned.slice(2) : cleaned;
   return `TF-${body}`;
 }

@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { asyncHandler } from '../../lib/asyncHandler.js';
-import { optionalAuth, requireAuth, requireRole } from '../../middleware/requireAuth.js';
+import { optionalAuth, requireAuth, requireRestaurantAdmin } from '../../middleware/requireAuth.js';
 import { validate } from '../../middleware/validate.js';
+import { isRestaurantAdmin, resolveRestaurant } from '../restaurants/restaurant.service.js';
 import * as menuService from './menu.service.js';
 import {
   availabilityBodySchema,
@@ -22,12 +23,18 @@ menuRouter.get(
   optionalAuth,
   validate({ query: listMenuQuerySchema }),
   asyncHandler(async (req, res) => {
+    const venue = await resolveRestaurant({ restaurantSlug: req.query.restaurant });
     const wantsUnavailable = Boolean(req.query.includeUnavailable);
-    const isAdmin = req.user?.role === 'ADMIN';
+    // Global ADMIN or a RestaurantAdmin for this venue may see 86'd dishes.
+    const canSeeUnavailable =
+      Boolean(req.user) && (await isRestaurantAdmin(req.user.id, venue.id, req.user.role));
+    const includeUnavailable = wantsUnavailable && canSeeUnavailable;
+
     res.json({
       items: await menuService.listMenu({
+        restaurantId: venue.id,
         category: req.query.category,
-        includeUnavailable: wantsUnavailable && isAdmin,
+        includeUnavailable,
       }),
     });
   }),
@@ -42,7 +49,9 @@ menuRouter.get(
   '/safe',
   validate({ query: safeMenuQuerySchema }),
   asyncHandler(async (req, res) => {
+    const venue = await resolveRestaurant({ restaurantSlug: req.query.restaurant });
     const items = await menuService.findSafeItems({
+      restaurantId: venue.id,
       category: req.query.category,
       excludeAllergens: req.query.excludeAllergens,
       requireTags: req.query.requireTags,
@@ -59,29 +68,35 @@ menuRouter.get(
 
 menuRouter.get(
   '/:slug',
-  validate({ params: slugParamSchema }),
+  validate({ params: slugParamSchema, query: listMenuQuerySchema.pick({ restaurant: true }) }),
   asyncHandler(async (req, res) => {
-    res.json({ item: await menuService.getBySlug(req.params.slug) });
+    const venue = await resolveRestaurant({ restaurantSlug: req.query.restaurant });
+    res.json({ item: await menuService.getBySlug(venue.id, req.params.slug) });
   }),
 );
 
 // --- admin ------------------------------------------------------------------
-
-const adminOnly = [requireAuth, requireRole('ADMIN')];
+// RestaurantAdmin (or global ADMIN) — never bare requireRole('ADMIN') alone,
+// so a venue owner with role USER can manage their own menu.
 
 menuRouter.post(
   '/',
-  ...adminOnly,
+  requireAuth,
   validate({ body: createMenuItemSchema }),
+  requireRestaurantAdmin(),
   asyncHandler(async (req, res) => {
-    res.status(201).json({ item: await menuService.createMenuItem(req.body) });
+    const { restaurantSlug: _slug, ...data } = req.body;
+    res.status(201).json({
+      item: await menuService.createMenuItem(req.restaurant.id, data),
+    });
   }),
 );
 
 menuRouter.patch(
   '/:id',
-  ...adminOnly,
+  requireAuth,
   validate({ params: menuIdParamSchema, body: updateMenuItemSchema }),
+  requireRestaurantAdmin({ resolveFromMenuItemId: true }),
   asyncHandler(async (req, res) => {
     res.json({ item: await menuService.updateMenuItem(req.params.id, req.body) });
   }),
@@ -89,8 +104,9 @@ menuRouter.patch(
 
 menuRouter.patch(
   '/:id/availability',
-  ...adminOnly,
+  requireAuth,
   validate({ params: menuIdParamSchema, body: availabilityBodySchema }),
+  requireRestaurantAdmin({ resolveFromMenuItemId: true }),
   asyncHandler(async (req, res) => {
     res.json({ item: await menuService.setAvailability(req.params.id, req.body.isAvailable) });
   }),
@@ -98,8 +114,9 @@ menuRouter.patch(
 
 menuRouter.delete(
   '/:id',
-  ...adminOnly,
+  requireAuth,
   validate({ params: menuIdParamSchema }),
+  requireRestaurantAdmin({ resolveFromMenuItemId: true }),
   asyncHandler(async (req, res) => {
     await menuService.deleteMenuItem(req.params.id);
     res.status(204).send();

@@ -24,6 +24,14 @@ const DIETARY_TAGS = [
 
 const CATEGORIES = ['BREAKFAST', 'LUNCH', 'DESSERT'];
 
+const restaurantSlug = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .min(2)
+  .max(80)
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Restaurant slug must be lowercase hyphenated words');
+
 /** Accepts "GLUTEN,TREE_NUT" from a query string as well as a real array. */
 const csvEnum = (values) =>
   z
@@ -36,6 +44,7 @@ const csvEnum = (values) =>
     });
 
 export const listMenuQuerySchema = z.object({
+  restaurant: restaurantSlug,
   category: z.enum(CATEGORIES).optional(),
   /** Admin-only flag — public callers never see 86'd dishes. */
   includeUnavailable: z
@@ -45,6 +54,7 @@ export const listMenuQuerySchema = z.object({
 });
 
 export const safeMenuQuerySchema = z.object({
+  restaurant: restaurantSlug,
   category: z.enum(CATEGORIES).optional(),
   excludeAllergens: csvEnum(ALLERGENS),
   requireTags: csvEnum(DIETARY_TAGS),
@@ -59,6 +69,7 @@ export const menuIdParamSchema = z.object({
 });
 
 export const createMenuItemSchema = z.object({
+  restaurantSlug: restaurantSlug,
   slug: z
     .string()
     .trim()
@@ -78,7 +89,7 @@ export const createMenuItemSchema = z.object({
   sortOrder: z.coerce.number().int().min(0).default(0),
 });
 
-export const updateMenuItemSchema = createMenuItemSchema.partial();
+export const updateMenuItemSchema = createMenuItemSchema.omit({ restaurantSlug: true }).partial();
 
 export const availabilityBodySchema = z.object({
   isAvailable: z.boolean(),

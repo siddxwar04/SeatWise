@@ -7,6 +7,10 @@ import { toPublicReservation } from '../reservations/reservation.service.js';
 /**
  * The admin surface the audit found entirely missing: "Bookings go into the DB
  * and are unreadable except via phpMyAdmin."
+ *
+ * Every list/stats query requires restaurantId so a restaurant admin never
+ * sees another venue's book, and a global ADMIN must still pick a venue
+ * (or pass restaurantId) rather than accidentally aggregating the whole fleet.
  */
 
 /**
@@ -25,8 +29,17 @@ const ALLOWED_TRANSITIONS = {
   NO_SHOW: [],
 };
 
+function requireRestaurantScope(restaurantId) {
+  if (!restaurantId) {
+    throw new BadRequestError('restaurantId is required for admin queries.');
+  }
+  return { table: { restaurantId } };
+}
+
 export async function listReservations(filters) {
-  const where = {};
+  const where = {
+    ...requireRestaurantScope(filters.restaurantId),
+  };
 
   if (filters.status) where.status = filters.status;
   if (filters.date) where.serviceDate = serviceDateFor(filters.date);
@@ -44,7 +57,7 @@ export async function listReservations(filters) {
     prisma.reservation.findMany({
       where,
       include: {
-        table: { select: { label: true, zone: true, capacity: true } },
+        table: { select: { label: true, zone: true, capacity: true, restaurantId: true } },
         user: { select: { id: true, email: true, priorNoShows: true, priorBookings: true } },
       },
       orderBy: { startsAt: filters.sort === 'oldest' ? 'asc' : 'desc' },
@@ -85,11 +98,27 @@ export async function listReservations(filters) {
  * is cheaper than holding a row lock across the request. This is the deliberate
  * counterpart to the pessimistic locking in the booking engine, and the
  * difference between them is exactly the contention level.
+ *
+ * restaurantId (when provided) ensures a restaurant admin cannot mutate a
+ * booking that belongs to another venue even if they guess the UUID.
  */
-export async function updateStatus(reservationId, nextStatus, expectedVersion, adminId) {
+export async function updateStatus(
+  reservationId,
+  nextStatus,
+  expectedVersion,
+  adminId,
+  restaurantId,
+) {
   return prisma.$transaction(async (tx) => {
-    const current = await tx.reservation.findUnique({ where: { id: reservationId } });
+    const current = await tx.reservation.findUnique({
+      where: { id: reservationId },
+      include: { table: { select: { restaurantId: true } } },
+    });
     if (!current) throw new NotFoundError('Reservation not found.');
+
+    if (restaurantId && current.table?.restaurantId !== restaurantId) {
+      throw new NotFoundError('Reservation not found.');
+    }
 
     if (current.status === nextStatus) return current;
 
@@ -140,21 +169,24 @@ export async function updateStatus(reservationId, nextStatus, expectedVersion, a
 /**
  * Today's service view — what the front-of-house actually needs on a screen.
  */
-export async function getTodayService() {
+export async function getTodayService(restaurantId) {
+  const scope = requireRestaurantScope(restaurantId);
   const today = todayLocal();
 
   const reservations = await prisma.reservation.findMany({
     where: {
+      ...scope,
       serviceDate: serviceDateFor(today),
       status: { in: ['PENDING', 'CONFIRMED', 'SEATED'] },
     },
-    include: { table: { select: { label: true, zone: true } } },
+    include: { table: { select: { label: true, zone: true, restaurantId: true } } },
     orderBy: { startsAt: 'asc' },
   });
 
   const covers = reservations.reduce((sum, r) => sum + r.partySize, 0);
 
   return {
+    restaurantId,
     date: today,
     bookings: reservations.length,
     covers,
@@ -174,7 +206,8 @@ export async function getTodayService() {
  * database is far better at aggregation, and this stays O(1) round trips as
  * the booking table grows.
  */
-export async function getDashboardStats(days = 30) {
+export async function getDashboardStats(restaurantId, days = 30) {
+  const scope = requireRestaurantScope(restaurantId);
   const since = new Date(Date.now() - days * 86_400_000);
   const todayDate = serviceDateFor(todayLocal());
 
@@ -182,28 +215,36 @@ export async function getDashboardStats(days = 30) {
     await Promise.all([
       prisma.reservation.groupBy({
         by: ['status'],
-        where: { createdAt: { gte: since } },
+        where: { ...scope, createdAt: { gte: since } },
         _count: { _all: true },
       }),
       prisma.reservation.aggregate({
-        where: { createdAt: { gte: since } },
+        where: { ...scope, createdAt: { gte: since } },
         _count: { _all: true },
         _avg: { partySize: true, noShowRisk: true },
         _sum: { partySize: true },
       }),
       prisma.reservation.count({
-        where: { serviceDate: todayDate, status: { in: ['PENDING', 'CONFIRMED', 'SEATED'] } },
+        where: {
+          ...scope,
+          serviceDate: todayDate,
+          status: { in: ['PENDING', 'CONFIRMED', 'SEATED'] },
+        },
       }),
       prisma.reservation.count({
-        where: { startsAt: { gte: new Date() }, status: { in: ['PENDING', 'CONFIRMED'] } },
+        where: {
+          ...scope,
+          startsAt: { gte: new Date() },
+          status: { in: ['PENDING', 'CONFIRMED'] },
+        },
       }),
       prisma.reservation.findMany({
-        where: { createdAt: { gte: since } },
+        where: { ...scope, createdAt: { gte: since } },
         select: { startsAt: true, partySize: true, status: true },
       }),
       prisma.reservation.groupBy({
         by: ['tableId'],
-        where: { createdAt: { gte: since }, tableId: { not: null } },
+        where: { ...scope, createdAt: { gte: since }, tableId: { not: null } },
         _count: { _all: true },
         orderBy: { _count: { tableId: 'desc' } },
         take: 5,
@@ -227,6 +268,7 @@ export async function getDashboardStats(days = 30) {
   }
 
   return {
+    restaurantId,
     periodDays: days,
     totals: {
       bookings: totals._count._all,
@@ -254,6 +296,10 @@ export async function getDashboardStats(days = 30) {
   };
 }
 
-export async function listTables() {
-  return prisma.restaurantTable.findMany({ orderBy: [{ capacity: 'asc' }, { label: 'asc' }] });
+export async function listTables(restaurantId) {
+  requireRestaurantScope(restaurantId);
+  return prisma.restaurantTable.findMany({
+    where: { restaurantId },
+    orderBy: [{ capacity: 'asc' }, { label: 'asc' }],
+  });
 }

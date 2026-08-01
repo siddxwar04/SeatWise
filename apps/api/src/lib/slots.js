@@ -108,7 +108,10 @@ export function validateBookingTime(dateStr, timeStr, now = new Date()) {
   if (!slots.includes(timeStr)) {
     return `We seat guests every ${env.SLOT_MINUTES} minutes between ${String(
       env.RESTAURANT_OPEN_HOUR,
-    ).padStart(2, '0')}:00 and ${String(env.RESTAURANT_CLOSE_HOUR).padStart(2, '0')}:00. Please pick one of the listed times.`;
+    ).padStart(
+      2,
+      '0',
+    )}:00 and ${String(env.RESTAURANT_CLOSE_HOUR).padStart(2, '0')}:00. Please pick one of the listed times.`;
   }
 
   const { startsAt } = bookingInterval(dateStr, timeStr);

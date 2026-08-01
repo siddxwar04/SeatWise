@@ -5,11 +5,14 @@ import { useAuth } from '../context/AuthContext.jsx';
  * Route guard.
  *
  * This is a convenience, not a security boundary — anyone can edit client
- * state. Every protected endpoint enforces requireAuth/requireRole on the
- * server independently, which is where authorisation actually happens.
+ * state. Every protected endpoint enforces requireAuth/requireRestaurantAdmin
+ * on the server independently, which is where authorisation actually happens.
+ *
+ * adminOnly allows global ADMIN and venue managers (RestaurantAdmin rows
+ * loaded via GET /restaurants/mine after auth — never from the JWT).
  */
 export function ProtectedRoute({ children, adminOnly = false }) {
-  const { isAuthenticated, isAdmin, loading } = useAuth();
+  const { isAuthenticated, canAccessAdmin, loading } = useAuth();
   const location = useLocation();
 
   // Wait for the session restore, or a signed-in user hitting refresh on
@@ -22,7 +25,7 @@ export function ProtectedRoute({ children, adminOnly = false }) {
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
-  if (adminOnly && !isAdmin) {
+  if (adminOnly && !canAccessAdmin) {
     return <Navigate to="/" replace />;
   }
 

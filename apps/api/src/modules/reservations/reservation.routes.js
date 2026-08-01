@@ -61,12 +61,7 @@ reservationRouter.get(
   controller.listMine,
 );
 
-reservationRouter.get(
-  '/:id',
-  requireAuth,
-  validate({ params: idParamSchema }),
-  controller.getOne,
-);
+reservationRouter.get('/:id', requireAuth, validate({ params: idParamSchema }), controller.getOne);
 
 reservationRouter.post(
   '/:id/cancel',

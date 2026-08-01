@@ -66,7 +66,9 @@ export async function invalidatePrefix(prefix) {
 }
 
 export const CACHE_KEYS = {
-  menuAll: 'menu:all',
-  menuByCategory: (category) => `menu:cat:${category}`,
-  menuPrefix: 'menu:',
+  // Restaurant id is part of every key so invalidating one venue cannot
+  // leave another venue serving a stale shared blob.
+  menuAll: (restaurantId) => `menu:${restaurantId}:all`,
+  menuByCategory: (restaurantId, category) => `menu:${restaurantId}:cat:${category}`,
+  menuPrefix: (restaurantId) => `menu:${restaurantId}:`,
 };

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AdminMenuPanel } from '../components/AdminMenuPanel.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
-import { adminApi, ApiError } from '../lib/api.js';
+import { adminApi, ApiError, DEFAULT_RESTAURANT_SLUG } from '../lib/api.js';
 
 /**
  * Admin dashboard — audit finding #5: "staff cannot see, confirm, modify, or
@@ -10,6 +11,10 @@ import { adminApi, ApiError } from '../lib/api.js';
  * Charts are drawn with plain CSS bars rather than a charting library. Twelve
  * data points do not justify shipping Chart.js to every admin page load, and
  * the visual language matches the rest of the site for free.
+ *
+ * Restaurant scope comes from AuthContext.managedRestaurants (GET /restaurants/mine).
+ * Global ADMIN sees every venue; venue managers see only theirs. Switching the
+ * select reloads stats, today's service, reservations, and the menu panel.
  */
 
 const NEXT_ACTIONS = {
@@ -35,7 +40,15 @@ function riskLabel(risk) {
   return { text: `${Math.round(risk * 100)}% risk`, level: 'low' };
 }
 
+function pickInitialSlug(venues) {
+  if (!venues.length) return DEFAULT_RESTAURANT_SLUG;
+  const preferred = venues.find((v) => v.slug === DEFAULT_RESTAURANT_SLUG);
+  return preferred?.slug ?? venues[0].slug;
+}
+
 export function AdminDashboardPage() {
+  const { managedRestaurants } = useAuth();
+  const [restaurantSlug, setRestaurantSlug] = useState(() => pickInitialSlug(managedRestaurants));
   const [stats, setStats] = useState(null);
   const [today, setToday] = useState(null);
   const [reservations, setReservations] = useState([]);
@@ -45,16 +58,29 @@ export function AdminDashboardPage() {
   const [busyId, setBusyId] = useState(null);
   const toast = useToast();
 
+  // When managed restaurants load (or change after login), keep the selection valid.
+  useEffect(() => {
+    if (!managedRestaurants.length) return;
+    setRestaurantSlug((current) => {
+      if (managedRestaurants.some((v) => v.slug === current)) return current;
+      return pickInitialSlug(managedRestaurants);
+    });
+  }, [managedRestaurants]);
+
+  const activeVenue = managedRestaurants.find((v) => v.slug === restaurantSlug);
+  const showSwitcher = managedRestaurants.length > 1;
+
   const loadAll = useCallback(async () => {
+    if (!restaurantSlug) return;
     setLoading(true);
     try {
-      const params = { pageSize: 25 };
+      const params = { restaurant: restaurantSlug, pageSize: 25 };
       if (statusFilter) params.status = statusFilter;
       if (search.trim()) params.search = search.trim();
 
       const [statsData, todayData, listData] = await Promise.all([
-        adminApi.stats(30),
-        adminApi.today(),
+        adminApi.stats(restaurantSlug, 30),
+        adminApi.today(restaurantSlug),
         adminApi.reservations(params),
       ]);
 
@@ -66,12 +92,12 @@ export function AdminDashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, search, toast]);
+  }, [restaurantSlug, statusFilter, search, toast]);
 
   useEffect(() => {
     loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter]);
+  }, [statusFilter, restaurantSlug]);
 
   const changeStatus = async (reservation, nextStatus) => {
     setBusyId(reservation.id);
@@ -79,7 +105,7 @@ export function AdminDashboardPage() {
       // The version travels with the request. If another manager changed this
       // booking since it was rendered, the server rejects it rather than
       // silently overwriting their decision.
-      await adminApi.updateStatus(reservation.id, nextStatus, reservation.version);
+      await adminApi.updateStatus(reservation.id, nextStatus, reservation.version, restaurantSlug);
       toast.success(`${reservation.reference} → ${nextStatus.toLowerCase()}`);
       await loadAll();
     } catch (err) {
@@ -96,8 +122,34 @@ export function AdminDashboardPage() {
       <header className="page_header">
         <span className="tag">Staff</span>
         <h1>Dashboard</h1>
-        <p>Service overview and booking management for the last 30 days.</p>
+        <p>
+          {activeVenue
+            ? `Service overview and booking management for ${activeVenue.name}.`
+            : 'Service overview and booking management for the last 30 days.'}
+        </p>
       </header>
+
+      {showSwitcher && (
+        <div className="restaurant_switcher">
+          <label htmlFor="admin-restaurant">Restaurant</label>
+          <select
+            id="admin-restaurant"
+            value={restaurantSlug}
+            onChange={(e) => {
+              setStats(null);
+              setRestaurantSlug(e.target.value);
+            }}
+          >
+            {managedRestaurants.map((venue) => (
+              <option key={venue.id} value={venue.slug}>
+                {venue.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {!showSwitcher && activeVenue && <p className="restaurant_badge">{activeVenue.name}</p>}
 
       {loading && !stats && <p className="menu_state">Loading dashboard…</p>}
 
@@ -274,7 +326,7 @@ export function AdminDashboardPage() {
         </div>
       </section>
 
-      <AdminMenuPanel />
+      <AdminMenuPanel restaurantSlug={restaurantSlug} />
     </main>
   );
 }

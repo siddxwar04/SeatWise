@@ -13,6 +13,7 @@ import { adminRouter } from './modules/admin/admin.routes.js';
 import { authRouter } from './modules/auth/auth.routes.js';
 import { menuRouter } from './modules/menu/menu.routes.js';
 import { reservationRouter } from './modules/reservations/reservation.routes.js';
+import { restaurantRouter } from './modules/restaurants/restaurant.routes.js';
 import { healthRouter } from './routes/health.js';
 
 export function createApp() {
@@ -73,6 +74,7 @@ export function createApp() {
   });
 
   app.use('/api/auth', authRouter);
+  app.use('/api/restaurants', restaurantRouter);
   app.use('/api/menu', menuRouter);
   app.use('/api/reservations', reservationRouter);
   app.use('/api/admin', adminRouter);

@@ -20,11 +20,15 @@ export function Hero() {
         <div className="hero_btns">
           <a href="#menu" className="btn btn-primary">
             Order Now{' '}
-            <i className="fa-solid fa-arrow-right" style={{ marginLeft: '8px' }} aria-hidden="true" />
+            <i
+              className="fa-solid fa-arrow-right"
+              style={{ marginLeft: '8px' }}
+              aria-hidden="true"
+            />
           </a>
           <a href="#reserve" className="btn btn-login">
-            <i className="fa-solid fa-chair" style={{ marginRight: '8px' }} aria-hidden="true" /> Book
-            Table
+            <i className="fa-solid fa-chair" style={{ marginRight: '8px' }} aria-hidden="true" />{' '}
+            Book Table
           </a>
         </div>
       </div>

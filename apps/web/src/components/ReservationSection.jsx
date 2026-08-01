@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
-import { ApiError, reservationApi } from '../lib/api.js';
+import { ApiError, DEFAULT_RESTAURANT_SLUG, reservationApi } from '../lib/api.js';
 
 /**
  * The booking form.
@@ -87,7 +87,7 @@ export function ReservationSection() {
     setLoadingSlots(true);
 
     reservationApi
-      .availability(form.date, form.partySize)
+      .availability(DEFAULT_RESTAURANT_SLUG, form.date, form.partySize)
       .then((data) => {
         if (cancelled) return;
         setSlots(data.slots);
@@ -133,6 +133,7 @@ export function ReservationSection() {
 
     try {
       const payload = {
+        restaurantSlug: DEFAULT_RESTAURANT_SLUG,
         guestName: form.guestName,
         guestPhone: form.guestPhone,
         partySize: form.partySize,
@@ -160,7 +161,7 @@ export function ReservationSection() {
         // the grid so they can see what is left.
         if (err.status === 409 && form.date) {
           reservationApi
-            .availability(form.date, form.partySize)
+            .availability(DEFAULT_RESTAURANT_SLUG, form.date, form.partySize)
             .then((data) => setSlots(data.slots))
             .catch(() => {});
         }
@@ -214,11 +215,7 @@ export function ReservationSection() {
               <p className="booking_hint">
                 Keep your reference — you can look the booking up with it and your phone number.
               </p>
-              <button
-                type="button"
-                className="btn btn-login"
-                onClick={() => setConfirmation(null)}
-              >
+              <button type="button" className="btn btn-login" onClick={() => setConfirmation(null)}>
                 Book another table
               </button>
             </div>

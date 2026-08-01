@@ -1,10 +1,25 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { authApi, bootstrapSession, setAccessToken } from '../lib/api.js';
+import { authApi, bootstrapSession, restaurantApi, setAccessToken } from '../lib/api.js';
 
 const AuthContext = createContext(null);
 
+/**
+ * Loads venues the user can staff-manage. Kept out of the JWT on purpose —
+ * membership changes take effect on the next call without waiting for token
+ * expiry. Failures yield an empty list so a flaky network never blocks login.
+ */
+async function fetchManagedRestaurants() {
+  try {
+    const data = await restaurantApi.mine();
+    return data.restaurants ?? [];
+  } catch {
+    return [];
+  }
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [managedRestaurants, setManagedRestaurants] = useState([]);
   // Starts true so the navbar does not flash "Log In" for a signed-in user
   // during the one-request session restore.
   const [loading, setLoading] = useState(true);
@@ -13,8 +28,11 @@ export function AuthProvider({ children }) {
     let cancelled = false;
 
     bootstrapSession()
-      .then((session) => {
-        if (!cancelled && session?.user) setUser(session.user);
+      .then(async (session) => {
+        if (cancelled || !session?.user) return;
+        setUser(session.user);
+        const venues = await fetchManagedRestaurants();
+        if (!cancelled) setManagedRestaurants(venues);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -29,13 +47,16 @@ export function AuthProvider({ children }) {
     const session = await authApi.login(credentials);
     setAccessToken(session.accessToken);
     setUser(session.user);
-    return session.user;
+    const venues = await fetchManagedRestaurants();
+    setManagedRestaurants(venues);
+    return { user: session.user, managedRestaurants: venues };
   }, []);
 
   const register = useCallback(async (data) => {
     const session = await authApi.register(data);
     setAccessToken(session.accessToken);
     setUser(session.user);
+    setManagedRestaurants([]);
     return session.user;
   }, []);
 
@@ -47,6 +68,7 @@ export function AuthProvider({ children }) {
       // and the UI must reflect that regardless of the network.
       setAccessToken(null);
       setUser(null);
+      setManagedRestaurants([]);
     }
   }, []);
 
@@ -58,10 +80,13 @@ export function AuthProvider({ children }) {
       register,
       logout,
       setUser,
+      managedRestaurants,
       isAuthenticated: user !== null,
       isAdmin: user?.role === 'ADMIN',
+      /** Global ADMIN or at least one RestaurantAdmin membership. */
+      canAccessAdmin: user?.role === 'ADMIN' || managedRestaurants.length > 0,
     }),
-    [user, loading, login, register, logout],
+    [user, loading, login, register, logout, managedRestaurants],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

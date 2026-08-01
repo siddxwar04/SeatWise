@@ -9,13 +9,15 @@
     "start": "node src/index.js",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:concurrency": "dotenv -e ../../.env.test -- vitest run --config vitest.concurrency.config.js",
     "db:generate": "prisma generate",
     "db:validate": "dotenv -e ../../.env -- prisma validate",
     "db:migrate": "dotenv -e ../../.env -- prisma migrate dev",
     "db:deploy": "dotenv -e ../../.env -- prisma migrate deploy",
     "db:seed": "dotenv -e ../../.env -- node prisma/seed.js",
     "db:studio": "dotenv -e ../../.env -- prisma studio",
-    "db:reset": "dotenv -e ../../.env -- prisma migrate reset --force"
+    "db:reset": "dotenv -e ../../.env -- prisma migrate reset --force",
+    "db:test:migrate": "dotenv -e ../../.env.test -- prisma migrate deploy"
   },
   "prisma": {
     "seed": "dotenv -e ../../.env -- node prisma/seed.js"
