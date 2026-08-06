@@ -5,15 +5,16 @@
    where the browser's preload scanner can see it immediately. */
 
 :root {
-  --primary: #ff914d;
-  --primary-dark: #e67e3c;
-  --bg-warm: linear-gradient(135deg, #fffaf5 0%, #fff0e3 100%);
-  --bg-dark: #2d3436;
-  --text-dark: #2d3436;
-  --text-light: #636e72;
+  /* Superseded by tokens.css — kept as fallback if tokens fail to load */
+  --primary: #e85d04;
+  --primary-dark: #c44a00;
+  --bg-warm: linear-gradient(160deg, #faf7f2 0%, #f3ebe3 48%, #efe6dc 100%);
+  --bg-dark: #1c1917;
+  --text-dark: #1c1917;
+  --text-light: #78716c;
   --white: #ffffff;
-  --shadow: 0 15px 35px rgba(0, 0, 0, 0.08);
-  --radius: 24px;
+  --shadow: 0 8px 24px rgba(28, 25, 23, 0.07);
+  --radius: 16px;
 }
 
 * {
@@ -30,7 +31,7 @@ html {
 }
 
 body {
-  font-family: 'Poppins', sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   background: var(--bg-warm);
   color: var(--text-dark);
   overflow-x: hidden;

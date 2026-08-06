@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { Hero } from '../components/Hero.jsx';
 import { MenuSection } from '../components/MenuSection.jsx';
 import { ReservationSection } from '../components/ReservationSection.jsx';
+import { Reveal } from '../components/Reveal.jsx';
 import { Spotlight } from '../components/Spotlight.jsx';
 
 export function HomePage() {
@@ -34,10 +35,18 @@ export function HomePage() {
 
   return (
     <>
-      <Hero />
-      <Spotlight />
-      <MenuSection />
-      <ReservationSection />
+      <Reveal>
+        <Hero />
+      </Reveal>
+      <Reveal delay={0.05}>
+        <Spotlight />
+      </Reveal>
+      <Reveal delay={0.08}>
+        <MenuSection />
+      </Reveal>
+      <Reveal delay={0.1}>
+        <ReservationSection />
+      </Reveal>
     </>
   );
 }

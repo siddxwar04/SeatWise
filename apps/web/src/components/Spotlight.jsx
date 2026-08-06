@@ -22,9 +22,7 @@ export function Spotlight() {
           />
         </div>
         <div className="spotlight_content">
-          <span className="tag" style={{ background: '#4a4a4a', color: '#ff914d' }}>
-            Chef&apos;s Masterpiece
-          </span>
+          <span className="tag">Chef&apos;s Masterpiece</span>
           <h2>The &quot;Morning Glory&quot;</h2>
           <p>
             Our award-winning brunch burger. A succulent wagyu beef patty topped with smoked turkey

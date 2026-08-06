@@ -1,9 +1,8 @@
 /**
  * Visual polish layer — overrides and enhancements only.
  * Loaded after style.css + app.css. No business logic.
+ * Tokens are imported separately in App.jsx.
  */
-
-@import './tokens.css';
 
 /* --- Base typography ----------------------------------------------------- */
 
@@ -294,6 +293,11 @@ nav.is-scrolled .logo_icon_circle {
 
 /* --- Spotlight ----------------------------------------------------------- */
 
+.spotlight_section .tag {
+  background: rgba(249, 115, 22, 0.18) !important;
+  color: #fdba74 !important;
+}
+
 .spotlight_section {
   background: linear-gradient(145deg, #1c1917 0%, #292524 55%, #1c1917 100%);
   border-radius: var(--radius-lg);
@@ -441,6 +445,14 @@ nav.is-scrolled .logo_icon_circle {
 }
 .skeleton_line.w40 {
   width: 40%;
+}
+
+.skeleton_booking {
+  padding: 1.25rem 1.5rem;
+  min-height: 6.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 @keyframes skeleton_shimmer {
@@ -644,6 +656,14 @@ footer {
 
 .toast_stack {
   bottom: 96px;
+}
+
+.btn_icon_start {
+  margin-right: 0.5rem;
+}
+
+.btn_icon_end {
+  margin-left: 0.5rem;
 }
 
 /* --- Reveal motion fallback (JS enhances) -------------------------------- */

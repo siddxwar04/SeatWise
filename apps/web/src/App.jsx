@@ -11,8 +11,10 @@ import { LoginPage } from './pages/LoginPage.jsx';
 import { MyReservationsPage } from './pages/MyReservationsPage.jsx';
 import { NotFoundPage } from './pages/NotFoundPage.jsx';
 import { RegisterPage } from './pages/RegisterPage.jsx';
+import './styles/tokens.css';
 import './styles/style.css';
 import './styles/app.css';
+import './styles/polish.css';
 
 export function App() {
   return (

@@ -67,9 +67,7 @@ export function MenuSection() {
 
   return (
     <section className="container menu_section" id="menu">
-      <span className="tag" style={{ background: '#fff0db', color: '#ff914d' }}>
-        Full Menu
-      </span>
+      <span className="tag">Full Menu</span>
       <h2>Curated for You</h2>
       <p>Authentic flavors from around the world, all in one place.</p>
 
@@ -90,7 +88,13 @@ export function MenuSection() {
         ))}
       </div>
 
-      {status === 'loading' && <p className="menu_state">Loading the menu…</p>}
+      {status === 'loading' && (
+        <div className="skeleton_grid" aria-busy="true" aria-label="Loading the menu">
+          {Array.from({ length: 6 }, (_, i) => (
+            <div className="skeleton_card" key={i} />
+          ))}
+        </div>
+      )}
       {status === 'error' && (
         <p className="menu_state menu_state_error">
           We could not load the menu just now. Please refresh the page.

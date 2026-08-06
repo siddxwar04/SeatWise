@@ -99,7 +99,17 @@ export function MyReservationsPage() {
         </button>
       </div>
 
-      {status === 'loading' && <p className="menu_state">Loading your reservations…</p>}
+      {status === 'loading' && (
+        <div className="reservation_list" aria-busy="true" aria-label="Loading reservations">
+          {Array.from({ length: 3 }, (_, i) => (
+            <div className="reservation_card skeleton_booking" key={i}>
+              <div className="skeleton_line w40" />
+              <div className="skeleton_line w80" />
+              <div className="skeleton_line w60" />
+            </div>
+          ))}
+        </div>
+      )}
 
       {status === 'error' && (
         <p className="menu_state menu_state_error">

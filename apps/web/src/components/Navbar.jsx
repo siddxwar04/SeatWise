@@ -19,6 +19,7 @@ import { useToast } from '../context/ToastContext.jsx';
  */
 export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const { user, isAuthenticated, canAccessAdmin, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -29,6 +30,14 @@ export function Navbar() {
   useEffect(() => {
     setMenuOpen(false);
   }, [location.pathname, location.hash]);
+
+  // Shrink / glass intensify on scroll — presentational only.
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 12);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   // Escape closes it, and a click outside dismisses it — both are what people
   // reflexively try, and neither existed.
@@ -73,7 +82,7 @@ export function Navbar() {
     );
 
   return (
-    <nav ref={navRef}>
+    <nav ref={navRef} className={scrolled ? 'is-scrolled' : undefined}>
       <div className="container navigation">
         <Link to="/" className="logo_container">
           <div className="logo_icon_circle">
