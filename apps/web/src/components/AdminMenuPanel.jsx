@@ -53,14 +53,24 @@ export function AdminMenuPanel({ restaurantSlug }) {
   const [editingId, setEditingId] = useState(null);
   const [busy, setBusy] = useState(false);
 
+  const [loadError, setLoadError] = useState(null);
+
   const load = useCallback(async () => {
-    if (!restaurantSlug) return;
+    if (!restaurantSlug) {
+      setItems([]);
+      setLoadError(null);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
+    setLoadError(null);
     try {
       const data = await menuApi.listAll(restaurantSlug);
       setItems(data.items);
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Could not load menu.');
+      const message = err instanceof ApiError ? err.message : 'Could not load menu.';
+      setLoadError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -405,6 +415,13 @@ export function AdminMenuPanel({ restaurantSlug }) {
 
       {loading ? (
         <p className="menu_state">Loading menu…</p>
+      ) : loadError ? (
+        <p className="menu_state menu_state_error" role="alert">
+          {loadError}{' '}
+          <button type="button" className="btn btn-login btn-small" onClick={load}>
+            Retry
+          </button>
+        </p>
       ) : (
         <div className="table_scroll">
           <table className="admin_table">

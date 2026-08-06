@@ -13,7 +13,8 @@ import { DEFAULT_RESTAURANT_SLUG, menuApi } from '../lib/api.js';
  *        could not have worked: there was no data layer to filter against.
  *
  * The tab labels and the rendered card markup are unchanged, so the section
- * looks exactly as it did.
+ * looks exactly as it did. Overlay details open on hover (desktop), tap
+ * (touch), or keyboard focus — hover-only was unusable on phones.
  */
 
 const TABS = [
@@ -27,6 +28,7 @@ export function MenuSection() {
   const [items, setItems] = useState([]);
   const [activeTab, setActiveTab] = useState(null);
   const [status, setStatus] = useState('loading');
+  const [openCardId, setOpenCardId] = useState(null);
 
   // Fetch the full menu once and filter in memory. Twelve items do not justify
   // a network round trip per tab click, and it keeps switching instant.
@@ -53,6 +55,10 @@ export function MenuSection() {
     () => (activeTab ? items.filter((item) => item.category === activeTab) : items),
     [items, activeTab],
   );
+
+  const toggleCard = (id) => {
+    setOpenCardId((current) => (current === id ? null : id));
+  };
 
   return (
     <section className="container menu_section" id="menu">
@@ -91,36 +97,50 @@ export function MenuSection() {
       )}
 
       <div className="menu_grid">
-        {visible.map((item) => (
-          <article className="menu_card" key={item.id}>
-            {/* Below the fold, so lazy. Explicit dimensions reserve the box and
-                stop the grid reflowing as images arrive. */}
-            <img
-              src={item.imageUrl}
-              alt={item.imageAlt}
-              loading="lazy"
-              decoding="async"
-              width="400"
-              height="300"
-            />
-            <div className="card_info">
-              <h3>{item.name}</h3>
-              <span>{item.priceLabel}</span>
-            </div>
-            {/* .card_overlay was fully styled in style.css:442-460 and used by
-                no HTML at all — dead CSS for a feature nobody built. The
-                description column now gives it something real to show. */}
-            <div className="card_overlay">
-              <p>{item.description}</p>
-              {item.allergens.length > 0 && (
-                <p className="card_allergens">
-                  Contains:{' '}
-                  {item.allergens.map((a) => a.replace('_', ' ').toLowerCase()).join(', ')}
-                </p>
-              )}
-            </div>
-          </article>
-        ))}
+        {visible.map((item) => {
+          const isOpen = openCardId === item.id;
+          return (
+            <article
+              className={isOpen ? 'menu_card is-open' : 'menu_card'}
+              key={item.id}
+              tabIndex={0}
+              role="button"
+              aria-expanded={isOpen}
+              aria-label={`${item.name}, ${item.priceLabel}. ${isOpen ? 'Hide' : 'Show'} details`}
+              onClick={() => toggleCard(item.id)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  toggleCard(item.id);
+                }
+              }}
+            >
+              {/* Below the fold, so lazy. Explicit dimensions reserve the box and
+                  stop the grid reflowing as images arrive. */}
+              <img
+                src={item.imageUrl}
+                alt={item.imageAlt}
+                loading="lazy"
+                decoding="async"
+                width="400"
+                height="300"
+              />
+              <div className="card_info">
+                <h3>{item.name}</h3>
+                <span>{item.priceLabel}</span>
+              </div>
+              <div className="card_overlay" aria-hidden={!isOpen}>
+                <p>{item.description}</p>
+                {item.allergens.length > 0 && (
+                  <p className="card_allergens">
+                    Contains:{' '}
+                    {item.allergens.map((a) => a.replace('_', ' ').toLowerCase()).join(', ')}
+                  </p>
+                )}
+              </div>
+            </article>
+          );
+        })}
       </div>
     </section>
   );

@@ -21,9 +21,9 @@ import { ApiError, DEFAULT_RESTAURANT_SLUG, reservationApi } from '../lib/api.js
  */
 
 /** Today in the restaurant's timezone — the floor for the date picker. */
-function todayInputValue() {
+function todayInputValue(utcOffsetMinutes = 330) {
   const now = new Date();
-  const local = new Date(now.getTime() + (330 + now.getTimezoneOffset()) * 60_000);
+  const local = new Date(now.getTime() + (utcOffsetMinutes + now.getTimezoneOffset()) * 60_000);
   return local.toISOString().slice(0, 10);
 }
 
@@ -44,11 +44,13 @@ export function ReservationSection() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [slots, setSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const [slotsError, setSlotsError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [confirmation, setConfirmation] = useState(null);
   const [maxPartySize, setMaxPartySize] = useState(10);
+  const [utcOffsetMinutes, setUtcOffsetMinutes] = useState(330);
 
-  const minDate = todayInputValue();
+  const minDate = todayInputValue(utcOffsetMinutes);
 
   // Prefill for signed-in guests — they should not retype what we already know.
   useEffect(() => {
@@ -61,15 +63,20 @@ export function ReservationSection() {
     }
   }, [user]);
 
-  // Party-size options come from the server's rules, so the form can never
-  // offer a size the booking engine will reject.
+  // Party-size options and timezone come from the server's rules, so the form
+  // can never drift from what the booking engine will accept.
   useEffect(() => {
     reservationApi
       .rules()
-      .then((rules) => setMaxPartySize(rules.maxPartySize))
+      .then((rules) => {
+        if (typeof rules.maxPartySize === 'number') setMaxPartySize(rules.maxPartySize);
+        if (typeof rules.utcOffsetMinutes === 'number') setUtcOffsetMinutes(rules.utcOffsetMinutes);
+      })
       .catch(() => {
-        /* keep the default; the server validates regardless */
+        toast.error('Could not load booking rules. Using defaults — the server still validates.');
       });
+    // toast is stable enough; avoid re-fetch loops if context identity changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /**
@@ -80,17 +87,20 @@ export function ReservationSection() {
   useEffect(() => {
     if (!form.date) {
       setSlots([]);
+      setSlotsError(null);
       return undefined;
     }
 
     let cancelled = false;
     setLoadingSlots(true);
+    setSlotsError(null);
 
     reservationApi
       .availability(DEFAULT_RESTAURANT_SLUG, form.date, form.partySize)
       .then((data) => {
         if (cancelled) return;
         setSlots(data.slots);
+        setSlotsError(null);
         // If the chosen time just became unavailable, clear it rather than
         // letting the user submit something we already know will fail.
         setForm((f) => {
@@ -98,8 +108,14 @@ export function ReservationSection() {
           return stillOpen ? f : { ...f, time: '' };
         });
       })
-      .catch(() => {
-        if (!cancelled) setSlots([]);
+      .catch((err) => {
+        if (cancelled) return;
+        setSlots([]);
+        setSlotsError(
+          err instanceof ApiError
+            ? err.message
+            : 'Could not check availability. Please try another date or refresh.',
+        );
       })
       .finally(() => {
         if (!cancelled) setLoadingSlots(false);
@@ -162,8 +178,13 @@ export function ReservationSection() {
         if (err.status === 409 && form.date) {
           reservationApi
             .availability(DEFAULT_RESTAURANT_SLUG, form.date, form.partySize)
-            .then((data) => setSlots(data.slots))
-            .catch(() => {});
+            .then((data) => {
+              setSlots(data.slots);
+              setSlotsError(null);
+            })
+            .catch(() => {
+              setSlotsError('Could not refresh availability after the conflict.');
+            });
         }
       } else {
         toast.error('Could not reach the server. Please try again.');
@@ -174,6 +195,15 @@ export function ReservationSection() {
   };
 
   const partyOptions = Array.from({ length: maxPartySize }, (_, i) => i + 1);
+
+  let timeHint = 'Availability updates as you choose a date and party size.';
+  if (slotsError) {
+    timeHint = slotsError;
+  } else if (form.date && !loadingSlots && slots.length > 0) {
+    timeHint = `${slots.filter((s) => s.available).length} of ${slots.length} sittings available for ${form.partySize} ${form.partySize === 1 ? 'guest' : 'guests'}.`;
+  } else if (form.date && !loadingSlots && slots.length === 0) {
+    timeHint = 'No sittings available for that date and party size. Try another day.';
+  }
 
   return (
     <section className="reservation_section" id="reserve">
@@ -213,7 +243,8 @@ export function ReservationSection() {
                 )}
               </dl>
               <p className="booking_hint">
-                Keep your reference — you can look the booking up with it and your phone number.
+                Keep your reference handy. Signed-in guests can manage bookings under My Bookings;
+                otherwise bring this reference when you arrive.
               </p>
               <button type="button" className="btn btn-login" onClick={() => setConfirmation(null)}>
                 Book another table
@@ -308,8 +339,8 @@ export function ReservationSection() {
                     name="time"
                     value={form.time}
                     onChange={update('time')}
-                    disabled={!form.date || loadingSlots}
-                    aria-invalid={Boolean(fieldErrors.time)}
+                    disabled={!form.date || loadingSlots || Boolean(slotsError)}
+                    aria-invalid={Boolean(fieldErrors.time) || Boolean(slotsError)}
                     aria-describedby="time-hint"
                     required
                   >
@@ -318,7 +349,9 @@ export function ReservationSection() {
                         ? 'Pick a date first'
                         : loadingSlots
                           ? 'Checking availability…'
-                          : 'Select a time'}
+                          : slotsError
+                            ? 'Availability unavailable'
+                            : 'Select a time'}
                     </option>
                     {slots.map((slot) => (
                       <option key={slot.time} value={slot.time} disabled={!slot.available}>
@@ -335,10 +368,12 @@ export function ReservationSection() {
                 </div>
               </div>
 
-              <p id="time-hint" className="field_hint">
-                {form.date && !loadingSlots && slots.length > 0
-                  ? `${slots.filter((s) => s.available).length} of ${slots.length} sittings available for ${form.partySize} ${form.partySize === 1 ? 'guest' : 'guests'}.`
-                  : 'Availability updates as you choose a date and party size.'}
+              <p
+                id="time-hint"
+                className={slotsError ? 'field_hint field_hint_error' : 'field_hint'}
+                role={slotsError ? 'alert' : undefined}
+              >
+                {timeHint}
               </p>
 
               <div className="field">
@@ -362,7 +397,7 @@ export function ReservationSection() {
                 type="submit"
                 className="btn btn-primary"
                 style={{ width: '100%' }}
-                disabled={submitting}
+                disabled={submitting || Boolean(slotsError)}
               >
                 {submitting ? 'Booking your table…' : 'Confirm Booking'}
               </button>

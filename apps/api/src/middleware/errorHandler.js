@@ -47,6 +47,11 @@ export function errorHandler(err, req, res, next) {
       code = 'BAD_REQUEST';
       message = 'Referenced record does not exist.';
     }
+  } else if (err instanceof Prisma.PrismaClientValidationError) {
+    // Bad client query shape — never leak the Prisma message to the wire.
+    statusCode = 400;
+    code = 'BAD_REQUEST';
+    message = 'Invalid request data.';
   }
 
   const isServerError = statusCode >= 500;

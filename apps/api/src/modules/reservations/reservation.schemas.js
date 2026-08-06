@@ -15,7 +15,7 @@ const guestName = z
   .max(80, 'Name must be 80 characters or fewer')
   .regex(/^[\p{L}\p{M}][\p{L}\p{M}\s'.-]*$/u, 'Name contains invalid characters');
 
-const guestPhone = z
+export const guestPhone = z
   .string()
   .trim()
   .regex(/^(?:\+?91[- ]?)?[6-9]\d{9}$/, 'Enter a valid 10-digit mobile number')
@@ -66,6 +66,12 @@ export const availabilityQuerySchema = z.object({
 
 export const referenceParamSchema = z.object({
   reference: z.string().trim().min(3).max(12),
+});
+
+/** Guest booking lookup — same phone rules as create, so lookup cannot be weaker. */
+export const lookupReservationSchema = z.object({
+  reference: z.string().trim().min(3).max(12),
+  phone: guestPhone,
 });
 
 export const idParamSchema = z.object({

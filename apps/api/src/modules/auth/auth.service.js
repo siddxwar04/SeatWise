@@ -19,7 +19,7 @@ import {
  * user-enumeration oracle just as reliable as the "User not found!" alert the
  * legacy app displayed outright.
  */
-const DUMMY_HASH = bcrypt.hashSync('timing-equalisation-placeholder', 12);
+const DUMMY_HASH = bcrypt.hashSync('timing-equalisation-placeholder', env.BCRYPT_ROUNDS);
 
 /** Everything the client is allowed to know about a user. Never the hash. */
 function toPublicUser(user) {

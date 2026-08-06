@@ -63,6 +63,8 @@ export function AuthProvider({ children }) {
   const logout = useCallback(async () => {
     try {
       await authApi.logout();
+    } catch {
+      // Network/API failure must not block local sign-out.
     } finally {
       // Clear locally even if the request failed — the user asked to sign out
       // and the UI must reflect that regardless of the network.

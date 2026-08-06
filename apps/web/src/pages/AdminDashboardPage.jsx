@@ -55,6 +55,7 @@ export function AdminDashboardPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const toast = useToast();
 
@@ -80,6 +81,7 @@ export function AdminDashboardPage() {
   const loadAll = useCallback(async () => {
     if (!restaurantSlug) return;
     setLoading(true);
+    setLoadError(null);
     try {
       const params = { restaurant: restaurantSlug, pageSize: 25 };
       if (statusFilter) params.status = statusFilter;
@@ -95,7 +97,9 @@ export function AdminDashboardPage() {
       setToday(todayData);
       setReservations(listData.reservations);
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Could not load the dashboard.');
+      const message = err instanceof ApiError ? err.message : 'Could not load the dashboard.';
+      setLoadError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -166,6 +170,15 @@ export function AdminDashboardPage() {
       {!showSwitcher && activeVenue && <p className="restaurant_badge">{activeVenue.name}</p>}
 
       {loading && !stats && <p className="menu_state">Loading dashboard…</p>}
+
+      {loadError && (
+        <p className="menu_state menu_state_error" role="alert">
+          {loadError}{' '}
+          <button type="button" className="btn btn-login btn-small" onClick={loadAll}>
+            Retry
+          </button>
+        </p>
+      )}
 
       {stats && (
         <>

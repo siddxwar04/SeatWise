@@ -112,7 +112,11 @@ export async function updateStatus(
   return prisma.$transaction(async (tx) => {
     const current = await tx.reservation.findUnique({
       where: { id: reservationId },
-      include: { table: { select: { restaurantId: true } } },
+      include: {
+        table: {
+          select: { label: true, zone: true, capacity: true, restaurantId: true },
+        },
+      },
     });
     if (!current) throw new NotFoundError('Reservation not found.');
 
@@ -142,6 +146,11 @@ export async function updateStatus(
         version: { increment: 1 },
         ...(nextStatus === 'SEATED' ? { seatedAt: new Date() } : {}),
         ...(nextStatus === 'CANCELLED' ? { cancelledAt: new Date() } : {}),
+      },
+      include: {
+        table: {
+          select: { label: true, zone: true, capacity: true, restaurantId: true },
+        },
       },
     });
 

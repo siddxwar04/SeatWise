@@ -164,7 +164,8 @@ export const adminApi = {
 };
 
 /** Default venue for the marketing site until a picker is wired. */
-export const DEFAULT_RESTAURANT_SLUG = 'tastyfood-koramangala';
+export const DEFAULT_RESTAURANT_SLUG =
+  import.meta.env.VITE_DEFAULT_RESTAURANT_SLUG || 'tastyfood-koramangala';
 
 /**
  * Called once at startup. A valid refresh cookie yields a new access token and

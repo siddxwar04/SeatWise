@@ -35,6 +35,8 @@ export function Navbar() {
   useEffect(() => {
     if (!menuOpen) return undefined;
 
+    document.body.classList.add('nav_drawer_open');
+
     const onKeyDown = (e) => {
       if (e.key === 'Escape') setMenuOpen(false);
     };
@@ -45,15 +47,21 @@ export function Navbar() {
     document.addEventListener('keydown', onKeyDown);
     document.addEventListener('pointerdown', onPointerDown);
     return () => {
+      document.body.classList.remove('nav_drawer_open');
       document.removeEventListener('keydown', onKeyDown);
       document.removeEventListener('pointerdown', onPointerDown);
     };
   }, [menuOpen]);
 
   const handleLogout = async () => {
-    await logout();
-    toast.success('Signed out. See you soon.');
-    navigate('/');
+    try {
+      await logout();
+      toast.success('Signed out. See you soon.');
+      navigate('/');
+    } catch {
+      toast.error('Signed out locally, but the server could not be reached.');
+      navigate('/');
+    }
   };
 
   /** On the home page these are in-page anchors; elsewhere they route home. */

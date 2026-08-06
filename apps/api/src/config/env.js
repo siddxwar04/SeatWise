@@ -23,7 +23,12 @@ const envSchema = z
     REDIS_URL: z.string().default('redis://localhost:6379'),
 
     JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET must be at least 32 characters'),
-    JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET must be at least 32 characters'),
+    /**
+     * Reserved for a future signed-refresh design. Refresh tokens today are
+     * opaque random strings hashed in Postgres, so this secret is unused —
+     * keep it optional so local setups are not blocked by a dead requirement.
+     */
+    JWT_REFRESH_SECRET: z.string().min(32).optional(),
     ACCESS_TOKEN_TTL: duration.default('15m'),
     REFRESH_TOKEN_TTL: duration.default('7d'),
     BCRYPT_ROUNDS: z.coerce.number().int().min(10).max(15).default(12),

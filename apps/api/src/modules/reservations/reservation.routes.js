@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import { z } from 'zod';
 import { writeLimiter } from '../../middleware/rateLimit.js';
 import { optionalAuth, requireAuth } from '../../middleware/requireAuth.js';
 import { validate } from '../../middleware/validate.js';
@@ -9,6 +8,7 @@ import {
   createReservationSchema,
   idParamSchema,
   listReservationsQuerySchema,
+  lookupReservationSchema,
 } from './reservation.schemas.js';
 
 export const reservationRouter = Router();
@@ -43,12 +43,7 @@ reservationRouter.post(
 reservationRouter.post(
   '/lookup',
   writeLimiter,
-  validate({
-    body: z.object({
-      reference: z.string().trim().min(3).max(12),
-      phone: z.string().trim().min(10).max(15),
-    }),
-  }),
+  validate({ body: lookupReservationSchema }),
   controller.lookup,
 );
 

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { asyncHandler } from '../lib/asyncHandler.js';
 import { prisma } from '../lib/prisma.js';
 import { isRedisReady } from '../lib/redis.js';
 
@@ -15,18 +16,21 @@ healthRouter.get('/live', (_req, res) => {
  * gracefully. Reporting "degraded" instead of "down" for a Redis outage keeps
  * the load balancer from pulling a perfectly serviceable instance.
  */
-healthRouter.get('/ready', async (_req, res) => {
-  const checks = { database: 'down', redis: 'down' };
+healthRouter.get(
+  '/ready',
+  asyncHandler(async (_req, res) => {
+    const checks = { database: 'down', redis: 'down' };
 
-  try {
-    await prisma.$queryRaw`SELECT 1`;
-    checks.database = 'up';
-  } catch {
-    checks.database = 'down';
-  }
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      checks.database = 'up';
+    } catch {
+      checks.database = 'down';
+    }
 
-  checks.redis = isRedisReady() ? 'up' : 'down';
+    checks.redis = isRedisReady() ? 'up' : 'down';
 
-  const status = checks.database === 'up' ? (checks.redis === 'up' ? 'ok' : 'degraded') : 'down';
-  res.status(status === 'down' ? 503 : 200).json({ status, checks });
-});
+    const status = checks.database === 'up' ? (checks.redis === 'up' ? 'ok' : 'degraded') : 'down';
+    res.status(status === 'down' ? 503 : 200).json({ status, checks });
+  }),
+);

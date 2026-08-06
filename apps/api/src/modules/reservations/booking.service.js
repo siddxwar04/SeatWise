@@ -262,7 +262,11 @@ export async function cancelReservation(reservationId, actor) {
   return prisma.$transaction(async (tx) => {
     const reservation = await tx.reservation.findUnique({
       where: { id: reservationId },
-      include: { table: { select: { restaurantId: true } } },
+      include: {
+        table: {
+          select: { label: true, zone: true, capacity: true, restaurantId: true },
+        },
+      },
     });
 
     if (!reservation) {
@@ -302,6 +306,11 @@ export async function cancelReservation(reservationId, actor) {
         cancelledAt: new Date(),
         version: { increment: 1 },
       },
+      include: {
+        table: {
+          select: { label: true, zone: true, capacity: true, restaurantId: true },
+        },
+      },
     });
 
     logger.info({ reservationId, hoursNotice: Math.round(hoursNotice) }, 'reservation cancelled');
@@ -319,5 +328,6 @@ export function bookingRules() {
     maxAdvanceDays: env.MAX_ADVANCE_BOOKING_DAYS,
     minLeadMinutes: env.MIN_LEAD_TIME_MINUTES,
     maxPartySize: env.MAX_PARTY_SIZE,
+    utcOffsetMinutes: env.RESTAURANT_UTC_OFFSET_MINUTES,
   };
 }
