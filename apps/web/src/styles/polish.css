@@ -1,0 +1,666 @@
+/**
+ * Visual polish layer — overrides and enhancements only.
+ * Loaded after style.css + app.css. No business logic.
+ */
+
+@import './tokens.css';
+
+/* --- Base typography ----------------------------------------------------- */
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: 1.65;
+  letter-spacing: -0.01em;
+  background: var(--bg-warm);
+  color: var(--text-dark);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+.brand_text,
+.hero_content h1,
+.menu_section h2,
+.spotlight_content h2,
+.reservation_form_wrapper h2,
+.page_header h1,
+.auth_card h2,
+.chat_panel_header h3 {
+  font-family: var(--font-display);
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: var(--text-dark);
+}
+
+p {
+  line-height: 1.7;
+  color: var(--text-light);
+}
+
+.container {
+  max-width: var(--container);
+  padding: 0 clamp(1rem, 3vw, 1.75rem);
+}
+
+/* --- Navbar -------------------------------------------------------------- */
+
+nav {
+  background: rgba(246, 243, 239, 0.72);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  backdrop-filter: blur(16px) saturate(1.4);
+  border-bottom: 1px solid transparent;
+  padding: 0.85rem 0;
+  transition:
+    padding var(--duration) var(--ease),
+    background var(--duration) var(--ease),
+    box-shadow var(--duration) var(--ease),
+    border-color var(--duration) var(--ease);
+}
+
+nav.is-scrolled {
+  padding: 0.45rem 0;
+  background: rgba(255, 255, 255, 0.86);
+  border-bottom-color: var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+nav.is-scrolled .logo_icon_circle {
+  width: 52px;
+  height: 52px;
+}
+
+.brand_text {
+  font-size: 1.55rem;
+  font-weight: 700;
+}
+
+.nav_links a {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 0.9rem;
+  letter-spacing: -0.01em;
+  transition:
+    color var(--duration) var(--ease),
+    opacity var(--duration) var(--ease);
+}
+
+.nav_links a::after {
+  height: 2px;
+  border-radius: var(--radius-pill);
+  transition: width var(--duration) var(--ease);
+}
+
+@media (max-width: 992px) {
+  .nav_links {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    pointer-events: none;
+    transition:
+      opacity 240ms var(--ease),
+      transform 240ms var(--ease),
+      visibility 240ms;
+  }
+
+  .nav_links.active {
+    display: flex;
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    pointer-events: auto;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    background: rgba(255, 255, 255, 0.97);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    box-shadow: var(--shadow-lg);
+  }
+}
+
+/* --- Buttons ------------------------------------------------------------- */
+
+.btn {
+  font-family: var(--font-sans);
+  font-weight: 650;
+  font-size: 0.9rem;
+  letter-spacing: -0.01em;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius-pill);
+  transition:
+    transform var(--duration) var(--ease),
+    background-color var(--duration) var(--ease),
+    border-color var(--duration) var(--ease),
+    box-shadow var(--duration) var(--ease),
+    color var(--duration) var(--ease),
+    opacity var(--duration) var(--ease);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.98);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary) 0%, #f97316 100%);
+  box-shadow: var(--shadow-accent);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px var(--primary-glow);
+}
+
+.btn-login {
+  background: var(--surface);
+  border: 1.5px solid var(--border-strong);
+  color: var(--text-dark);
+}
+
+.btn-login:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.btn-small {
+  border-radius: var(--radius-pill);
+  padding: 0.55rem 1.1rem;
+}
+
+/* --- Tags & type rhythm -------------------------------------------------- */
+
+.tag {
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.4rem 0.85rem;
+  border-radius: var(--radius-pill);
+  background: var(--primary-soft) !important;
+  color: var(--primary-dark) !important;
+}
+
+.hero_content h1 {
+  font-size: var(--text-hero);
+  margin-bottom: 1.25rem;
+}
+
+.hero_content h1 span {
+  color: var(--primary);
+}
+
+.hero_content h1 span::after {
+  background: linear-gradient(90deg, rgba(249, 115, 22, 0.35), transparent);
+  height: 0.35em;
+  bottom: 0.1em;
+}
+
+.hero_content p {
+  font-size: 1.1rem;
+  line-height: 1.75;
+  max-width: 34rem;
+}
+
+.menu_section,
+.spotlight_section,
+.reservation_section {
+  padding-top: var(--space-section);
+  padding-bottom: var(--space-section);
+}
+
+.menu_section {
+  margin-top: 0;
+}
+
+.menu_section h2,
+.spotlight_content h2,
+.reservation_form_wrapper h2 {
+  font-size: var(--text-h2);
+  margin: 0.75rem 0 0.85rem;
+}
+
+.menu_section > p,
+.reservation_form_wrapper > p,
+.spotlight_content > p {
+  max-width: 36rem;
+  margin-bottom: 2rem;
+  font-size: 1.05rem;
+  line-height: 1.75;
+}
+
+.page_header {
+  margin-bottom: 2.5rem;
+}
+
+.page_header h1 {
+  font-size: var(--text-h1);
+}
+
+.page_wrapper {
+  padding-top: var(--space-section-sm);
+  padding-bottom: var(--space-section);
+}
+
+/* --- Hero imagery -------------------------------------------------------- */
+
+.hero {
+  gap: clamp(2rem, 5vw, 4rem);
+  padding-top: clamp(2.5rem, 6vw, 5rem);
+  padding-bottom: clamp(3rem, 7vw, 6rem);
+}
+
+.hero_image {
+  position: relative;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  aspect-ratio: 1 / 1;
+  max-width: 520px;
+  margin-left: auto;
+  box-shadow: var(--shadow-lg);
+}
+
+.hero_image::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(160deg, transparent 40%, rgba(28, 25, 23, 0.18) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.hero_image img {
+  width: 100% !important;
+  height: 100%;
+  margin: 0 !important;
+  object-fit: cover;
+  border-radius: var(--radius-lg);
+  transform: none !important;
+  transition: transform 400ms var(--ease);
+}
+
+.hero_image:hover img {
+  transform: scale(1.03) !important;
+}
+
+/* --- Spotlight ----------------------------------------------------------- */
+
+.spotlight_section {
+  background: linear-gradient(145deg, #1c1917 0%, #292524 55%, #1c1917 100%);
+  border-radius: var(--radius-lg);
+  margin: 0 clamp(0.75rem, 2vw, 1.5rem);
+  overflow: hidden;
+}
+
+.spotlight_img {
+  border-radius: var(--radius);
+  overflow: hidden;
+  aspect-ratio: 4 / 5;
+  max-height: 520px;
+}
+
+.spotlight_img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 400ms var(--ease);
+}
+
+.spotlight_img:hover img {
+  transform: scale(1.04);
+}
+
+.spotlight_content h2 {
+  color: #fff;
+}
+
+.spotlight_content p,
+.spotlight_list li {
+  color: #a8a29e;
+}
+
+/* --- Menu cards ---------------------------------------------------------- */
+
+.menu_grid {
+  gap: 1.5rem;
+}
+
+.menu_card {
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  height: auto;
+  aspect-ratio: 4 / 5;
+  max-height: 420px;
+  transition:
+    transform var(--duration) var(--ease),
+    box-shadow var(--duration) var(--ease);
+}
+
+.menu_card:hover,
+.menu_card.is-open,
+.menu_card:focus-within {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-lg);
+}
+
+.menu_card img {
+  object-fit: cover;
+}
+
+.card_info {
+  padding: 3.5rem 1.15rem 1.15rem;
+}
+
+.card_info h3 {
+  font-family: var(--font-display);
+  font-size: var(--text-h3);
+  font-weight: 650;
+}
+
+.card_info span {
+  border-radius: var(--radius-sm);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.card_overlay {
+  background: linear-gradient(180deg, rgba(28, 25, 23, 0.55) 0%, rgba(28, 25, 23, 0.88) 100%);
+  padding: 1.5rem;
+}
+
+.card_overlay p {
+  color: #e7e5e4;
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+.tab_btn {
+  font-family: var(--font-sans);
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--border-strong);
+  background: var(--surface);
+  transition:
+    background var(--duration) var(--ease),
+    color var(--duration) var(--ease),
+    border-color var(--duration) var(--ease),
+    transform var(--duration) var(--ease);
+}
+
+.tab_btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.tab_btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+  box-shadow: var(--shadow-accent);
+}
+
+/* --- Skeletons ----------------------------------------------------------- */
+
+.skeleton_grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1.5rem;
+}
+
+.skeleton_card {
+  aspect-ratio: 4 / 5;
+  border-radius: var(--radius);
+  background: linear-gradient(90deg, #ebe6df 25%, #f5f1eb 50%, #ebe6df 75%);
+  background-size: 200% 100%;
+  animation: skeleton_shimmer 1.2s ease-in-out infinite;
+}
+
+.skeleton_line {
+  height: 0.85rem;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, #ebe6df 25%, #f5f1eb 50%, #ebe6df 75%);
+  background-size: 200% 100%;
+  animation: skeleton_shimmer 1.2s ease-in-out infinite;
+  margin-bottom: 0.65rem;
+}
+
+.skeleton_line.w60 {
+  width: 60%;
+}
+.skeleton_line.w80 {
+  width: 80%;
+}
+.skeleton_line.w40 {
+  width: 40%;
+}
+
+@keyframes skeleton_shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+/* --- Reservation / forms ------------------------------------------------- */
+
+.reservation_section {
+  margin-top: 0;
+  background: transparent;
+}
+
+.reservation_container {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: clamp(1.5rem, 4vw, 3rem);
+  box-shadow: var(--shadow);
+  gap: clamp(1.5rem, 4vw, 3rem);
+}
+
+.reservation_image {
+  border-radius: var(--radius);
+  overflow: hidden;
+  aspect-ratio: 4 / 5;
+}
+
+.reservation_image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius);
+}
+
+.reservation_form input,
+.reservation_form select,
+.form_group input,
+.admin_search input,
+.admin_search select,
+.chat_composer input {
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border-strong);
+  background: var(--surface-muted);
+  transition:
+    border-color var(--duration) var(--ease),
+    box-shadow var(--duration) var(--ease),
+    background var(--duration) var(--ease);
+}
+
+.reservation_form input:focus,
+.reservation_form select:focus,
+.form_group input:focus,
+.chat_composer input:focus {
+  border-color: var(--primary);
+  background: var(--surface);
+  box-shadow: 0 0 0 4px var(--primary-soft);
+}
+
+.booking_confirmation {
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+}
+
+.booking_reference {
+  font-family: var(--font-display);
+  color: var(--primary);
+}
+
+/* --- Auth cards ---------------------------------------------------------- */
+
+.auth_card {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  background: var(--surface);
+}
+
+.auth_card h2 {
+  font-size: var(--text-h2);
+}
+
+/* --- Admin / bookings ---------------------------------------------------- */
+
+.stat_card,
+.chart_panel,
+.admin_panel,
+.reservation_card {
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  background: var(--surface);
+  transition:
+    box-shadow var(--duration) var(--ease),
+    transform var(--duration) var(--ease);
+}
+
+.stat_card:hover {
+  box-shadow: var(--shadow);
+  transform: translateY(-2px);
+}
+
+.stat_value {
+  font-family: var(--font-display);
+  font-weight: 650;
+}
+
+.admin_table {
+  border-radius: var(--radius);
+}
+
+/* --- Footer -------------------------------------------------------------- */
+
+footer {
+  background: linear-gradient(180deg, #1c1917 0%, #0c0a09 100%);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  margin-top: var(--space-section);
+}
+
+.footer_col h3 {
+  font-family: var(--font-display);
+  font-weight: 650;
+}
+
+.social_icons a {
+  border-radius: var(--radius-sm);
+  transition:
+    color var(--duration) var(--ease),
+    background var(--duration) var(--ease);
+}
+
+.social_icons a:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--primary);
+}
+
+/* --- Chat widget --------------------------------------------------------- */
+
+.chat_fab {
+  background: linear-gradient(135deg, var(--primary) 0%, #f97316 100%);
+  box-shadow: var(--shadow-accent);
+  transition:
+    transform var(--duration) var(--ease),
+    box-shadow var(--duration) var(--ease);
+}
+
+.chat_fab:hover {
+  transform: translateY(-2px) scale(1.02);
+}
+
+.chat_panel {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+}
+
+.chat_panel_header {
+  background: linear-gradient(135deg, #faf7f2 0%, #f3ebe3 100%);
+}
+
+.chat_panel_header h3 {
+  font-family: var(--font-display);
+}
+
+.chat_restaurant_card {
+  border-radius: var(--radius-sm);
+  border-color: rgba(232, 93, 4, 0.2);
+  background: var(--surface-muted);
+  transition:
+    transform var(--duration) var(--ease),
+    box-shadow var(--duration) var(--ease);
+}
+
+.chat_restaurant_card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.chat_bubble_assistant {
+  border-radius: var(--radius);
+}
+
+.chat_bubble_user {
+  background: linear-gradient(135deg, var(--primary) 0%, #f97316 100%);
+  border-radius: var(--radius);
+}
+
+/* --- Toasts -------------------------------------------------------------- */
+
+.toast {
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+}
+
+.toast_stack {
+  bottom: 96px;
+}
+
+/* --- Reveal motion fallback (JS enhances) -------------------------------- */
+
+.reveal-ready {
+  opacity: 0;
+  transform: translateY(18px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-ready {
+    opacity: 1;
+    transform: none;
+  }
+
+  .skeleton_card,
+  .skeleton_line {
+    animation: none;
+  }
+}

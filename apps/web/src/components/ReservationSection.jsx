@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { ApiError, DEFAULT_RESTAURANT_SLUG, reservationApi } from '../lib/api.js';
+import { resolveVenueSlug } from '../lib/venue.js';
 
 /**
  * The booking form.
@@ -39,6 +41,8 @@ const EMPTY_FORM = {
 export function ReservationSection() {
   const { user } = useAuth();
   const toast = useToast();
+  const { search } = useLocation();
+  const restaurantSlug = resolveVenueSlug(search, DEFAULT_RESTAURANT_SLUG);
 
   const [form, setForm] = useState(EMPTY_FORM);
   const [fieldErrors, setFieldErrors] = useState({});
@@ -96,7 +100,7 @@ export function ReservationSection() {
     setSlotsError(null);
 
     reservationApi
-      .availability(DEFAULT_RESTAURANT_SLUG, form.date, form.partySize)
+      .availability(restaurantSlug, form.date, form.partySize)
       .then((data) => {
         if (cancelled) return;
         setSlots(data.slots);
@@ -124,7 +128,7 @@ export function ReservationSection() {
     return () => {
       cancelled = true;
     };
-  }, [form.date, form.partySize]);
+  }, [form.date, form.partySize, restaurantSlug]);
 
   const update = (field) => (event) => {
     const raw = event.target.value;
@@ -149,7 +153,7 @@ export function ReservationSection() {
 
     try {
       const payload = {
-        restaurantSlug: DEFAULT_RESTAURANT_SLUG,
+        restaurantSlug,
         guestName: form.guestName,
         guestPhone: form.guestPhone,
         partySize: form.partySize,
@@ -177,7 +181,7 @@ export function ReservationSection() {
         // the grid so they can see what is left.
         if (err.status === 409 && form.date) {
           reservationApi
-            .availability(DEFAULT_RESTAURANT_SLUG, form.date, form.partySize)
+            .availability(restaurantSlug, form.date, form.partySize)
             .then((data) => {
               setSlots(data.slots);
               setSlotsError(null);

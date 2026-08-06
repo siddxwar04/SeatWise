@@ -50,9 +50,12 @@ const envSchema = z
     ML_SERVICE_URL: z.string().url().default('http://localhost:8000'),
     ML_SERVICE_TIMEOUT_MS: z.coerce.number().int().positive().default(2000),
 
-    ANTHROPIC_API_KEY: z.string().optional(),
-    ANTHROPIC_MODEL: z.string().default('claude-sonnet-5'),
     AI_RATE_LIMIT_PER_HOUR: z.coerce.number().int().positive().default(20),
+
+    /** Required for the AI concierge (embeddings + gpt-4o-mini). */
+    OPENAI_API_KEY: z.string().optional(),
+    OPENAI_CHAT_MODEL: z.string().default('gpt-4o-mini'),
+    OPENAI_EMBEDDING_MODEL: z.string().default('text-embedding-3-small'),
 
     SMTP_HOST: z.string().optional(),
     SMTP_PORT: z.coerce.number().int().positive().optional(),

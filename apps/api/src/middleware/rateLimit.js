@@ -1,6 +1,6 @@
 import rateLimit from 'express-rate-limit';
 import { RedisStore } from 'rate-limit-redis';
-import { isTest } from '../config/env.js';
+import { env, isTest } from '../config/env.js';
 import { TooManyRequestsError } from '../errors/AppError.js';
 import { getRedis, isRedisReady } from '../lib/redis.js';
 
@@ -116,4 +116,12 @@ export const generalLimiter = createLimiter({
   windowMs: 60 * 1000,
   max: 120,
   message: 'Too many requests. Please slow down.',
+});
+
+/** AI concierge — OpenAI calls are metered; keep this tighter than general. */
+export const aiLimiter = createLimiter({
+  name: 'ai',
+  windowMs: 60 * 60 * 1000,
+  max: env.AI_RATE_LIMIT_PER_HOUR,
+  message: 'You have reached the hourly concierge limit. Please try again later.',
 });

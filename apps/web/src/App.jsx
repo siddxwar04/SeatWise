@@ -1,4 +1,5 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { ChatWidget } from './components/ChatWidget.jsx';
 import { Footer } from './components/Footer.jsx';
 import { Navbar } from './components/Navbar.jsx';
 import { ProtectedRoute } from './components/ProtectedRoute.jsx';
@@ -52,6 +53,7 @@ export function App() {
           </div>
 
           <Footer />
+          <ChatWidget />
         </ToastProvider>
       </AuthProvider>
     </BrowserRouter>

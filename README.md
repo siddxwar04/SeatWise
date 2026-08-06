@@ -39,7 +39,7 @@ The old critical defects this rewrite closes by design:
 
 ## Shipped vs reserved (read this before demos)
 
-**Shipped (Tier 1 — works today):** multi-restaurant schema, JWT auth, transactional bookings with row locks, availability grid, admin dashboard, menu CRUD from Postgres, unit tests, concurrency proof.
+**Shipped (Tier 1 — works today):** multi-restaurant schema, JWT auth, transactional bookings with row locks, availability grid, admin dashboard, menu CRUD from Postgres, OpenAI RAG concierge (`POST /api/chat` + floating chat widget), unit tests, concurrency proof.
 
 **Schema reserved, not implemented (Tier 2):**
 
@@ -47,11 +47,46 @@ The old critical defects this rewrite closes by design:
 | ------------------------------------------------ | ------------------------------------------------------------------ |
 | `noShowRisk`, `riskModelVersion`, `isOverbooked` | Columns exist; FastAPI ML + overbooking rule **not** wired         |
 | `BookingChannel.AI_ASSISTANT`                    | Enum value exists; only `WEB` (and seed channels) used in app code |
-| `ANTHROPIC_API_KEY` / Claude NL booking          | Env placeholders only — no assistant routes                        |
-| `pgvector` / allergen RAG                        | Image includes the extension for later; no vector migrations yet   |
 | `ML_SERVICE_URL`                                 | Configured for a future FastAPI service; booking does not call it  |
 
 Admin UI may show a no-show risk column when null — that is display plumbing for Phase 6/7, not a live model.
+
+---
+
+## AI concierge (RAG pipeline)
+
+Interview-ready explanation of how restaurant recommendations stay grounded in **our** Postgres data:
+
+```
+User question
+    ↓
+OpenAI text-embedding-3-small  →  query vector (1536 dims)
+    ↓
+pgvector cosine search on restaurant_embeddings  →  top 5 venue docs
+    ↓
+gpt-4o-mini + system prompt ("recommend ONLY from retrieved context")
+    ↓
+{ reply, recommendedRestaurantIds, restaurants[] }  →  chat widget cards
+```
+
+1. **Index time** — `npm run embeddings:generate` loads each active restaurant with menu items and seating zones, builds a plain-text document (name, address, outdoor/indoor, price range, dish highlights/tags), embeds it with `text-embedding-3-small`, and upserts into `restaurant_embeddings` (pgvector). Content is hashed so unchanged venues are skipped; use `--force` to rebuild all.
+
+2. **Query time** — `POST /api/chat` embeds the guest message the same way, runs `ORDER BY embedding <=> query LIMIT 5`, then asks **gpt-4o-mini** to answer using only that retrieved context. The model is instructed to append `RECOMMENDED_IDS: …`; the API strips that line and returns UUIDs plus card payloads for the UI.
+
+3. **Why this is RAG, not “just ChatGPT”** — the LLM never sees the full catalogue and is forbidden from inventing venues. If embeddings are empty, the API tells you to run the generate script instead of hallucinating.
+
+**Setup**
+
+```bash
+# .env
+OPENAI_API_KEY=sk-...
+
+npm run db:migrate          # enables pgvector + restaurant_embeddings
+npm run embeddings:generate # needs OPENAI_API_KEY
+npm run dev                 # Ask AI button (bottom-right)
+```
+
+Re-run `embeddings:generate` after seed changes or menu CRUD that should affect recommendations (manual trigger for now).
 
 ---
 
@@ -168,8 +203,9 @@ If you see pool timeouts or non-`ConflictError` rejections under load, that is a
 2. **Book a table** — live availability slots; confirmation shows a `TF-…` reference.
 3. **Double-booking** — fill a slot from two clients; second request gets a conflict.
 4. **Admin** (`/admin`) — confirm / seat / no-show; menu CRUD (add, 86, edit, delete).
-5. **Whiteboard** — walk through `booking.service.js`: lock tables → overlap check → best-fit → insert.
-6. **Before/after** — open `legacy/` (or tag `v1-php`) next to the React app.
+5. **AI concierge** — Ask AI → natural-language venue recommend → Book a table card.
+6. **Whiteboard** — walk through `booking.service.js`: lock tables → overlap check → best-fit → insert.
+7. **Before/after** — open `legacy/` (or tag `v1-php`) next to the React app.
 
 ---
 
@@ -183,6 +219,6 @@ If you see pool timeouts or non-`ConflictError` rejections under load, that is a
 | 4 React UI (CSS port)                             | **Shipped**                                 |
 | 5 Menu from DB + admin dashboard                  | **Shipped**                                 |
 | 6 FastAPI no-show + overbooking                   | **Schema reserved** — not implemented       |
-| 7 Claude NL booking + allergen RAG                | **Schema / env reserved** — not implemented |
+| 7 OpenAI NL concierge + pgvector RAG          | **Shipped** (`POST /api/chat`, chat widget) |
 
 See `TECH-STACK.md` for the definitive Node stack notes (the older Spring/Thymeleaf draft in git history is obsolete).

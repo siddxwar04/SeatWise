@@ -151,6 +151,10 @@ export const restaurantApi = {
   get: (slug) => api.get(`/restaurants/${slug}`),
 };
 
+export const chatApi = {
+  send: (message, history = []) => api.post('/chat', { message, history }),
+};
+
 export const adminApi = {
   reservations: (params = {}) => api.get(`/admin/reservations?${new URLSearchParams(params)}`),
   updateStatus: (id, status, version, restaurant) =>

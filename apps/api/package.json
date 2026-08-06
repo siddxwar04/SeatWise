@@ -17,7 +17,8 @@
     "db:seed": "dotenv -e ../../.env -- node prisma/seed.js",
     "db:studio": "dotenv -e ../../.env -- prisma studio",
     "db:reset": "dotenv -e ../../.env -- prisma migrate reset --force",
-    "db:test:migrate": "dotenv -e ../../.env.test -- prisma migrate deploy"
+    "db:test:migrate": "dotenv -e ../../.env.test -- prisma migrate deploy",
+    "embeddings:generate": "dotenv -e ../../.env -- node ../../scripts/generate-embeddings.js"
   },
   "prisma": {
     "seed": "dotenv -e ../../.env -- node prisma/seed.js"
@@ -34,6 +35,7 @@
     "helmet": "^8.0.0",
     "ioredis": "^5.4.2",
     "jsonwebtoken": "^9.0.2",
+    "openai": "^7.4.0",
     "pino": "^9.6.0",
     "pino-http": "^10.4.0",
     "rate-limit-redis": "^4.2.0",

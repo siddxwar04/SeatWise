@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { DEFAULT_RESTAURANT_SLUG, menuApi } from '../lib/api.js';
+import { resolveVenueSlug } from '../lib/venue.js';
 
 /**
  * The menu, from the database.
@@ -25,6 +27,8 @@ const TABS = [
 ];
 
 export function MenuSection() {
+  const { search } = useLocation();
+  const restaurantSlug = resolveVenueSlug(search, DEFAULT_RESTAURANT_SLUG);
   const [items, setItems] = useState([]);
   const [activeTab, setActiveTab] = useState(null);
   const [status, setStatus] = useState('loading');
@@ -34,9 +38,10 @@ export function MenuSection() {
   // a network round trip per tab click, and it keeps switching instant.
   useEffect(() => {
     let cancelled = false;
+    setStatus('loading');
 
     menuApi
-      .list(DEFAULT_RESTAURANT_SLUG)
+      .list(restaurantSlug)
       .then((data) => {
         if (cancelled) return;
         setItems(data.items);
@@ -49,7 +54,7 @@ export function MenuSection() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [restaurantSlug]);
 
   const visible = useMemo(
     () => (activeTab ? items.filter((item) => item.category === activeTab) : items),

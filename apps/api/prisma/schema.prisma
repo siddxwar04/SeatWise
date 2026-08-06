@@ -162,12 +162,34 @@ model Restaurant {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  tables    RestaurantTable[]
-  menuItems MenuItem[]
-  admins    RestaurantAdmin[]
+  tables     RestaurantTable[]
+  menuItems  MenuItem[]
+  admins     RestaurantAdmin[]
+  embedding  RestaurantEmbedding?
 
   @@index([isActive])
   @@map("restaurants")
+}
+
+/// pgvector row for the AI concierge RAG pipeline (Phase 8).
+/// The embedding column is Unsupported so Prisma does not try to map it —
+/// similarity search and upserts go through $executeRaw / $queryRaw.
+model RestaurantEmbedding {
+  id           String                       @id @default(uuid()) @db.Uuid
+  restaurantId String                       @unique @map("restaurant_id") @db.Uuid
+  /// Plain-text document that was embedded (restaurant + menu + zones).
+  content      String                       @db.Text
+  /// SHA-256 of content — skip re-embedding when nothing changed.
+  contentHash  String                       @map("content_hash") @db.VarChar(64)
+  embedding    Unsupported("vector(1536)")?
+  /// e.g. text-embedding-3-small
+  model        String                       @db.VarChar(64)
+  createdAt    DateTime                     @default(now()) @map("created_at")
+  updatedAt    DateTime                     @updatedAt @map("updated_at")
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@map("restaurant_embeddings")
 }
 
 /// Per-venue staff. Global Role.ADMIN bypasses this table for platform ops;

@@ -875,3 +875,200 @@ select[aria-invalid='true'] {
     min-height: 44px;
   }
 }
+
+/* --- AI concierge chat widget -------------------------------------------- */
+
+.chat_widget {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 9500;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.chat_fab {
+  min-width: 56px;
+  min-height: 56px;
+  padding: 0 20px;
+  border: none;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 12px 30px rgba(255, 145, 77, 0.45);
+}
+
+.chat_fab:hover {
+  background: var(--primary-dark);
+}
+
+.chat_panel {
+  width: min(380px, calc(100vw - 32px));
+  height: min(520px, calc(100dvh - 120px));
+  background: var(--white);
+  border-radius: 20px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.chat_panel_header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  background: linear-gradient(135deg, #fffaf5 0%, #fff0e3 100%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.chat_panel_eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin: 0 0 2px;
+}
+
+.chat_panel_header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.chat_icon_btn {
+  min-width: 44px;
+  min-height: 44px;
+  border: none;
+  background: transparent;
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--text-light);
+  border-radius: 10px;
+}
+
+.chat_messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #fffdfb;
+}
+
+.chat_bubble {
+  max-width: 92%;
+  padding: 12px 14px;
+  border-radius: 16px;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.chat_bubble p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.chat_bubble_user {
+  align-self: flex-end;
+  background: var(--primary);
+  color: #fff;
+  border-bottom-right-radius: 6px;
+}
+
+.chat_bubble_assistant {
+  align-self: flex-start;
+  background: #fff;
+  border: 1px solid #f1f2f6;
+  color: var(--text-dark);
+  border-bottom-left-radius: 6px;
+}
+
+.chat_bubble_error {
+  border-color: #fab1a0;
+  background: #fff5f2;
+}
+
+.chat_bubble_loading {
+  opacity: 0.75;
+  font-style: italic;
+}
+
+.chat_restaurant_list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.chat_restaurant_card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  background: #fffaf5;
+  border: 1px solid #ffe0c2;
+}
+
+.chat_restaurant_card h4 {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+}
+
+.chat_restaurant_meta {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-light);
+  line-height: 1.4;
+}
+
+.chat_restaurant_cta {
+  align-self: flex-start;
+  text-decoration: none;
+}
+
+.chat_composer {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  background: #fff;
+}
+
+.chat_composer input {
+  flex: 1;
+  min-height: 44px;
+  border: 2px solid #f1f2f6;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 16px;
+  outline: none;
+}
+
+.chat_composer input:focus {
+  border-color: var(--primary);
+}
+
+@media (max-width: 480px) {
+  .chat_widget {
+    right: 12px;
+    bottom: 12px;
+  }
+
+  .chat_panel {
+    width: calc(100vw - 24px);
+    height: min(70dvh, 520px);
+  }
+}
