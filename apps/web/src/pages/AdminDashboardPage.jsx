@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { AdminMenuPanel } from '../components/AdminMenuPanel.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
-import { adminApi, ApiError, DEFAULT_RESTAURANT_SLUG } from '../lib/api.js';
+import { adminApi, ApiError, DEFAULT_RESTAURANT_SLUG, waitlistApi } from '../lib/api.js';
 
 /**
  * Admin dashboard — audit finding #5: "staff cannot see, confirm, modify, or
@@ -57,6 +57,8 @@ export function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [busyId, setBusyId] = useState(null);
+  const [panel, setPanel] = useState('reservations');
+  const [waitlist, setWaitlist] = useState([]);
   const toast = useToast();
 
   // Wait for /restaurants/mine before picking a slug. Otherwise a venue manager
@@ -87,15 +89,17 @@ export function AdminDashboardPage() {
       if (statusFilter) params.status = statusFilter;
       if (search.trim()) params.search = search.trim();
 
-      const [statsData, todayData, listData] = await Promise.all([
+      const [statsData, todayData, listData, waitlistData] = await Promise.all([
         adminApi.stats(restaurantSlug, 30),
         adminApi.today(restaurantSlug),
         adminApi.reservations(params),
+        waitlistApi.list(restaurantSlug),
       ]);
 
       setStats(statsData);
       setToday(todayData);
       setReservations(listData.reservations);
+      setWaitlist(waitlistData.entries ?? []);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Could not load the dashboard.';
       setLoadError(message);
@@ -122,6 +126,18 @@ export function AdminDashboardPage() {
       await loadAll();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Update failed.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const sendReminder = async (reservation) => {
+    setBusyId(reservation.id);
+    try {
+      const result = await adminApi.sendReminder(reservation.id, restaurantSlug);
+      toast.success(result.message || 'Reminder sent.');
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Could not send reminder.');
     } finally {
       setBusyId(null);
     }
@@ -230,128 +246,221 @@ export function AdminDashboardPage() {
         </>
       )}
 
-      <section className="admin_panel">
-        <div className="admin_toolbar">
-          <h2>Reservations</h2>
-          <form
-            className="admin_search"
-            onSubmit={(e) => {
-              e.preventDefault();
-              loadAll();
-            }}
-          >
-            <label htmlFor="admin-search" className="visually_hidden">
-              Search by reference, name or phone
-            </label>
-            <input
-              id="admin-search"
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Reference, name or phone"
-            />
-            <label htmlFor="admin-status" className="visually_hidden">
-              Filter by status
-            </label>
-            <select
-              id="admin-status"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="">All statuses</option>
-              {Object.keys(NEXT_ACTIONS).map((s) => (
-                <option key={s} value={s}>
-                  {s.replace('_', ' ')}
-                </option>
-              ))}
-            </select>
-            <button type="submit" className="btn btn-primary btn-small">
-              Search
-            </button>
-          </form>
-        </div>
+      <div className="admin_toolbar" style={{ marginBottom: '1rem' }}>
+        <button
+          type="button"
+          className={panel === 'reservations' ? 'btn btn-primary btn-small' : 'btn btn-login btn-small'}
+          onClick={() => setPanel('reservations')}
+        >
+          Reservations
+        </button>
+        <button
+          type="button"
+          className={panel === 'waitlist' ? 'btn btn-primary btn-small' : 'btn btn-login btn-small'}
+          onClick={() => setPanel('waitlist')}
+        >
+          Waitlist{waitlist.length ? ` (${waitlist.length})` : ''}
+        </button>
+      </div>
 
-        <div className="table_scroll">
-          <table className="admin_table">
-            <caption className="visually_hidden">
-              Reservations, most recent first, with status actions
-            </caption>
-            <thead>
-              <tr>
-                <th scope="col">Reference</th>
-                <th scope="col">Guest</th>
-                <th scope="col">When</th>
-                <th scope="col">Party</th>
-                <th scope="col">Table</th>
-                <th scope="col">Status</th>
-                <th scope="col">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {reservations.map((r) => {
-                const risk = riskLabel(r.noShowRisk);
-                return (
-                  <tr key={r.id}>
-                    <td className="mono">{r.reference}</td>
-                    <td>
-                      {r.guestName}
-                      <br />
-                      <span className="cell_sub">{r.guestPhone}</span>
-                      {r.account?.priorNoShows > 0 && (
-                        <span className="flag_warning">
-                          {r.account.priorNoShows} prior no-show
-                          {r.account.priorNoShows === 1 ? '' : 's'}
+      {panel === 'reservations' && (
+        <section className="admin_panel">
+          <div className="admin_toolbar">
+            <h2>Reservations</h2>
+            <form
+              className="admin_search"
+              onSubmit={(e) => {
+                e.preventDefault();
+                loadAll();
+              }}
+            >
+              <label htmlFor="admin-search" className="visually_hidden">
+                Search by reference, name or phone
+              </label>
+              <input
+                id="admin-search"
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Reference, name or phone"
+              />
+              <label htmlFor="admin-status" className="visually_hidden">
+                Filter by status
+              </label>
+              <select
+                id="admin-status"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="">All statuses</option>
+                {Object.keys(NEXT_ACTIONS).map((s) => (
+                  <option key={s} value={s}>
+                    {s.replace('_', ' ')}
+                  </option>
+                ))}
+              </select>
+              <button type="submit" className="btn btn-primary btn-small">
+                Search
+              </button>
+            </form>
+          </div>
+
+          <div className="table_scroll">
+            <table className="admin_table">
+              <caption className="visually_hidden">
+                Reservations, most recent first, with status actions
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Reference</th>
+                  <th scope="col">Guest</th>
+                  <th scope="col">When</th>
+                  <th scope="col">Party</th>
+                  <th scope="col">Table</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reservations.map((r) => {
+                  const risk = riskLabel(r.noShowRisk);
+                  const highRisk = risk?.level === 'high';
+                  return (
+                    <tr key={r.id}>
+                      <td className="mono">{r.reference}</td>
+                      <td>
+                        {r.guestName}
+                        <br />
+                        <span className="cell_sub">{r.guestPhone}</span>
+                        {r.account?.priorNoShows > 0 && (
+                          <span className="flag_warning">
+                            {r.account.priorNoShows} prior no-show
+                            {r.account.priorNoShows === 1 ? '' : 's'}
+                          </span>
+                        )}
+                      </td>
+                      <td>
+                        {r.date}
+                        <br />
+                        <span className="cell_sub">{r.time}</span>
+                      </td>
+                      <td>{r.partySize}</td>
+                      <td>{r.table?.label ?? '—'}</td>
+                      <td>
+                        <span className={`status_pill status_${r.status.toLowerCase()}`}>
+                          {r.status.replace('_', ' ')}
                         </span>
-                      )}
-                    </td>
-                    <td>
-                      {r.date}
-                      <br />
-                      <span className="cell_sub">{r.time}</span>
-                    </td>
-                    <td>{r.partySize}</td>
-                    <td>{r.table?.label ?? '—'}</td>
-                    <td>
-                      <span className={`status_pill status_${r.status.toLowerCase()}`}>
-                        {r.status.replace('_', ' ')}
-                      </span>
-                      {risk && <span className={`risk_pill risk_${risk.level}`}>{risk.text}</span>}
-                      {r.isOverbooked && <span className="risk_pill risk_medium">overbooked</span>}
-                    </td>
-                    <td className="action_cell">
-                      {(NEXT_ACTIONS[r.status] ?? []).map((action) => (
-                        <button
-                          key={action.status}
-                          type="button"
-                          className={
-                            action.tone === 'primary'
-                              ? 'btn btn-primary btn-small'
-                              : 'btn btn-login btn-small'
-                          }
-                          disabled={busyId === r.id}
-                          onClick={() => changeStatus(r, action.status)}
-                        >
-                          {action.label}
-                        </button>
-                      ))}
-                      {(NEXT_ACTIONS[r.status] ?? []).length === 0 && (
-                        <span className="cell_sub">No actions</span>
-                      )}
+                        {risk && <span className={`risk_pill risk_${risk.level}`}>{risk.text}</span>}
+                        {r.isOverbooked && <span className="risk_pill risk_medium">overbooked</span>}
+                      </td>
+                      <td className="action_cell">
+                        {(NEXT_ACTIONS[r.status] ?? []).map((action) => (
+                          <button
+                            key={action.status}
+                            type="button"
+                            className={
+                              action.tone === 'primary'
+                                ? 'btn btn-primary btn-small'
+                                : 'btn btn-login btn-small'
+                            }
+                            disabled={busyId === r.id}
+                            onClick={() => changeStatus(r, action.status)}
+                          >
+                            {action.label}
+                          </button>
+                        ))}
+                        {highRisk && ['PENDING', 'CONFIRMED'].includes(r.status) && (
+                          <button
+                            type="button"
+                            className="btn btn-login btn-small"
+                            disabled={busyId === r.id}
+                            onClick={() => sendReminder(r)}
+                          >
+                            Send reminder
+                          </button>
+                        )}
+                        {(NEXT_ACTIONS[r.status] ?? []).length === 0 && !highRisk && (
+                          <span className="cell_sub">No actions</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {reservations.length === 0 && !loading && (
+                  <tr>
+                    <td colSpan={7} className="cell_empty">
+                      No reservations match that filter.
                     </td>
                   </tr>
-                );
-              })}
-              {reservations.length === 0 && !loading && (
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {panel === 'waitlist' && (
+        <section className="admin_panel">
+          <div className="admin_toolbar">
+            <h2>Waitlist</h2>
+            <button type="button" className="btn btn-login btn-small" onClick={loadAll}>
+              Refresh
+            </button>
+          </div>
+          <div className="table_scroll">
+            <table className="admin_table">
+              <caption className="visually_hidden">Current waitlist entries</caption>
+              <thead>
                 <tr>
-                  <td colSpan={7} className="cell_empty">
-                    No reservations match that filter.
-                  </td>
+                  <th scope="col">Guest</th>
+                  <th scope="col">When</th>
+                  <th scope="col">Party</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Joined</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
+              </thead>
+              <tbody>
+                {waitlist.map((entry) => (
+                  <tr key={entry.id}>
+                    <td>
+                      {entry.guestName}
+                      <br />
+                      <span className="cell_sub">{entry.guestPhone}</span>
+                      {entry.guestEmail && (
+                        <>
+                          <br />
+                          <span className="cell_sub">{entry.guestEmail}</span>
+                        </>
+                      )}
+                    </td>
+                    <td>
+                      {entry.date}
+                      <br />
+                      <span className="cell_sub">{entry.time}</span>
+                    </td>
+                    <td>{entry.partySize}</td>
+                    <td>
+                      <span className={`status_pill status_${entry.status.toLowerCase()}`}>
+                        {entry.status.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td className="cell_sub">
+                      {entry.createdAt ? new Date(entry.createdAt).toLocaleString() : '—'}
+                    </td>
+                  </tr>
+                ))}
+                {waitlist.length === 0 && !loading && (
+                  <tr>
+                    <td colSpan={5} className="cell_empty">
+                      No one is on the waitlist right now.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       <AdminMenuPanel restaurantSlug={restaurantSlug} />
     </main>

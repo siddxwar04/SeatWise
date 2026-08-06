@@ -11,7 +11,11 @@ export function Hero() {
       <div className="hero_content">
         <span className="tag">Est. 2025</span>
         <h1>
-          Taste the <br /> Art of <span>Cooking.</span>
+          Taste the
+          <br />
+          Art of
+          <br />
+          <span>Cooking.</span>
         </h1>
         <p>
           Experience a symphony of flavors. From our signature stack burgers to authentic

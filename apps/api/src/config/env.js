@@ -57,6 +57,8 @@ const envSchema = z
     OPENAI_CHAT_MODEL: z.string().default('gpt-4o-mini'),
     OPENAI_EMBEDDING_MODEL: z.string().default('text-embedding-3-small'),
 
+    RESEND_API_KEY: z.string().optional(),
+
     SMTP_HOST: z.string().optional(),
     SMTP_PORT: z.coerce.number().int().positive().optional(),
     SMTP_USER: z.string().optional(),

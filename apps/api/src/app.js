@@ -12,9 +12,11 @@ import { generalLimiter } from './middleware/rateLimit.js';
 import { adminRouter } from './modules/admin/admin.routes.js';
 import { authRouter } from './modules/auth/auth.routes.js';
 import { chatRouter } from './modules/chat/chat.routes.js';
+import { dashboardRouter } from './modules/dashboard/dashboard.routes.js';
 import { menuRouter } from './modules/menu/menu.routes.js';
 import { reservationRouter } from './modules/reservations/reservation.routes.js';
 import { restaurantRouter } from './modules/restaurants/restaurant.routes.js';
+import { waitlistRouter } from './modules/waitlist/waitlist.routes.js';
 import { healthRouter } from './routes/health.js';
 
 export function createApp() {
@@ -79,6 +81,8 @@ export function createApp() {
   app.use('/api/menu', menuRouter);
   app.use('/api/reservations', reservationRouter);
   app.use('/api/admin', adminRouter);
+  app.use('/api/dashboard', dashboardRouter);
+  app.use('/api/waitlist', waitlistRouter);
   app.use('/api/chat', chatRouter);
 
   app.use(notFound);

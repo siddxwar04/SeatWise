@@ -162,10 +162,22 @@ export const adminApi = {
       status,
       version,
     }),
+  sendReminder: (id, restaurant) =>
+    api.post(`/admin/reservations/${id}/reminder?${new URLSearchParams({ restaurant })}`),
   today: (restaurant) => api.get(`/admin/service/today?${new URLSearchParams({ restaurant })}`),
   stats: (restaurant, days = 30) =>
     api.get(`/admin/stats?${new URLSearchParams({ restaurant, days })}`),
 };
+
+export const waitlistApi = {
+  join: (data) => api.post('/waitlist', data),
+  list: (restaurant, status) => {
+    const params = { restaurant };
+    if (status) params.status = status;
+    return api.get(`/dashboard/waitlist?${new URLSearchParams(params)}`);
+  },
+};
+
 
 /** Default venue for the marketing site until a picker is wired. */
 export const DEFAULT_RESTAURANT_SLUG =

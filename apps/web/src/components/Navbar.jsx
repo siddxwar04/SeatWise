@@ -74,12 +74,16 @@ export function Navbar() {
   };
 
   /** On the home page these are in-page anchors; elsewhere they route home. */
-  const sectionLink = (hash, label) =>
-    location.pathname === '/' ? (
-      <a href={`#${hash}`}>{label}</a>
+  const sectionLink = (hash, label) => {
+    const active = location.pathname === '/' && location.hash === `#${hash}`;
+    return location.pathname === '/' ? (
+      <a href={`#${hash}`} className={active ? 'is-active' : undefined}>
+        {label}
+      </a>
     ) : (
       <Link to={`/#${hash}`}>{label}</Link>
     );
+  };
 
   return (
     <nav ref={navRef} className={scrolled ? 'is-scrolled' : undefined}>
@@ -95,19 +99,39 @@ export function Navbar() {
 
         <ul className={menuOpen ? 'nav_links active' : 'nav_links'} id="primary-navigation">
           <li>
-            <Link to="/">Home</Link>
+            <Link
+              to="/"
+              className={
+                location.pathname === '/' && !location.hash ? 'is-active' : undefined
+              }
+              aria-current={location.pathname === '/' && !location.hash ? 'page' : undefined}
+            >
+              Home
+            </Link>
           </li>
           <li>{sectionLink('menu', 'Menu')}</li>
           <li>{sectionLink('reserve', 'Reservations')}</li>
           <li>{sectionLink('contact', 'Contact')}</li>
           {isAuthenticated && (
             <li>
-              <Link to="/my-reservations">My Bookings</Link>
+              <Link
+                to="/my-reservations"
+                className={location.pathname === '/my-reservations' ? 'is-active' : undefined}
+                aria-current={location.pathname === '/my-reservations' ? 'page' : undefined}
+              >
+                My Bookings
+              </Link>
             </li>
           )}
           {canAccessAdmin && (
             <li>
-              <Link to="/admin">Admin</Link>
+              <Link
+                to="/admin"
+                className={location.pathname === '/admin' ? 'is-active' : undefined}
+                aria-current={location.pathname === '/admin' ? 'page' : undefined}
+              >
+                Admin
+              </Link>
             </li>
           )}
 

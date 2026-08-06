@@ -88,6 +88,13 @@ enum BookingChannel {
   WALK_IN
 }
 
+enum WaitlistStatus {
+  WAITING
+  NOTIFIED
+  CONVERTED
+  EXPIRED
+}
+
 enum TableZone {
   INDOOR
   OUTDOOR
@@ -123,6 +130,7 @@ model User {
   reservations      Reservation[]
   refreshTokens     RefreshToken[]
   restaurantAdmins  RestaurantAdmin[]
+  waitlistEntries   WaitlistEntry[]
 
   @@index([email])
   @@map("users")
@@ -166,6 +174,7 @@ model Restaurant {
   menuItems  MenuItem[]
   admins     RestaurantAdmin[]
   embedding  RestaurantEmbedding?
+  waitlist   WaitlistEntry[]
 
   @@index([isActive])
   @@map("restaurants")
@@ -338,4 +347,28 @@ model MenuItem {
   @@index([restaurantId])
   @@index([restaurantId, category, isAvailable])
   @@map("menu_items")
+}
+
+/// Guests waiting for a freed table when a slot is full or a no-show opens one.
+model WaitlistEntry {
+  id             String         @id @default(uuid()) @db.Uuid
+  restaurantId   String         @map("restaurant_id") @db.Uuid
+  userId         String?        @map("user_id") @db.Uuid
+  guestName      String         @map("guest_name") @db.VarChar(80)
+  guestPhone     String         @map("guest_phone") @db.VarChar(20)
+  guestEmail     String?        @map("guest_email")
+  requestedDate  DateTime       @map("requested_date") @db.Date
+  requestedTime  String         @map("requested_time") @db.VarChar(5)
+  partySize      Int            @map("party_size")
+  status         WaitlistStatus @default(WAITING)
+  notifiedAt     DateTime?      @map("notified_at")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  user       User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([restaurantId, status, requestedDate])
+  @@index([userId])
+  @@map("waitlist_entries")
 }

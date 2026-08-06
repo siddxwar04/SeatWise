@@ -1,3 +1,4 @@
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 import { ApiError, chatApi } from '../lib/api.js';
 import { ChatRestaurantCard } from './ChatRestaurantCard.jsx';
@@ -15,6 +16,7 @@ export function ChatWidget() {
   const [sending, setSending] = useState(false);
   const [messages, setMessages] = useState([{ role: 'assistant', content: WELCOME }]);
   const listRef = useRef(null);
+  const reduce = useReducedMotion();
 
   useEffect(() => {
     if (!open || !listRef.current) return;
@@ -58,66 +60,81 @@ export function ChatWidget() {
 
   return (
     <div className={`chat_widget ${open ? 'is-open' : ''}`}>
-      {open && (
-        <section className="chat_panel" aria-label="TastyFood concierge chat">
-          <header className="chat_panel_header">
-            <div>
-              <p className="chat_panel_eyebrow">Concierge</p>
-              <h3>Ask TastyFood</h3>
-            </div>
-            <button
-              type="button"
-              className="chat_icon_btn"
-              onClick={() => setOpen(false)}
-              aria-label="Close chat"
-            >
-              ×
-            </button>
-          </header>
-
-          <div className="chat_messages" ref={listRef} role="log" aria-live="polite">
-            {messages.map((msg, index) => (
-              <div
-                key={`${msg.role}-${index}`}
-                className={`chat_bubble chat_bubble_${msg.role}${msg.isError ? ' chat_bubble_error' : ''}`}
+      <AnimatePresence>
+        {open && (
+          <motion.section
+            className="chat_panel"
+            aria-label="TastyFood concierge chat"
+            key="chat-panel"
+            initial={reduce ? false : { opacity: 0, scale: 0.88, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={reduce ? undefined : { opacity: 0, scale: 0.92, y: 12 }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            style={{ transformOrigin: 'bottom right' }}
+          >
+            <header className="chat_panel_header">
+              <div>
+                <p className="chat_panel_eyebrow">Concierge</p>
+                <h3>Ask TastyFood</h3>
+              </div>
+              <button
+                type="button"
+                className="chat_icon_btn"
+                onClick={() => setOpen(false)}
+                aria-label="Close chat"
               >
-                <p>{msg.content}</p>
-                {msg.restaurants?.length > 0 && (
-                  <div className="chat_restaurant_list">
-                    {msg.restaurants.map((restaurant) => (
-                      <ChatRestaurantCard key={restaurant.id} restaurant={restaurant} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-            {sending && (
-              <div className="chat_bubble chat_bubble_assistant chat_bubble_loading">
-                <p>Finding places for you…</p>
-              </div>
-            )}
-          </div>
+                ×
+              </button>
+            </header>
 
-          <form className="chat_composer" onSubmit={send}>
-            <label htmlFor="chat-input" className="visually_hidden">
-              Message the concierge
-            </label>
-            <input
-              id="chat-input"
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about restaurants…"
-              maxLength={1000}
-              disabled={sending}
-              autoComplete="off"
-            />
-            <button type="submit" className="btn btn-primary btn-small" disabled={sending || !input.trim()}>
-              Send
-            </button>
-          </form>
-        </section>
-      )}
+            <div className="chat_messages" ref={listRef} role="log" aria-live="polite">
+              {messages.map((msg, index) => (
+                <div
+                  key={`${msg.role}-${index}`}
+                  className={`chat_bubble chat_bubble_${msg.role}${msg.isError ? ' chat_bubble_error' : ''}`}
+                >
+                  <p>{msg.content}</p>
+                  {msg.restaurants?.length > 0 && (
+                    <div className="chat_restaurant_list">
+                      {msg.restaurants.map((restaurant) => (
+                        <ChatRestaurantCard key={restaurant.id} restaurant={restaurant} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {sending && (
+                <div className="chat_bubble chat_bubble_assistant chat_bubble_loading">
+                  <p>Finding places for you…</p>
+                </div>
+              )}
+            </div>
+
+            <form className="chat_composer" onSubmit={send}>
+              <label htmlFor="chat-input" className="visually_hidden">
+                Message the concierge
+              </label>
+              <input
+                id="chat-input"
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Ask about restaurants…"
+                maxLength={1000}
+                disabled={sending}
+                autoComplete="off"
+              />
+              <button
+                type="submit"
+                className="btn btn-primary btn-small"
+                disabled={sending || !input.trim()}
+              >
+                Send
+              </button>
+            </form>
+          </motion.section>
+        )}
+      </AnimatePresence>
 
       <button
         type="button"

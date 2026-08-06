@@ -1,47 +1,124 @@
-/* Design tokens — single source for radii, shadows, type, color */
+/**
+ * TastyFood design tokens — single source of truth.
+ * No Tailwind in this project; every component consumes these CSS variables.
+ * Spacing uses an 4px base scale (space-1 … space-16).
+ */
 :root {
-  /* Brand — saffron accent on warm stone (not purple, not flat gray) */
-  --primary: #e85d04;
-  --primary-dark: #c44a00;
-  --primary-soft: rgba(232, 93, 4, 0.12);
-  --primary-glow: rgba(232, 93, 4, 0.28);
+  /* ——— Accent (single brand orange) ——— */
+  --color-accent: #e85d04;
+  --color-accent-hover: #c2410c;
+  --color-accent-pressed: #9a3412;
+  --color-accent-soft: rgba(232, 93, 4, 0.1);
+  --color-accent-glow: rgba(232, 93, 4, 0.32);
+  --color-accent-ring: rgba(232, 93, 4, 0.35);
 
-  --bg-page: #f6f3ef;
-  --bg-warm: linear-gradient(160deg, #faf7f2 0%, #f3ebe3 48%, #efe6dc 100%);
-  --bg-dark: #1c1917;
-  --surface: #ffffff;
-  --surface-muted: #faf8f5;
-  --border: rgba(28, 25, 23, 0.08);
-  --border-strong: rgba(28, 25, 23, 0.14);
+  /* Legacy aliases used across style.css / app.css */
+  --primary: var(--color-accent);
+  --primary-dark: var(--color-accent-hover);
+  --primary-soft: var(--color-accent-soft);
+  --primary-glow: var(--color-accent-glow);
 
-  --text-dark: #1c1917;
-  --text-light: #78716c;
-  --white: #ffffff;
+  /* ——— Warm neutral scale ——— */
+  --neutral-0: #ffffff;
+  --neutral-25: #fdfcfa;
+  --neutral-50: #faf7f2;
+  --neutral-100: #f3ebe3;
+  --neutral-150: #ebe3d9;
+  --neutral-200: #e0d6ca;
+  --neutral-300: #c9bdb0;
+  --neutral-400: #a8988a;
+  --neutral-500: #8a7b6e;
+  --neutral-600: #6b5f55;
+  --neutral-700: #4a4039;
+  --neutral-800: #2c2622;
+  --neutral-900: #1c1917;
+  --neutral-950: #0c0a09;
 
-  --shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.04), 0 4px 12px rgba(28, 25, 23, 0.04);
-  --shadow: 0 8px 24px rgba(28, 25, 23, 0.07), 0 2px 6px rgba(28, 25, 23, 0.04);
-  --shadow-lg: 0 20px 48px rgba(28, 25, 23, 0.12), 0 8px 16px rgba(28, 25, 23, 0.06);
-  --shadow-accent: 0 10px 28px var(--primary-glow);
+  /* ——— Semantic surfaces & text ——— */
+  --surface: var(--neutral-0);
+  --surface-elevated: var(--neutral-25);
+  --surface-muted: var(--neutral-50);
+  --surface-sunken: var(--neutral-100);
+  --border-subtle: rgba(28, 25, 23, 0.07);
+  --border: rgba(28, 25, 23, 0.1);
+  --border-strong: rgba(28, 25, 23, 0.16);
+  --text-primary: var(--neutral-900);
+  --text-secondary: var(--neutral-600);
+  --text-muted: var(--neutral-500);
+  --text-on-accent: #ffffff;
 
+  --bg-page: var(--neutral-50);
+  --bg-warm: radial-gradient(ellipse 120% 80% at 10% -10%, rgba(232, 93, 4, 0.07), transparent 50%),
+    radial-gradient(ellipse 90% 60% at 100% 0%, rgba(194, 65, 12, 0.05), transparent 45%),
+    linear-gradient(180deg, var(--neutral-50) 0%, var(--neutral-100) 55%, var(--neutral-150) 100%);
+  --bg-dark: var(--neutral-900);
+  --text-dark: var(--text-primary);
+  --text-light: var(--text-secondary);
+  --white: var(--neutral-0);
+
+  /* ——— Elevation (ambient + contact) ——— */
+  --shadow-xs: 0 1px 2px rgba(28, 25, 23, 0.04);
+  --shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.04), 0 4px 14px rgba(28, 25, 23, 0.05);
+  --shadow-md: 0 2px 4px rgba(28, 25, 23, 0.04), 0 12px 28px rgba(28, 25, 23, 0.08);
+  --shadow-lg: 0 4px 8px rgba(28, 25, 23, 0.04), 0 24px 48px rgba(28, 25, 23, 0.12);
+  --shadow-xl: 0 8px 16px rgba(28, 25, 23, 0.06), 0 32px 64px rgba(28, 25, 23, 0.16);
+  --shadow-accent: 0 4px 12px rgba(232, 93, 4, 0.2), 0 12px 32px rgba(232, 93, 4, 0.28);
+  --shadow: var(--shadow-md);
+
+  /* ——— Radius ——— */
   --radius-sm: 10px;
-  --radius: 16px;
-  --radius-lg: 24px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius: var(--radius-md);
   --radius-pill: 999px;
 
-  --space-section: clamp(4.5rem, 8vw, 7rem);
-  --space-section-sm: clamp(3rem, 5vw, 4.5rem);
+  /* ——— Spacing (4px base) ——— */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
+  --space-section: clamp(4.5rem, 9vw, 7.5rem);
+  --space-section-sm: clamp(3rem, 6vw, 4.5rem);
   --container: 1120px;
 
+  /* ——— Typography ——— */
   --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
   --font-display: 'Fraunces', 'Times New Roman', serif;
 
-  --text-hero: clamp(2.75rem, 6vw, 4.25rem);
-  --text-h1: clamp(2rem, 4vw, 2.75rem);
-  --text-h2: clamp(1.65rem, 3vw, 2.25rem);
-  --text-h3: clamp(1.15rem, 2vw, 1.35rem);
+  --text-display: clamp(3rem, 7.5vw, 4.75rem);
+  --text-hero: var(--text-display);
+  --text-h1: clamp(2.15rem, 4.2vw, 2.85rem);
+  --text-h2: clamp(1.75rem, 3.2vw, 2.35rem);
+  --text-h3: clamp(1.2rem, 2vw, 1.4rem);
+  --text-h4: 1.05rem;
+  --text-body-lg: 1.125rem;
   --text-body: 1.05rem;
-  --text-caption: 0.8125rem;
+  --text-caption: 0.8rem;
 
-  --ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --duration: 220ms;
+  --leading-tight: 1.12;
+  --leading-snug: 1.35;
+  --leading-normal: 1.65;
+  --leading-relaxed: 1.75;
+  --tracking-display: -0.035em;
+  --tracking-tight: -0.025em;
+  --tracking-normal: -0.011em;
+
+  /* ——— Motion ——— */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
+  --duration-fast: 160ms;
+  --duration-micro: 200ms;
+  --duration-base: 280ms;
+  --duration-reveal: 420ms;
+  --ease: var(--ease-out);
+  --duration: var(--duration-micro);
 }

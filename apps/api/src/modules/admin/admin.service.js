@@ -1,8 +1,10 @@
 import { BadRequestError, ConflictError, NotFoundError } from '../../errors/AppError.js';
+import { sendHighRiskReminder } from '../../lib/email.js';
 import { logger } from '../../lib/logger.js';
 import { prisma } from '../../lib/prisma.js';
 import { serviceDateFor, todayLocal, utcToLocalParts } from '../../lib/slots.js';
 import { toPublicReservation } from '../reservations/reservation.service.js';
+import { notifyMatchingWaitlist } from '../waitlist/waitlist.service.js';
 
 /**
  * The admin surface the audit found entirely missing: "Bookings go into the DB
@@ -109,7 +111,7 @@ export async function updateStatus(
   adminId,
   restaurantId,
 ) {
-  return prisma.$transaction(async (tx) => {
+  const updated = await prisma.$transaction(async (tx) => {
     const current = await tx.reservation.findUnique({
       where: { id: reservationId },
       include: {
@@ -124,7 +126,7 @@ export async function updateStatus(
       throw new NotFoundError('Reservation not found.');
     }
 
-    if (current.status === nextStatus) return current;
+    if (current.status === nextStatus) return { row: current, changed: false };
 
     const allowed = ALLOWED_TRANSITIONS[current.status] ?? [];
     if (!allowed.includes(nextStatus)) {
@@ -139,7 +141,7 @@ export async function updateStatus(
       );
     }
 
-    const updated = await tx.reservation.update({
+    const row = await tx.reservation.update({
       where: { id: reservationId },
       data: {
         status: nextStatus,
@@ -171,8 +173,80 @@ export async function updateStatus(
       'reservation status changed',
     );
 
-    return updated;
+    return { row, changed: true, previous: current };
   });
+
+  if (
+    updated.changed &&
+    (nextStatus === 'CANCELLED' || nextStatus === 'NO_SHOW') &&
+    updated.row.table?.restaurantId
+  ) {
+    try {
+      const local = utcToLocalParts(updated.row.startsAt);
+      await notifyMatchingWaitlist({
+        restaurantId: updated.row.table.restaurantId,
+        date: local.date,
+        time: local.time,
+        partySize: updated.row.partySize,
+      });
+    } catch (err) {
+      logger.error({ err, reservationId }, 'waitlist notify after status change failed');
+    }
+  }
+
+  return updated.row;
+}
+
+/** Owner-triggered reminder for high no-show-risk bookings. */
+export async function sendReminder(reservationId, restaurantId) {
+  const reservation = await prisma.reservation.findUnique({
+    where: { id: reservationId },
+    include: {
+      table: { select: { restaurantId: true } },
+      user: { select: { email: true } },
+    },
+  });
+
+  if (!reservation || reservation.table?.restaurantId !== restaurantId) {
+    throw new NotFoundError('Reservation not found.');
+  }
+
+  if (!['PENDING', 'CONFIRMED'].includes(reservation.status)) {
+    throw new BadRequestError('Reminders can only be sent for upcoming bookings.');
+  }
+
+  const to = reservation.guestEmail || reservation.user?.email;
+  if (!to) {
+    throw new BadRequestError('This booking has no email address on file.');
+  }
+
+  const local = utcToLocalParts(reservation.startsAt);
+  const venue = await prisma.restaurant.findUnique({
+    where: { id: restaurantId },
+    select: { name: true },
+  });
+
+  const result = await sendHighRiskReminder({
+    to,
+    guestName: reservation.guestName,
+    restaurantName: venue?.name || 'TastyFood',
+    date: local.date,
+    time: local.time,
+    partySize: reservation.partySize,
+    reference: reservation.reference,
+  });
+
+  if (!result.ok) {
+    if (result.reason === 'not_configured') {
+      throw new BadRequestError('Email is not configured. Set RESEND_API_KEY on the API.');
+    }
+    if (result.reason === 'no_recipient') {
+      throw new BadRequestError('This booking has no email address on file.');
+    }
+    throw new BadRequestError('Could not send the reminder email. Please try again.');
+  }
+
+  return { message: `Reminder sent to ${to}.` };
 }
 
 /**

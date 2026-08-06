@@ -106,3 +106,15 @@ adminRouter.get(
     res.json({ tables: await adminService.listTables(req.restaurant.id) });
   }),
 );
+
+adminRouter.post(
+  '/reservations/:id/reminder',
+  validate({
+    params: idParamSchema,
+    query: restaurantQuerySchema,
+  }),
+  requireRestaurantAdmin(),
+  asyncHandler(async (req, res) => {
+    res.json(await adminService.sendReminder(req.params.id, req.restaurant.id));
+  }),
+);

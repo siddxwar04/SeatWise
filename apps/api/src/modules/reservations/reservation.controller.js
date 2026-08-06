@@ -1,4 +1,5 @@
 import { asyncHandler } from '../../lib/asyncHandler.js';
+import { sendBookingConfirmation } from '../../lib/email.js';
 import { resolveRestaurant } from '../restaurants/restaurant.service.js';
 import { getDayAvailability } from './availability.service.js';
 import { bookingRules, cancelReservation, createReservation } from './booking.service.js';
@@ -23,8 +24,21 @@ export const create = asyncHandler(async (req, res) => {
     req.user ?? null,
     'WEB',
   );
+  const publicReservation = reservationService.toPublicReservation(reservation);
+
+  const to = reservation.guestEmail || req.user?.email;
+  await sendBookingConfirmation({
+    to,
+    guestName: reservation.guestName,
+    restaurantName: venue.name,
+    date: publicReservation.date,
+    time: publicReservation.time,
+    partySize: reservation.partySize,
+    reference: reservation.reference,
+  });
+
   res.status(201).json({
-    reservation: reservationService.toPublicReservation(reservation),
+    reservation: publicReservation,
     message: `Table booked. Your reference is ${reservation.reference}.`,
   });
 });

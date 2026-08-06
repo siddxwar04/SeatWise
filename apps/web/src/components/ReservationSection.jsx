@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
-import { ApiError, DEFAULT_RESTAURANT_SLUG, reservationApi } from '../lib/api.js';
+import { ApiError, DEFAULT_RESTAURANT_SLUG, reservationApi, waitlistApi } from '../lib/api.js';
 import { resolveVenueSlug } from '../lib/venue.js';
 
 /**
@@ -32,6 +32,7 @@ function todayInputValue(utcOffsetMinutes = 330) {
 const EMPTY_FORM = {
   guestName: '',
   guestPhone: '',
+  guestEmail: '',
   date: '',
   time: '',
   partySize: 2,
@@ -43,13 +44,21 @@ export function ReservationSection() {
   const toast = useToast();
   const { search } = useLocation();
   const restaurantSlug = resolveVenueSlug(search, DEFAULT_RESTAURANT_SLUG);
+  const query = new URLSearchParams(search);
 
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [form, setForm] = useState(() => ({
+    ...EMPTY_FORM,
+    date: query.get('date') || '',
+    time: query.get('time') || '',
+  }));
   const [fieldErrors, setFieldErrors] = useState({});
   const [slots, setSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [slotsError, setSlotsError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [joiningWaitlist, setJoiningWaitlist] = useState(false);
+  const [waitlistOffer, setWaitlistOffer] = useState(false);
+  const [waitlistJoined, setWaitlistJoined] = useState(false);
   const [confirmation, setConfirmation] = useState(null);
   const [maxPartySize, setMaxPartySize] = useState(10);
   const [utcOffsetMinutes, setUtcOffsetMinutes] = useState(330);
@@ -63,6 +72,7 @@ export function ReservationSection() {
         ...f,
         guestName: f.guestName || user.username,
         guestPhone: f.guestPhone || (user.phone ?? ''),
+        guestEmail: f.guestEmail || (user.email ?? ''),
       }));
     }
   }, [user]);
@@ -92,6 +102,7 @@ export function ReservationSection() {
     if (!form.date) {
       setSlots([]);
       setSlotsError(null);
+      setWaitlistOffer(false);
       return undefined;
     }
 
@@ -105,16 +116,19 @@ export function ReservationSection() {
         if (cancelled) return;
         setSlots(data.slots);
         setSlotsError(null);
-        // If the chosen time just became unavailable, clear it rather than
-        // letting the user submit something we already know will fail.
+        const anyOpen = data.slots.some((s) => s.available);
+        setWaitlistOffer(!anyOpen);
         setForm((f) => {
           const stillOpen = data.slots.some((s) => s.time === f.time && s.available);
-          return stillOpen ? f : { ...f, time: '' };
+          if (stillOpen) return f;
+          if (!anyOpen && f.time) return f;
+          return { ...f, time: '' };
         });
       })
       .catch((err) => {
         if (cancelled) return;
         setSlots([]);
+        setWaitlistOffer(false);
         setSlotsError(
           err instanceof ApiError
             ? err.message
@@ -134,14 +148,35 @@ export function ReservationSection() {
     const raw = event.target.value;
     const value = field === 'partySize' ? Number(raw) : raw;
     setForm((f) => ({ ...f, [field]: value }));
-    // Clear the error as soon as the field is touched — leaving it up while
-    // someone is fixing it reads as though the fix did not register.
     setFieldErrors((errors) => {
       if (!errors[field]) return errors;
       const next = { ...errors };
       delete next[field];
       return next;
     });
+  };
+
+  const handleJoinWaitlist = async () => {
+    if (joiningWaitlist) return;
+    setJoiningWaitlist(true);
+    try {
+      const result = await waitlistApi.join({
+        restaurantSlug,
+        guestName: form.guestName,
+        guestPhone: form.guestPhone,
+        guestEmail: form.guestEmail,
+        date: form.date,
+        time: form.time || slots[0]?.time || '19:00',
+        partySize: form.partySize,
+      });
+      setWaitlistJoined(true);
+      setWaitlistOffer(false);
+      toast.success(result.message);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Could not join the waitlist.');
+    } finally {
+      setJoiningWaitlist(false);
+    }
   };
 
   const handleSubmit = async (event) => {
@@ -160,35 +195,43 @@ export function ReservationSection() {
         date: form.date,
         time: form.time,
         ...(form.specialRequests ? { specialRequests: form.specialRequests } : {}),
-        ...(user?.email ? { guestEmail: user.email } : {}),
+        ...(form.guestEmail || user?.email
+          ? { guestEmail: form.guestEmail || user.email }
+          : {}),
       };
 
       const result = await reservationApi.create(payload);
       setConfirmation(result.reservation);
+      setWaitlistOffer(false);
       toast.success(result.message);
-      setForm({ ...EMPTY_FORM, guestName: user?.username ?? '', guestPhone: user?.phone ?? '' });
+      setForm({
+        ...EMPTY_FORM,
+        guestName: user?.username ?? '',
+        guestPhone: user?.phone ?? '',
+        guestEmail: user?.email ?? '',
+      });
     } catch (err) {
       if (err instanceof ApiError) {
-        // Field-level messages land under the inputs; everything else is a
-        // toast. Either way the form keeps what was typed.
-        if (err.details && typeof err.details === 'object') {
+        if (err.details && typeof err.details === 'object' && !err.details.waitlistEligible) {
           setFieldErrors(err.details);
           toast.error('Please check the highlighted fields.');
         } else {
           toast.error(err.message);
         }
-        // A 409 means the slot went while they were filling the form; refresh
-        // the grid so they can see what is left.
-        if (err.status === 409 && form.date) {
-          reservationApi
-            .availability(restaurantSlug, form.date, form.partySize)
-            .then((data) => {
-              setSlots(data.slots);
-              setSlotsError(null);
-            })
-            .catch(() => {
-              setSlotsError('Could not refresh availability after the conflict.');
-            });
+        if (err.status === 409) {
+          if (err.details?.waitlistEligible) setWaitlistOffer(true);
+          if (form.date) {
+            reservationApi
+              .availability(restaurantSlug, form.date, form.partySize)
+              .then((data) => {
+                setSlots(data.slots);
+                setSlotsError(null);
+                if (!data.slots.some((s) => s.available)) setWaitlistOffer(true);
+              })
+              .catch(() => {
+                setSlotsError('Could not refresh availability after the conflict.');
+              });
+          }
         }
       } else {
         toast.error('Could not reach the server. Please try again.');
@@ -254,6 +297,23 @@ export function ReservationSection() {
                 Book another table
               </button>
             </div>
+          ) : waitlistJoined ? (
+            <div className="booking_confirmation" role="status">
+              <h3>You&apos;re on the waitlist.</h3>
+              <p className="booking_hint">
+                We&apos;ll email you if a table opens for {form.date || 'your date'}
+                {form.time ? ` at ${form.time}` : ''}.
+              </p>
+              <button
+                type="button"
+                className="btn btn-login"
+                onClick={() => {
+                  setWaitlistJoined(false);
+                }}
+              >
+                Back to booking
+              </button>
+            </div>
           ) : (
             <form className="reservation_form" onSubmit={handleSubmit} noValidate>
               <div className="input_row">
@@ -300,11 +360,24 @@ export function ReservationSection() {
                 </div>
               </div>
 
+              <div className="field">
+                <label htmlFor="guestEmail">
+                  Email <span className="field_optional">(for confirmations &amp; waitlist)</span>
+                </label>
+                <input
+                  id="guestEmail"
+                  type="email"
+                  name="guestEmail"
+                  value={form.guestEmail}
+                  onChange={update('guestEmail')}
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                />
+              </div>
+
               <div className="input_row">
                 <div className="field">
                   <label htmlFor="date">Date</label>
-                  {/* min stops past dates at the picker; the server enforces it
-                      again, because a min attribute is a two-second DevTools edit. */}
                   <input
                     id="date"
                     type="date"
@@ -346,7 +419,7 @@ export function ReservationSection() {
                     disabled={!form.date || loadingSlots || Boolean(slotsError)}
                     aria-invalid={Boolean(fieldErrors.time) || Boolean(slotsError)}
                     aria-describedby="time-hint"
-                    required
+                    required={!waitlistOffer}
                   >
                     <option value="">
                       {!form.date
@@ -358,7 +431,11 @@ export function ReservationSection() {
                             : 'Select a time'}
                     </option>
                     {slots.map((slot) => (
-                      <option key={slot.time} value={slot.time} disabled={!slot.available}>
+                      <option
+                        key={slot.time}
+                        value={slot.time}
+                        disabled={!slot.available && !waitlistOffer}
+                      >
                         {slot.time}
                         {slot.available
                           ? slot.tablesFree <= 2
@@ -395,16 +472,41 @@ export function ReservationSection() {
                 />
               </div>
 
-              {/* disabled while in flight — the old form had no in-flight state
-                  at all, so an impatient double-click made two reservations. */}
-              <button
-                type="submit"
-                className="btn btn-primary"
-                style={{ width: '100%' }}
-                disabled={submitting || Boolean(slotsError)}
-              >
-                {submitting ? 'Booking your table…' : 'Confirm Booking'}
-              </button>
+              {!waitlistOffer && (
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ width: '100%' }}
+                  disabled={submitting || Boolean(slotsError)}
+                >
+                  {submitting ? 'Booking your table…' : 'Confirm Booking'}
+                </button>
+              )}
+
+              {waitlistOffer && (
+                <div className="booking_hint" role="status">
+                  <p>
+                    That sitting is full. Join the waitlist and we&apos;ll email you the moment a
+                    table opens — including when a high-risk booking turns into a no-show.
+                  </p>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    style={{ width: '100%' }}
+                    disabled={
+                      joiningWaitlist ||
+                      !form.guestName ||
+                      !form.guestPhone ||
+                      !form.guestEmail ||
+                      !form.date ||
+                      !form.time
+                    }
+                    onClick={handleJoinWaitlist}
+                  >
+                    {joiningWaitlist ? 'Joining waitlist…' : 'Join Waitlist'}
+                  </button>
+                </div>
+              )}
             </form>
           )}
         </div>

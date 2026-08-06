@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { DEFAULT_RESTAURANT_SLUG, menuApi } from '../lib/api.js';
 import { resolveVenueSlug } from '../lib/venue.js';
+import { Stagger, StaggerItem } from './Reveal.jsx';
 
 /**
  * The menu, from the database.
@@ -105,52 +106,51 @@ export function MenuSection() {
         <p className="menu_state">Nothing on the menu in this course today.</p>
       )}
 
-      <div className="menu_grid">
+      <Stagger className="menu_grid" stagger={0.05}>
         {visible.map((item) => {
           const isOpen = openCardId === item.id;
           return (
-            <article
-              className={isOpen ? 'menu_card is-open' : 'menu_card'}
-              key={item.id}
-              tabIndex={0}
-              role="button"
-              aria-expanded={isOpen}
-              aria-label={`${item.name}, ${item.priceLabel}. ${isOpen ? 'Hide' : 'Show'} details`}
-              onClick={() => toggleCard(item.id)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  toggleCard(item.id);
-                }
-              }}
-            >
-              {/* Below the fold, so lazy. Explicit dimensions reserve the box and
-                  stop the grid reflowing as images arrive. */}
-              <img
-                src={item.imageUrl}
-                alt={item.imageAlt}
-                loading="lazy"
-                decoding="async"
-                width="400"
-                height="300"
-              />
-              <div className="card_info">
-                <h3>{item.name}</h3>
-                <span>{item.priceLabel}</span>
-              </div>
-              <div className="card_overlay" aria-hidden={!isOpen}>
-                <p>{item.description}</p>
-                {item.allergens.length > 0 && (
-                  <p className="card_allergens">
-                    Contains:{' '}
-                    {item.allergens.map((a) => a.replace('_', ' ').toLowerCase()).join(', ')}
-                  </p>
-                )}
-              </div>
-            </article>
+            <StaggerItem key={item.id}>
+              <article
+                className={isOpen ? 'menu_card is-open' : 'menu_card'}
+                tabIndex={0}
+                role="button"
+                aria-expanded={isOpen}
+                aria-label={`${item.name}, ${item.priceLabel}. ${isOpen ? 'Hide' : 'Show'} details`}
+                onClick={() => toggleCard(item.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggleCard(item.id);
+                  }
+                }}
+              >
+                <img
+                  src={item.imageUrl}
+                  alt={item.imageAlt}
+                  loading="lazy"
+                  decoding="async"
+                  width="400"
+                  height="300"
+                />
+                <div className="card_info">
+                  <h3>{item.name}</h3>
+                  <span>{item.priceLabel}</span>
+                </div>
+                <div className="card_overlay" aria-hidden={!isOpen}>
+                  <p>{item.description}</p>
+                  {item.allergens.length > 0 && (
+                    <p className="card_allergens">
+                      Contains:{' '}
+                      {item.allergens.map((a) => a.replace('_', ' ').toLowerCase()).join(', ')}
+                    </p>
+                  )}
+                </div>
+              </article>
+            </StaggerItem>
           );
         })}
-      </div>
+      </Stagger>
     </section>
   );
 }

@@ -4,7 +4,8 @@ import { BadRequestError, ConflictError } from '../../errors/AppError.js';
 import { logger } from '../../lib/logger.js';
 import { prisma } from '../../lib/prisma.js';
 import { generateBookingReference } from '../../lib/reference.js';
-import { bookingInterval, serviceDateFor, validateBookingTime } from '../../lib/slots.js';
+import { bookingInterval, serviceDateFor, utcToLocalParts, validateBookingTime } from '../../lib/slots.js';
+import { notifyMatchingWaitlist } from '../waitlist/waitlist.service.js';
 import { isRestaurantAdmin } from '../restaurants/restaurant.service.js';
 
 /**
@@ -164,6 +165,7 @@ export async function createReservation(input, actor = null, channel = 'WEB') {
             // enough, release controlled extra capacity instead of refusing.
             throw new ConflictError(
               'That time is fully booked. Please choose another slot — the times shown update live.',
+              { waitlistEligible: true },
             );
           }
 
@@ -259,7 +261,7 @@ export async function createReservation(input, actor = null, channel = 'WEB') {
  * had no concept of this because bookings were not linked to users at all.
  */
 export async function cancelReservation(reservationId, actor) {
-  return prisma.$transaction(async (tx) => {
+  const updated = await prisma.$transaction(async (tx) => {
     const reservation = await tx.reservation.findUnique({
       where: { id: reservationId },
       include: {
@@ -289,7 +291,7 @@ export async function cancelReservation(reservationId, actor) {
     }
 
     if (reservation.status === 'CANCELLED') {
-      return reservation;
+      return { reservation, newlyCancelled: false };
     }
     if (['SEATED', 'COMPLETED'].includes(reservation.status)) {
       throw new BadRequestError('This booking has already been seated and cannot be cancelled.');
@@ -299,7 +301,7 @@ export async function cancelReservation(reservationId, actor) {
     // is exactly what the no-show model learns from.
     const hoursNotice = (reservation.startsAt.getTime() - Date.now()) / 3_600_000;
 
-    const updated = await tx.reservation.update({
+    const row = await tx.reservation.update({
       where: { id: reservationId },
       data: {
         status: 'CANCELLED',
@@ -314,8 +316,24 @@ export async function cancelReservation(reservationId, actor) {
     });
 
     logger.info({ reservationId, hoursNotice: Math.round(hoursNotice) }, 'reservation cancelled');
-    return updated;
+    return { reservation: row, newlyCancelled: true };
   });
+
+  if (updated.newlyCancelled && updated.reservation.table?.restaurantId) {
+    try {
+      const local = utcToLocalParts(updated.reservation.startsAt);
+      await notifyMatchingWaitlist({
+        restaurantId: updated.reservation.table.restaurantId,
+        date: local.date,
+        time: local.time,
+        partySize: updated.reservation.partySize,
+      });
+    } catch (err) {
+      logger.error({ err, reservationId }, 'waitlist notify after cancel failed');
+    }
+  }
+
+  return updated.reservation;
 }
 
 /** Config the booking form needs in order to render correct options. */

@@ -1,7 +1,8 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { ChatWidget } from './components/ChatWidget.jsx';
 import { Footer } from './components/Footer.jsx';
 import { Navbar } from './components/Navbar.jsx';
+import { PageTransition } from './components/PageTransition.jsx';
 import { ProtectedRoute } from './components/ProtectedRoute.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
 import { ToastProvider } from './context/ToastContext.jsx';
@@ -16,13 +17,42 @@ import './styles/style.css';
 import './styles/app.css';
 import './styles/polish.css';
 
+function AppRoutes() {
+  const location = useLocation();
+
+  return (
+    <PageTransition>
+      <Routes location={location}>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route
+          path="/my-reservations"
+          element={
+            <ProtectedRoute>
+              <MyReservationsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute adminOnly>
+              <AdminDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </PageTransition>
+  );
+}
+
 export function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <ToastProvider>
-          {/* Audit #29: the site was not keyboard navigable and had no skip
-              link. This is the first thing a keyboard user reaches. */}
           <a href="#main-content" className="skip_link">
             Skip to main content
           </a>
@@ -30,28 +60,7 @@ export function App() {
           <Navbar />
 
           <div id="main-content">
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route
-                path="/my-reservations"
-                element={
-                  <ProtectedRoute>
-                    <MyReservationsPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin"
-                element={
-                  <ProtectedRoute adminOnly>
-                    <AdminDashboardPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route path="*" element={<NotFoundPage />} />
-            </Routes>
+            <AppRoutes />
           </div>
 
           <Footer />
