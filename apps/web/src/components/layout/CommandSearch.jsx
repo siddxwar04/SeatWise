@@ -159,7 +159,7 @@ export function CommandSearch({ open, onClose }) {
                   >
                     {item.kind === 'venue' ? (
                       <>
-                        <Cover seed={item.slug} name={item.title} size="sm" />
+                        <Cover seed={item.slug} name={item.title} src={item.image} size="sm" alt="" />
                         <span className="cmd_text">
                           <strong>{item.title}</strong>
                           <span className="cmd_meta">{item.meta}</span>
@@ -210,6 +210,7 @@ function toVenueItem(venue) {
     title: venue.name,
     meta: `${venue.cuisine} · ${priceBand(venue.price)} · ${venue.area}`,
     rating: venue.rating,
+    image: venue.image,
   };
 }
 

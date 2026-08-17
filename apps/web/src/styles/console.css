@@ -1,0 +1,222 @@
+/**
+ * Owner console: layout, heatmap, floor, risk queue.
+ * Shared shells (panel, table, stat tile) live in components.css.
+ */
+
+.console_head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-4);
+  margin-bottom: var(--s-6);
+  flex-wrap: wrap;
+}
+
+.console_head h1 {
+  margin-top: var(--s-1);
+  font-size: var(--t-h2);
+}
+
+.console_panel {
+  margin-top: var(--s-5);
+}
+
+.menu_state {
+  padding: var(--s-16) 0;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.stat_grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--s-3);
+}
+
+.console_summary {
+  margin-bottom: var(--s-6);
+}
+
+/* ════════════════════════════════════════════════════════════ risk queue ══ */
+
+.risk_bands {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s-3);
+}
+
+.risk_band_card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--s-4);
+  border-radius: var(--r-md);
+  border: 1px solid var(--border-faint);
+  background: var(--surface-raised);
+}
+
+.risk_band_card strong {
+  font-size: 1.5rem;
+}
+
+.risk_band-low {
+  box-shadow: inset 3px 0 0 var(--risk-low);
+}
+.risk_band-medium {
+  box-shadow: inset 3px 0 0 var(--risk-medium);
+}
+.risk_band-high {
+  box-shadow: inset 3px 0 0 var(--risk-high);
+}
+
+.risk_band_label {
+  font-size: var(--t-2xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--tr-caps);
+  color: var(--text-muted);
+}
+
+.risk_why {
+  font-size: var(--t-xs);
+  color: var(--text-secondary);
+}
+
+.risk_action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--t-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.risk_action-danger {
+  color: var(--danger);
+}
+.risk_action-warn {
+  color: var(--warn);
+}
+.risk_action-ok {
+  color: var(--ok);
+}
+
+.risk_pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: var(--r-pill);
+  font-size: var(--t-2xs);
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+/* ══════════════════════════════════════════════════════════════ heatmap ══ */
+
+.heatmap {
+  display: grid;
+  gap: 3px;
+  font-size: var(--t-2xs);
+}
+
+.heatmap_hour,
+.heatmap_day {
+  color: var(--text-faint);
+  font-weight: 600;
+}
+
+.heatmap_hour {
+  text-align: center;
+}
+
+.heatmap_day {
+  display: flex;
+  align-items: center;
+}
+
+.heatmap_cell {
+  min-height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 3px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.heat-0 {
+  background: var(--surface-sunken);
+}
+.heat-1 {
+  background: var(--risk-low-bg);
+  color: var(--risk-low);
+}
+.heat-2 {
+  background: rgba(217, 119, 6, 0.18);
+  color: var(--warn);
+}
+.heat-3 {
+  background: var(--risk-medium-bg);
+  color: var(--risk-medium);
+}
+.heat-4 {
+  background: var(--risk-high-bg);
+  color: var(--risk-high);
+}
+
+/* ════════════════════════════════════════════════════════════════ floor ══ */
+
+.floor_grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+  gap: var(--s-3);
+}
+
+.floor_table {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  border: 1px solid var(--border-faint);
+  background: var(--surface-muted);
+  min-height: 88px;
+}
+
+.floor_table_label {
+  font-weight: 700;
+  font-size: var(--t-sm);
+}
+
+.floor_table_seats,
+.floor_table_zone,
+.floor_table_turns {
+  font-size: var(--t-2xs);
+  color: var(--text-muted);
+}
+
+.floor_table_seats {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.floor_table-free {
+  background: var(--ok-bg);
+  border-color: transparent;
+}
+
+.floor_table-seated {
+  background: var(--brand-soft);
+  border-color: transparent;
+}
+
+.floor_table-turning {
+  background: var(--warn-bg);
+  border-color: transparent;
+}
+
+@media (max-width: 720px) {
+  .risk_bands {
+    grid-template-columns: 1fr;
+  }
+}

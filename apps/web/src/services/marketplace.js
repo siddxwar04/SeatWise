@@ -216,7 +216,7 @@ function publicBooking(record) {
   return {
     ...record,
     venue: venue
-      ? { slug: venue.slug, name: venue.name, area: venue.area, city: venue.city, type: venue.type }
+      ? { slug: venue.slug, name: venue.name, area: venue.area, city: venue.city, type: venue.type, image: venue.image }
       : { slug: record.venueSlug, name: record.venueName },
   };
 }

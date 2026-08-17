@@ -1,17 +1,17 @@
-import { Link } from 'react-router-dom';
+import { EmptyState } from '../components/ui/Data.jsx';
+import { Button } from '../components/ui/Button.jsx';
 
-/** Audit #23: no custom 404. Every unknown path returned a blank white page. */
 export function NotFoundPage() {
   return (
-    <main className="page_wrapper container">
-      <div className="empty_state">
-        <span className="tag">404</span>
-        <h1>We could not find that page.</h1>
-        <p>The link may be old, or the page may have moved.</p>
-        <Link to="/" className="btn btn-primary">
-          Back to the menu
-        </Link>
-      </div>
-    </main>
+    <div className="wrap notfound_page">
+      <EmptyState icon="search" title="We could not find that page">
+        The link may be old, or the page may have moved.
+        <div style={{ marginTop: 'var(--s-4)' }}>
+          <Button variant="primary" to="/">
+            Back to Discover
+          </Button>
+        </div>
+      </EmptyState>
+    </div>
   );
 }

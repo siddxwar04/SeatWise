@@ -1,0 +1,185 @@
+/**
+ * For-restaurants marketing page.
+ */
+
+.mkt_hero {
+  padding-block: clamp(2.5rem, 6vw, 4.5rem) var(--s-8);
+  background:
+    radial-gradient(ellipse 90% 70% at 80% -10%, var(--brand-soft), transparent 55%),
+    var(--canvas);
+  border-bottom: 1px solid var(--border-faint);
+}
+
+.mkt_title {
+  margin-top: var(--s-3);
+  max-width: 18ch;
+  font-size: clamp(2rem, 5vw, 3.25rem);
+  line-height: 1.05;
+}
+
+.mkt_title em {
+  font-style: italic;
+  color: var(--brand-text);
+}
+
+.mkt_sub {
+  margin-top: var(--s-4);
+  margin-bottom: var(--s-6);
+  max-width: 62ch;
+  color: var(--text-secondary);
+  font-size: var(--t-body-lg);
+}
+
+.mkt_stats {
+  margin-top: var(--s-5);
+  font-size: var(--t-sm);
+  color: var(--text-muted);
+}
+
+.mkt_section {
+  padding-block: var(--section-y);
+}
+
+.mkt_section .section-head {
+  margin-bottom: var(--s-6);
+  align-items: flex-start;
+}
+
+.mkt_section .section-head h2 {
+  margin-top: var(--s-2);
+  font-size: var(--t-h2);
+}
+
+.mkt_section .section-head p {
+  margin-top: var(--s-2);
+  max-width: 62ch;
+}
+
+.mkt_grid,
+.mkt_scenarios {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s-4);
+}
+
+.mkt_card {
+  padding: var(--s-5);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-faint);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.mkt_card h2,
+.mkt_card h3 {
+  margin-top: var(--s-3);
+  font-size: var(--t-h4);
+}
+
+.mkt_card p {
+  margin-top: var(--s-2);
+  color: var(--text-secondary);
+  font-size: var(--t-sm);
+}
+
+.mkt_icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-md);
+  background: var(--brand-soft);
+  color: var(--brand-text);
+}
+
+.mkt_calc {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+}
+
+.mkt_calc_form {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--s-4);
+}
+
+.mkt_drivers {
+  margin-top: var(--s-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.mkt_drivers li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-3);
+  font-size: var(--t-xs);
+  color: var(--text-secondary);
+}
+
+.mkt_drivers .is-up {
+  color: var(--danger);
+}
+
+.mkt_drivers .is-down {
+  color: var(--ok);
+}
+
+.mkt_bias {
+  margin-top: var(--s-4);
+}
+
+.mkt_features {
+  margin-top: var(--s-6);
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--s-3);
+}
+
+.mkt_features li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--s-4);
+  background: var(--surface-muted);
+  border-radius: var(--r-md);
+}
+
+.mkt_features strong {
+  font-size: var(--t-sm);
+}
+
+.mkt_features span {
+  font-size: var(--t-xs);
+  color: var(--text-secondary);
+}
+
+.mkt_cta {
+  padding-bottom: calc(var(--section-y) + var(--s-4));
+}
+
+.mkt_card-wide {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-8);
+  background:
+    radial-gradient(ellipse 80% 120% at 100% 0%, var(--brand-soft), transparent 60%),
+    var(--surface-raised);
+}
+
+.mkt_card-wide h2 {
+  margin-top: 0;
+  font-size: var(--t-h2);
+}
+
+@media (max-width: 900px) {
+  .mkt_grid,
+  .mkt_scenarios,
+  .mkt_calc_form,
+  .mkt_features {
+    grid-template-columns: 1fr;
+  }
+}

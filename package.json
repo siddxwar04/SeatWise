@@ -28,7 +28,8 @@
     "db:test": "npm run db:test:up && npm run db:test:wait && npm run db:test:migrate",
     "db:test:wait": "node scripts/wait-for-postgres-test.js",
     "embeddings:generate": "dotenv -e .env -- node scripts/generate-embeddings.js",
-    "embeddings:generate:force": "dotenv -e .env -- node scripts/generate-embeddings.js --force"
+    "embeddings:generate:force": "dotenv -e .env -- node scripts/generate-embeddings.js --force",
+    "photos:download": "node scripts/download-venue-photos.js"
   },
   "devDependencies": {
     "dotenv-cli": "^11.0.0",

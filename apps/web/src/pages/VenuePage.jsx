@@ -59,7 +59,17 @@ export function VenuePage() {
 
   return (
     <div className="vpage">
-      <Cover seed={venue.slug} name={venue.name} size="wide" className="vpage_cover" />
+      <Cover
+        seed={venue.slug}
+        name={venue.name}
+        src={venue.image}
+        srcSet={venue.imageSrcSet}
+        sizes="100vw"
+        size="wide"
+        className="vpage_cover"
+        loading="eager"
+        alt=""
+      />
 
       <div className="wrap vpage_layout">
         <div className="vpage_main">
@@ -185,7 +195,7 @@ export function VenuePage() {
               <div className="similar_grid">
                 {similar.map((v) => (
                   <Link key={v.slug} to={`/r/${v.slug}`} className="similar_card">
-                    <Cover seed={v.slug} name={v.name} size="sm" />
+                    <Cover seed={v.slug} name={v.name} src={v.image} size="sm" alt="" />
                     <div>
                       <strong>{v.name}</strong>
                       <span>

@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { cover } from '../../lib/cover.js';
+import { venueImage, venueImageSrcSet } from '../../data/venuePhotos.js';
 import { compact, initials, percent } from '../../lib/format.js';
 import { BAND_LABEL } from '../../lib/risk.js';
 import { Icon } from './Icon.jsx';
@@ -127,17 +129,57 @@ export function StarRating({ rating, reviews, size = 'md' }) {
 }
 
 /**
- * Generated venue cover. No photography anywhere in this app — see lib/cover.js
- * for why, and for the determinism guarantee that keeps a venue looking the same
- * on every screen it appears on.
+ * Venue cover: editorial photograph when `src` is set, generated art otherwise.
+ *
+ * A broken or missing image falls back to the slug-derived cover from
+ * lib/cover.js so a card never renders empty.
  */
-export function Cover({ seed, name, size = 'md', badge }) {
+export function Cover({
+  seed,
+  name,
+  size = 'md',
+  badge,
+  src,
+  srcSet,
+  sizes,
+  alt = '',
+  loading = 'lazy',
+  className = '',
+}) {
   const { style, pattern } = cover(seed);
+  const [failed, setFailed] = useState(false);
+  const photoSrc = src ?? venueImage(seed);
+  const photoSrcSet = srcSet ?? venueImageSrcSet(seed);
+  const showPhoto = Boolean(photoSrc) && !failed;
 
   return (
-    <div className={`cover cover-${size}`} style={style} data-pattern={pattern} aria-hidden="true">
-      <span className="cover_pattern" />
-      <span className="cover_mono">{initials(name)}</span>
+    <div
+      className={`cover cover-${size} ${showPhoto ? 'has-photo' : ''} ${className}`.trim()}
+      style={showPhoto ? undefined : style}
+      data-pattern={showPhoto ? undefined : pattern}
+    >
+      {showPhoto ? (
+        <>
+          <img
+            className="cover_img"
+            src={photoSrc}
+            srcSet={photoSrcSet}
+            sizes={sizes ?? '(max-width: 720px) 100vw, 400px'}
+            alt={alt}
+            loading={loading}
+            decoding="async"
+            width={800}
+            height={600}
+            onError={() => setFailed(true)}
+          />
+          <span className="cover_shade" aria-hidden="true" />
+        </>
+      ) : (
+        <>
+          <span className="cover_pattern" />
+          <span className="cover_mono">{initials(name)}</span>
+        </>
+      )}
       {badge && <span className="cover_badge">{badge}</span>}
     </div>
   );

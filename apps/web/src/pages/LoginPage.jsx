@@ -1,21 +1,26 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { DEMO_ACCOUNTS } from '../services/session.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
+import { Button } from '../components/ui/Button.jsx';
+import { TextField } from '../components/ui/Field.jsx';
+import { Icon } from '../components/ui/Icon.jsx';
+import { Logo } from '../components/layout/Logo.jsx';
 import { ApiError } from '../lib/api.js';
+import { ServiceError } from '../services/config.js';
 
 /**
- * The login page finally gets the card it was always styled for.
+ * Sign in.
  *
- * Audit #15: the form carried class="auth_form", which has no CSS rule
- * anywhere. Meanwhile `.auth_card` (style.css:654) and `.auth_body`
- * (style.css:639) were fully written and applied to nothing, so both auth
- * pages rendered full-width and unstyled — a jarring break from the polished
- * homepage. The rules were fine; they were simply never attached.
+ * The demo-account panel is not a gimmick: this app has no backend deployed,
+ * so without a documented way in, a reviewer can only ever see the diner side.
+ * Signing in as the demo owner is how the console — the part of the product
+ * the research brief is actually about — becomes reachable at all.
  */
 export function LoginPage() {
   const [form, setForm] = useState({ email: '', password: '' });
-  const [fieldErrors, setFieldErrors] = useState({});
+  const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
   const { login } = useAuth();
@@ -23,33 +28,27 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Send people back where they were headed before the login redirect.
   const destination = location.state?.from ?? '/';
 
-  const update = (field) => (event) => {
-    setForm((f) => ({ ...f, [field]: event.target.value }));
-    setFieldErrors((errors) => ({ ...errors, [field]: undefined }));
+  const update = (field) => (e) => {
+    setForm((f) => ({ ...f, [field]: e.target.value }));
+    setErrors((errs) => ({ ...errs, [field]: undefined }));
   };
 
-  const handleSubmit = async (event) => {
+  const submit = async (event) => {
     event.preventDefault();
     if (submitting) return;
 
     setSubmitting(true);
-    setFieldErrors({});
+    setErrors({});
 
     try {
-      const { user, managedRestaurants } = await login(form);
+      const { user, managedVenues } = await login(form);
       toast.success(`Welcome back, ${user.username.split(' ')[0]}.`);
-      const goAdmin = user.role === 'ADMIN' || managedRestaurants.length > 0;
-      navigate(goAdmin ? '/admin' : destination, { replace: true });
+      navigate(managedVenues.length > 0 ? '/console' : destination, { replace: true });
     } catch (err) {
-      if (err instanceof ApiError) {
-        if (err.details && typeof err.details === 'object') setFieldErrors(err.details);
-        // The server returns one message for "no such account" and "wrong
-        // password" alike, so this cannot be used to discover which emails
-        // are registered. The legacy app said "User not found!" and then
-        // redirected to the register page, which gave it away twice over.
+      if (err instanceof ServiceError || err instanceof ApiError) {
+        if (err.details) setErrors(err.details);
         toast.error(err.message);
       } else {
         toast.error('Could not reach the server. Please try again.');
@@ -59,50 +58,60 @@ export function LoginPage() {
     }
   };
 
-  return (
-    <div className="auth_wrapper container">
-      <form className="auth_card" onSubmit={handleSubmit} noValidate>
-        <h2>Welcome Back</h2>
-        <p className="auth_subtitle">Sign in to manage your reservations.</p>
+  const fillDemo = (account) => {
+    setForm({ email: account.email, password: account.password });
+  };
 
-        <div className="form_group">
-          <label htmlFor="email">Email Address</label>
-          <input
-            id="email"
+  return (
+    <div className="auth_wrapper">
+      <div className="auth_split">
+        <form className="auth_card" onSubmit={submit} noValidate>
+          <Logo showWord={false} size={36} />
+          <h1>Welcome back</h1>
+          <p className="auth_sub">Sign in to book, or to manage a restaurant.</p>
+
+          <TextField
+            label="Email address"
             type="email"
-            name="email"
             value={form.email}
             onChange={update('email')}
+            error={errors.email}
             autoComplete="email"
-            aria-invalid={Boolean(fieldErrors.email)}
             required
           />
-          {fieldErrors.email && <p className="field_error">{fieldErrors.email}</p>}
-        </div>
-
-        <div className="form_group">
-          <label htmlFor="password">Password</label>
-          <input
-            id="password"
+          <TextField
+            label="Password"
             type="password"
-            name="password"
             value={form.password}
             onChange={update('password')}
+            error={errors.password}
             autoComplete="current-password"
-            aria-invalid={Boolean(fieldErrors.password)}
             required
           />
-          {fieldErrors.password && <p className="field_error">{fieldErrors.password}</p>}
+
+          <Button type="submit" variant="primary" block loading={submitting}>
+            Sign in
+          </Button>
+
+          <p className="auth_switch">
+            New to SeatWise? <Link to="/register">Create an account</Link>
+          </p>
+        </form>
+
+        <div className="auth_demo">
+          <p className="auth_demo_label">
+            <Icon name="sparkles" /> No backend is deployed — sign in with a demo account
+          </p>
+          {DEMO_ACCOUNTS.map((account) => (
+            <button key={account.email} type="button" className="auth_demo_card" onClick={() => fillDemo(account)}>
+              <span className="auth_demo_role">{account.label}</span>
+              <strong>{account.email}</strong>
+              <span className="auth_demo_blurb">{account.blurb}</span>
+            </button>
+          ))}
+          <p className="auth_demo_hint">Password for both: demo1234</p>
         </div>
-
-        <button type="submit" className="auth_btn" disabled={submitting}>
-          {submitting ? 'SIGNING IN…' : 'LOG IN'}
-        </button>
-
-        <p className="switch_link">
-          New here? <Link to="/register">Create Account</Link>
-        </p>
-      </form>
+      </div>
     </div>
   );
 }

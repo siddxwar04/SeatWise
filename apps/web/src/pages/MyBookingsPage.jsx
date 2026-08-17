@@ -82,7 +82,7 @@ export function MyBookingsPage() {
         {status === 'ready' &&
           bookings.map((booking) => (
             <article className="booking_row" key={booking.reference}>
-              <Cover seed={booking.venue.slug} name={booking.venue.name} size="sm" />
+              <Cover seed={booking.venue.slug} name={booking.venue.name} src={booking.venue.image} size="sm" alt="" />
 
               <div className="booking_row_main">
                 <div className="row spread">

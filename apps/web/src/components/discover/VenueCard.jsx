@@ -29,7 +29,16 @@ export function VenueCard({ venue, onOpen, onHoverPin }) {
       onMouseLeave={() => onHoverPin?.(null)}
     >
       <button type="button" className="vcard_media" onClick={() => onOpen(venue)}>
-        <Cover seed={venue.slug} name={venue.name} size="lg" badge={venue.curated} />
+        <Cover
+          seed={venue.slug}
+          name={venue.name}
+          src={venue.image}
+          srcSet={venue.imageSrcSet}
+          sizes="(max-width: 720px) 92vw, (max-width: 1080px) 45vw, 360px"
+          size="lg"
+          badge={venue.curated}
+          alt=""
+        />
       </button>
 
       <div className="vcard_body">

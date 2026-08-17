@@ -25,6 +25,7 @@
 
 import { seedHue } from '../lib/cover.js';
 import { rng } from '../lib/prng.js';
+import { venueImage, venueImageSrcSet } from './venuePhotos.js';
 
 /* ══════════════════════════════════════════════════════════ authored data ══ */
 
@@ -1081,6 +1082,8 @@ function derive(v) {
     /** Spare covers the overbooking service says this venue could still sell. */
     headroom: Math.round(seats * (1 - v.demand)),
     hue: seedHue(v.slug),
+    image: v.image ?? venueImage(v.slug),
+    imageSrcSet: v.imageSrcSet ?? venueImageSrcSet(v.slug),
     phone: `+91 ${random.int(20, 99)} ${random.int(2000, 9999)} ${random.int(1000, 9999)}`,
     hours: v.price >= 3 ? { open: '18:00', close: '23:30' } : { open: '11:30', close: '23:00' },
     policy: policyFor(v),

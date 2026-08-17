@@ -1,0 +1,153 @@
+/**
+ * Cross-page utilities: page headers, loading/error states, My Bookings,
+ * booking confirmation, 404.
+ */
+
+.page_header {
+  margin-bottom: var(--s-8);
+  max-width: 60ch;
+}
+
+.page_header h1 {
+  margin-top: var(--s-2);
+  font-size: var(--t-h1);
+}
+
+.page_header p {
+  margin-top: var(--s-2);
+  color: var(--text-secondary);
+}
+
+.menu_state {
+  padding: var(--s-16) 0;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+/* ═══════════════════════════════════════════════════════════ my bookings ══ */
+
+.mybookings .tabs {
+  margin-bottom: var(--s-6);
+}
+
+.booking_list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.booking_row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  padding: var(--s-4);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-faint);
+  border-radius: var(--r-lg);
+}
+
+.booking_row_main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.booking_row_title {
+  font-weight: 700;
+  font-size: var(--t-body);
+}
+
+.booking_row_title:hover {
+  color: var(--brand-text);
+}
+
+.booking_row_meta {
+  font-size: var(--t-xs);
+  color: var(--text-secondary);
+}
+
+.booking_row_ref {
+  font-size: var(--t-2xs);
+  color: var(--text-faint);
+  letter-spacing: 0.03em;
+}
+
+.booking_row_note {
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ═══════════════════════════════════════════════════════ confirm & 404 ══ */
+
+.confirm_page {
+  display: grid;
+  place-items: center;
+  min-height: 60vh;
+}
+
+.confirm_card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-3);
+  text-align: center;
+  max-width: 420px;
+  padding: var(--s-8);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-lg);
+}
+
+.confirm_card .cover {
+  width: 100%;
+  height: 140px;
+  border-radius: var(--r-lg);
+}
+
+.confirm_card h1 {
+  font-size: var(--t-h2);
+}
+
+.confirm_when {
+  color: var(--text-secondary);
+  line-height: var(--lh-relaxed);
+}
+
+.confirm_ref {
+  padding: 6px 14px;
+  background: var(--surface-sunken);
+  border-radius: var(--r-pill);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.confirm_prepaid {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--t-sm);
+  color: var(--brand-text);
+}
+
+.confirm_note {
+  font-size: var(--t-sm);
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.confirm_actions {
+  display: flex;
+  gap: var(--s-3);
+  margin-top: var(--s-3);
+}
+
+.notfound_page {
+  display: grid;
+  place-items: center;
+  min-height: 60vh;
+  text-align: center;
+}

@@ -860,10 +860,39 @@
   isolation: isolate;
 }
 
+.cover.has-photo {
+  background: var(--surface-sunken);
+}
+
+.cover_img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--d-base) var(--ease-out);
+}
+
+.cover_shade {
+  display: none;
+}
+
+.cover.has-photo .cover_shade {
+  display: block;
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(12, 12, 18, 0.32) 0%, transparent 46%);
+  pointer-events: none;
+  z-index: 1;
+}
+
 .cover-sm {
   width: 44px;
   height: 44px;
   border-radius: var(--r-sm);
+}
+.cover-sm.has-photo .cover_shade {
+  display: none;
 }
 .cover-md {
   width: 92px;
@@ -910,15 +939,16 @@
   position: absolute;
   top: var(--s-2);
   left: var(--s-2);
-  padding: 2px 8px;
-  background: rgba(10, 10, 16, 0.55);
+  z-index: 2;
+  padding: 3px 9px;
+  background: rgba(10, 10, 16, 0.62);
   color: #fff;
   border-radius: var(--r-pill);
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: var(--tr-wide);
   text-transform: uppercase;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(6px);
 }
 
 /* Dark theme: the same hues at lower lightness, or every card glows. */
