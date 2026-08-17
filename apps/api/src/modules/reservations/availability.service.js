@@ -7,6 +7,7 @@ import {
   serviceDateFor,
   validateBookingTime,
 } from '../../lib/slots.js';
+import { summariseOverbooking } from '../overbooking/overbooking.service.js';
 
 const OCCUPYING_STATUSES = ['PENDING', 'CONFIRMED', 'SEATED', 'COMPLETED'];
 
@@ -38,21 +39,23 @@ export async function getDayAvailability(restaurantId, dateStr, partySize) {
     }),
     prisma.reservation.findMany({
       where: {
+        restaurantId,
         serviceDate: serviceDateFor(dateStr),
         status: { in: OCCUPYING_STATUSES },
-        tableId: { not: null },
-        // Scope via the table FK — reservations do not denormalise restaurantId,
-        // but every seated booking points at a per-venue table row.
-        table: { restaurantId },
       },
-      select: { tableId: true, startsAt: true, endsAt: true },
+      select: {
+        tableId: true,
+        startsAt: true,
+        endsAt: true,
+        noShowRisk: true,
+        isOverbooked: true,
+      },
     }),
   ]);
 
-  // Group bookings by table once, so the per-slot check is a small array scan
-  // instead of a filter over every booking in the day.
   const bookingsByTable = new Map();
   for (const b of bookings) {
+    if (!b.tableId) continue;
     const list = bookingsByTable.get(b.tableId);
     if (list) list.push(b);
     else bookingsByTable.set(b.tableId, [b]);
@@ -63,8 +66,6 @@ export async function getDayAvailability(restaurantId, dateStr, partySize) {
   const slots = generateSlots().map((time) => {
     const { startsAt, endsAt } = bookingInterval(dateStr, time);
 
-    // A slot in the past, or inside the minimum lead time, is not bookable
-    // regardless of how many tables happen to be empty.
     const rejection = validateBookingTime(dateStr, time, now);
 
     let tablesFree = 0;
@@ -78,13 +79,19 @@ export async function getDayAvailability(restaurantId, dateStr, partySize) {
       }
     }
 
+    const overlapping = bookings.filter((b) =>
+      intervalsOverlap(b.startsAt, b.endsAt, startsAt, endsAt),
+    );
+    const extra = summariseOverbooking(overlapping);
+    const overbookingOpen = extra.remainingExtra > 0;
+    const available = !rejection && (tablesFree > 0 || overbookingOpen);
+
     return {
       time,
-      available: !rejection && tablesFree > 0,
+      available,
       tablesFree,
-      // Surfaced so the UI can explain *why* a slot is greyed out rather than
-      // silently hiding it.
-      unavailableReason: rejection ?? (tablesFree === 0 ? 'Fully booked' : null),
+      overbooking: extra,
+      unavailableReason: rejection ?? (available ? null : 'Fully booked'),
     };
   });
 

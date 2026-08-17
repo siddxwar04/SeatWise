@@ -1,34 +1,45 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="TastyFood — book a table in seconds. Authentic flavors from around the world, all in one place."
+      content="SeatWise — every table in the city, one search. Live availability across restaurants, plus no-show risk scoring and overbooking recommendations for the venues that run on it."
     />
+    <meta name="theme-color" content="#4f42e0" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#08080d" media="(prefers-color-scheme: dark)" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
-    <!-- Preconnect before the font request so DNS + TLS overlap with HTML parse.
-         The legacy pages loaded Poppins twice: once via a render-blocking
-         @import at the top of style.css and again via a <link>. One load, here. -->
+    <!-- Theme before first paint.
+         Anything that resolves the theme in React runs after the first frame, so
+         a dark-mode visitor gets a white flash on every cold load. This is the
+         one inline script the app has, and it is why: it must beat paint. It
+         mirrors ThemeProvider's resolution exactly (same key, same values). -->
+    <script>
+      (function () {
+        try {
+          var stored = JSON.parse(localStorage.getItem('seatwise.theme'));
+          var dark =
+            stored === 'dark' ||
+            ((stored === 'system' || stored === null) &&
+              matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+        } catch (e) {
+          /* No storage access (private mode / blocked cookies) — light is fine. */
+        }
+      })();
+    </script>
+
+    <!-- Preconnect so DNS + TLS to the font host overlap with HTML parsing. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
 
-    <!-- Font Awesome. `defer` matters: the legacy pages loaded this kit
-         synchronously in <head>, which blocked rendering on all three pages
-         (audit #25). Icons are decorative here, so they can arrive late. -->
-    <script
-      src="https://kit.fontawesome.com/6db594b4a8.js"
-      crossorigin="anonymous"
-      defer
-    ></script>
-
-    <title>TastyFood — Premium Food &amp; Dining</title>
+    <title>SeatWise — every table in the city, one search</title>
   </head>
   <body>
     <div id="root"></div>

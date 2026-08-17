@@ -1,6 +1,17 @@
 import { BadRequestError, NotFoundError } from '../../errors/AppError.js';
 import { prisma } from '../../lib/prisma.js';
 
+const restaurantListSelect = {
+  id: true,
+  slug: true,
+  name: true,
+  address: true,
+  phone: true,
+  cuisine: true,
+  priceLevel: true,
+  vibeTags: true,
+};
+
 /**
  * Resolves a restaurant from an id and/or public slug.
  *
@@ -34,26 +45,14 @@ export async function listActiveRestaurants() {
   return prisma.restaurant.findMany({
     where: { isActive: true },
     orderBy: { name: 'asc' },
-    select: {
-      id: true,
-      slug: true,
-      name: true,
-      address: true,
-      phone: true,
-    },
+    select: restaurantListSelect,
   });
 }
 
 export async function getRestaurantBySlug(slug) {
   const restaurant = await prisma.restaurant.findFirst({
     where: { slug, isActive: true },
-    select: {
-      id: true,
-      slug: true,
-      name: true,
-      address: true,
-      phone: true,
-    },
+    select: restaurantListSelect,
   });
   if (!restaurant) throw new NotFoundError('That restaurant was not found.');
   return restaurant;
@@ -79,14 +78,6 @@ export async function isRestaurantAdmin(userId, restaurantId, role) {
 
   return Boolean(membership);
 }
-
-const restaurantListSelect = {
-  id: true,
-  slug: true,
-  name: true,
-  address: true,
-  phone: true,
-};
 
 /**
  * Venues the signed-in user may administer.

@@ -21,3 +21,9 @@ export const joinWaitlistSchema = z.object({
   time: slotTime,
   partySize: z.coerce.number().int().min(1).max(20),
 });
+
+export const assignWaitlistSchema = z.object({
+  date: isoDate.optional(),
+  time: slotTime.optional(),
+  apply: z.boolean().optional().default(false),
+});

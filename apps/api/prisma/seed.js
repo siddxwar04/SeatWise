@@ -9,6 +9,9 @@
  */
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { generateBookingReference } from '../src/lib/reference.js';
+import { bookingInterval, serviceDateFor, todayLocal, utcToLocalParts } from '../src/lib/slots.js';
+import { scoreReservation } from '../src/modules/risk/riskScoring.service.js';
 
 const prisma = new PrismaClient();
 
@@ -21,18 +24,27 @@ const RESTAURANTS = [
     name: 'TastyFood Koramangala',
     address: '80 Feet Rd, Koramangala 4th Block, Bengaluru 560034',
     phone: '08041234567',
+    cuisine: 'Indian',
+    priceLevel: 2,
+    vibeTags: ['date-night', 'family', 'lively'],
   },
   {
     slug: 'tastyfood-indiranagar',
     name: 'TastyFood Indiranagar',
     address: '100 Feet Rd, Indiranagar, Bengaluru 560038',
     phone: '08049876543',
+    cuisine: 'Dessert',
+    priceLevel: 3,
+    vibeTags: ['date-night', 'cozy', 'sweet'],
   },
   {
     slug: 'tastyfood-whitefield',
     name: 'TastyFood Whitefield',
     address: 'ITPL Main Rd, Whitefield, Bengaluru 560066',
     phone: '08045551234',
+    cuisine: 'Cafe',
+    priceLevel: 1,
+    vibeTags: ['casual', 'work-friendly', 'quick'],
   },
 ];
 
@@ -220,11 +232,11 @@ const MENU_BY_SLUG = {
  */
 const TABLES_BY_SLUG = {
   'tastyfood-koramangala': [
-    { label: 'T1', capacity: 2, zone: 'INDOOR' },
-    { label: 'T2', capacity: 2, zone: 'INDOOR' },
+    { label: 'T1', capacity: 2, zone: 'INDOOR', combinable: true, combineGroup: 'IN-2' },
+    { label: 'T2', capacity: 2, zone: 'INDOOR', combinable: true, combineGroup: 'IN-2' },
     { label: 'T3', capacity: 2, zone: 'BAR' },
-    { label: 'T4', capacity: 4, zone: 'INDOOR' },
-    { label: 'T5', capacity: 4, zone: 'INDOOR' },
+    { label: 'T4', capacity: 4, zone: 'INDOOR', combinable: true, combineGroup: 'IN-4' },
+    { label: 'T5', capacity: 4, zone: 'INDOOR', combinable: true, combineGroup: 'IN-4' },
     { label: 'T6', capacity: 4, zone: 'OUTDOOR' },
     { label: 'T7', capacity: 4, zone: 'OUTDOOR' },
     { label: 'T8', capacity: 6, zone: 'INDOOR' },
@@ -240,8 +252,8 @@ const TABLES_BY_SLUG = {
     { label: 'T4', capacity: 4, zone: 'OUTDOOR' },
     { label: 'T5', capacity: 6, zone: 'INDOOR' },
     { label: 'P1', capacity: 8, zone: 'PRIVATE' },
-    { label: 'BAR-1', capacity: 2, zone: 'BAR' },
-    { label: 'BAR-2', capacity: 2, zone: 'BAR' },
+    { label: 'BAR-1', capacity: 2, zone: 'BAR', combinable: true, combineGroup: 'BAR' },
+    { label: 'BAR-2', capacity: 2, zone: 'BAR', combinable: true, combineGroup: 'BAR' },
   ],
   'tastyfood-whitefield': [
     { label: 'T1', capacity: 2, zone: 'INDOOR' },
@@ -315,6 +327,9 @@ async function main() {
         address: venue.address,
         phone: venue.phone,
         isActive: true,
+        cuisine: venue.cuisine,
+        priceLevel: venue.priceLevel,
+        vibeTags: venue.vibeTags,
       },
       create: venue,
     });
@@ -328,7 +343,13 @@ async function main() {
         where: {
           restaurantId_label: { restaurantId, label: table.label },
         },
-        update: { capacity: table.capacity, zone: table.zone, isActive: true },
+        update: {
+          capacity: table.capacity,
+          zone: table.zone,
+          isActive: true,
+          combinable: table.combinable ?? false,
+          combineGroup: table.combineGroup ?? null,
+        },
         create: { ...table, restaurantId },
       });
     }
@@ -372,6 +393,8 @@ async function main() {
     });
   }
 
+  await seedDemoDemand({ guest, restaurants });
+
   const tableCount = Object.values(TABLES_BY_SLUG).reduce((n, t) => n + t.length, 0);
   const menuCount = Object.values(MENU_BY_SLUG).reduce((n, m) => n + m.length, 0);
 
@@ -382,6 +405,133 @@ async function main() {
   console.log(`  tables:      ${tableCount}`);
   console.log(`  menu:        ${menuCount}`);
   console.log('Seed complete.');
+}
+
+function shiftDate(isoDate, days) {
+  const [y, m, d] = isoDate.split('-').map(Number);
+  const utc = new Date(Date.UTC(y, m - 1, d + days));
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${utc.getUTCFullYear()}-${pad(utc.getUTCMonth() + 1)}-${pad(utc.getUTCDate())}`;
+}
+
+/**
+ * Historical + upcoming bookings so the owner dashboard has real risk badges,
+ * an overbooking banner, and a heatmap without anyone clicking Reserve 40 times.
+ * Skipped when Koramangala already has reservations (idempotent).
+ */
+async function seedDemoDemand({ guest, restaurants }) {
+  const koramangala = restaurants['tastyfood-koramangala'];
+  const existing = await prisma.reservation.count({ where: { restaurantId: koramangala.id } });
+  if (existing > 0) {
+    console.log(`  bookings:    skipped (${existing} already present)`);
+    return;
+  }
+
+  const flake = await prisma.user.upsert({
+    where: { email: 'flake@tastyfood.local' },
+    update: { priorBookings: 4, priorNoShows: 2 },
+    create: {
+      email: 'flake@tastyfood.local',
+      username: 'Serial No-Show',
+      phone: '9876500001',
+      passwordHash: guest.passwordHash,
+      role: 'USER',
+      priorBookings: 4,
+      priorNoShows: 2,
+      emailVerifiedAt: new Date(),
+    },
+  });
+
+  const tables = await prisma.restaurantTable.findMany({
+    where: { restaurantId: koramangala.id, isActive: true },
+    orderBy: { label: 'asc' },
+  });
+  const byLabel = Object.fromEntries(tables.map((t) => [t.label, t]));
+
+  const today = todayLocal();
+  const templates = [
+    { days: -21, time: '19:00', party: 2, table: 'T1', status: 'COMPLETED', user: guest, name: 'Asha Rao' },
+    { days: -20, time: '20:00', party: 4, table: 'T4', status: 'NO_SHOW', user: flake, name: 'Ravi Menon' },
+    { days: -18, time: '19:30', party: 6, table: 'T8', status: 'COMPLETED', user: guest, name: 'Meera Iyer' },
+    { days: -14, time: '21:00', party: 2, table: 'T2', status: 'NO_SHOW', user: flake, name: 'Arjun Shah' },
+    { days: -13, time: '13:00', party: 2, table: 'T3', status: 'COMPLETED', user: guest, name: 'Nina Kapoor' },
+    { days: -11, time: '20:00', party: 8, table: 'P1', status: 'COMPLETED', user: guest, name: 'Office offsite' },
+    { days: -10, time: '19:00', party: 4, table: 'T5', status: 'CANCELLED', user: guest, name: 'Priya Nair' },
+    { days: -8, time: '20:30', party: 2, table: 'T1', status: 'NO_SHOW', user: flake, name: 'Kabir Das' },
+    { days: -7, time: '19:00', party: 4, table: 'T4', status: 'COMPLETED', user: guest, name: 'Family of four' },
+    { days: -6, time: '12:30', party: 2, table: 'T2', status: 'COMPLETED', user: guest, name: 'Lunch duo' },
+    { days: -5, time: '20:00', party: 6, table: 'T9', status: 'COMPLETED', user: guest, name: 'Anita Joseph' },
+    { days: -4, time: '21:00', party: 2, table: 'BAR-1', status: 'NO_SHOW', user: flake, name: 'Late walk-back' },
+    { days: -3, time: '19:30', party: 4, table: 'T6', status: 'COMPLETED', user: guest, name: 'Sana Ali' },
+    { days: -2, time: '20:00', party: 2, table: 'T1', status: 'COMPLETED', user: guest, name: 'Rohit K' },
+    { days: -1, time: '19:00', party: 4, table: 'T5', status: 'COMPLETED', user: guest, name: 'Tuesday regulars' },
+    { days: 0, time: '20:00', party: 2, table: 'T1', status: 'PENDING', user: guest, name: guest.username },
+    { days: 0, time: '20:00', party: 4, table: 'T4', status: 'PENDING', user: flake, name: flake.username },
+    { days: 0, time: '20:00', party: 6, table: 'T8', status: 'PENDING', user: flake, name: 'Office six' },
+    { days: 0, time: '21:00', party: 2, table: 'T2', status: 'PENDING', user: flake, name: 'Late table' },
+    { days: 2, time: '19:00', party: 2, table: 'T1', status: 'PENDING', user: guest, name: guest.username },
+    { days: 2, time: '19:00', party: 4, table: 'T4', status: 'PENDING', user: flake, name: flake.username },
+    { days: 2, time: '20:00', party: 8, table: 'P1', status: 'CONFIRMED', user: guest, name: 'Birthday eight' },
+    { days: 2, time: '20:00', party: 2, table: 'T2', status: 'PENDING', user: flake, name: 'Date night' },
+    { days: 3, time: '19:30', party: 6, table: 'T8', status: 'PENDING', user: guest, name: 'Team dinner' },
+  ];
+
+  for (const row of templates) {
+    const date = shiftDate(today, row.days);
+    const { startsAt, endsAt } = bookingInterval(date, row.time);
+    const local = utcToLocalParts(startsAt);
+    const leadTimeHours = Math.max(1, (startsAt.getTime() - Date.now()) / 3_600_000);
+    const createdAt = new Date(startsAt.getTime() - leadTimeHours * 3_600_000);
+    const scored = scoreReservation({
+      leadTimeHours,
+      partySize: row.party,
+      dayOfWeek: local.dayOfWeek,
+      hour: local.hour,
+      isWeekend: local.isWeekend,
+      priorBookings: row.user.priorBookings ?? 0,
+      priorNoShows: row.user.priorNoShows ?? 0,
+      isConfirmed: row.status === 'CONFIRMED' || row.status === 'SEATED' || row.status === 'COMPLETED',
+    });
+    const table = byLabel[row.table];
+
+    await prisma.reservation.create({
+      data: {
+        reference: generateBookingReference(),
+        restaurantId: koramangala.id,
+        userId: row.user.id,
+        guestName: row.name,
+        guestPhone: row.user.phone ?? '9876543210',
+        guestEmail: row.user.email,
+        partySize: row.party,
+        startsAt,
+        endsAt,
+        serviceDate: serviceDateFor(date),
+        status: row.status,
+        channel: 'WEB',
+        tableId: table?.id ?? null,
+        leadTimeHours,
+        noShowRisk: scored.noShowRisk,
+        riskModelVersion: scored.riskModelVersion,
+        createdAt,
+        cancelledAt: row.status === 'CANCELLED' ? startsAt : null,
+      },
+    });
+  }
+
+  await prisma.waitlistEntry.create({
+    data: {
+      restaurantId: koramangala.id,
+      guestName: 'Walk-in four',
+      guestPhone: '9876500099',
+      guestEmail: 'waitlist@tastyfood.local',
+      requestedDate: serviceDateFor(shiftDate(today, 2)),
+      requestedTime: '19:00',
+      partySize: 4,
+      status: 'WAITING',
+    },
+  });
+
+  console.log(`  bookings:    ${templates.length} demo reservations + 1 waitlist`);
 }
 
 main()

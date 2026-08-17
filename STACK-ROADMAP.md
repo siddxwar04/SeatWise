@@ -37,9 +37,9 @@ Express (routes → controllers → services → Prisma)
 
 | Phase | Item                                               | Status      |
 | ----- | -------------------------------------------------- | ----------- |
-| 6     | FastAPI no-show model → overbooking rule           | Not started |
-| 7     | Claude NL booking + allergen RAG (hard SQL filter) | Not started |
-| 8     | Email confirmations, SSE slots, CI, ADRs, deploy   | Not started |
+| 6     | JS logistic regression no-show → overbooking EV + waitlist assign | **Shipped** |
+| 7     | OpenAI RAG concierge                                           | **Shipped** |
+| 8     | Email confirmations, SSE slots, CI, ADRs, deploy               | Partial (email exists) |
 
 ---
 

@@ -68,11 +68,17 @@ No EJS/Thymeleaf. Client-side state (session restore, slot grid, admin actions) 
 
 ---
 
-## Explicitly later (Tier 2)
+## Yield layer (shipped)
 
-- FastAPI + scikit-learn no-show model → overbooking rule
-- `@anthropic-ai/sdk` NL booking (extract only) + allergen RAG with hard SQL filter
-- Confirmation email, SSE live slots, CI load numbers
+- In-process logistic regression (`apps/api/src/modules/risk`) — Path A. Swap the internals of `scoreNoShowRisk()` for a Python `/score` call later (Path B / `ML_SERVICE_URL`).
+- Overbooking: `floor(Σ P(no-show))` extra covers per slot, cached per restaurant+date.
+- Waitlist assignment: largest-first best-fit, combinable pairs as suggestions.
+- Postgres RLS policies on tenant tables; `SET LOCAL app.current_restaurant_id` in tenant transactions. Table-owner DATABASE_URL still bypasses RLS until FORCE + a non-owner role.
+
+## Explicitly later
+
+- Swap Path A for a FastAPI/XGBoost `/score` service behind `ML_SERVICE_URL`
+- SSE live slots, ADRs, production deploy polish
 
 ---
 

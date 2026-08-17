@@ -71,4 +71,6 @@ export const CACHE_KEYS = {
   menuAll: (restaurantId) => `menu:${restaurantId}:all`,
   menuByCategory: (restaurantId, category) => `menu:${restaurantId}:cat:${category}`,
   menuPrefix: (restaurantId) => `menu:${restaurantId}:`,
+  overbookingDay: (restaurantId, date) => `overbooking:${restaurantId}:${date}`,
+  overbookingPrefix: (restaurantId) => `overbooking:${restaurantId}:`,
 };

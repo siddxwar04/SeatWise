@@ -1,0 +1,12 @@
+{
+  "version": "lr-js-v1",
+  "bias": -1.85,
+  "coeffs": {
+    "leadTime": 0.9,
+    "partySize": 0.45,
+    "isWeekend": 0.35,
+    "isLate": 0.4,
+    "guestNoShowRate": 3.6,
+    "isConfirmed": -1.25
+  }
+}

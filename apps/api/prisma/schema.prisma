@@ -167,16 +167,23 @@ model Restaurant {
   phone   String  @db.VarChar(20)
   isActive Boolean @default(true) @map("is_active")
 
+  /// Diner-search / concierge filters. priceLevel is 1–4 (₹ to ₹₹₹₹).
+  cuisine    String   @default("Indian") @db.VarChar(80)
+  priceLevel Int      @default(2) @map("price_level")
+  vibeTags   String[] @default([]) @map("vibe_tags")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  tables     RestaurantTable[]
-  menuItems  MenuItem[]
-  admins     RestaurantAdmin[]
-  embedding  RestaurantEmbedding?
-  waitlist   WaitlistEntry[]
+  tables       RestaurantTable[]
+  menuItems    MenuItem[]
+  admins       RestaurantAdmin[]
+  embedding    RestaurantEmbedding?
+  waitlist     WaitlistEntry[]
+  reservations Reservation[]
 
   @@index([isActive])
+  @@index([cuisine])
   @@map("restaurants")
 }
 
@@ -233,6 +240,11 @@ model RestaurantTable {
   zone     TableZone @default(INDOOR)
   isActive Boolean   @default(true) @map("is_active")
 
+  /// Two combinable tables in the same combineGroup can be pushed together
+  /// when no single table fits a waiting party (waitlist assignment).
+  combinable   Boolean @default(false)
+  combineGroup String? @map("combine_group") @db.VarChar(16)
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -251,6 +263,11 @@ model Reservation {
   /// Short human-quotable code, e.g. "TF-7QX4M2". The audit flagged that a
   /// user who booked had no record of it at all.
   reference String @unique @db.VarChar(12)
+
+  /// Denormalised tenant key. Required for RLS (policies cannot hop through
+  /// the table relation) and for overbooked bookings that have no table yet.
+  restaurantId String     @map("restaurant_id") @db.Uuid
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
 
   /// Nullable so staff can enter phone and walk-in bookings for people who
   /// have no account. Web bookings always carry a userId.
@@ -287,9 +304,13 @@ model Reservation {
 
   specialRequests String? @map("special_requests") @db.VarChar(500)
 
-  // --- ML fields (Phase 7) --------------------------------------------------
-  /// P(no-show) in [0,1] from the FastAPI model. Null when the service was
-  /// unreachable — booking must never fail because prediction failed.
+  /// Hours between insert and seating. Snapshotted so the risk model reads a
+  /// stable feature instead of "how long ago was this booking" later.
+  leadTimeHours Float? @map("lead_time_hours")
+
+  // --- ML fields -------------------------------------------------------------
+  /// P(no-show) in [0,1] from riskScoring.service (Path A logistic regression).
+  /// Null only if scoring itself threw — booking must never fail because of it.
   noShowRisk       Float?  @map("no_show_risk")
   riskModelVersion String? @map("risk_model_version") @db.VarChar(32)
 
@@ -309,6 +330,8 @@ model Reservation {
   version Int @default(0)
 
   @@index([serviceDate, status])
+  @@index([restaurantId, serviceDate, status])
+  @@index([restaurantId, startsAt, endsAt])
   @@index([tableId, startsAt, endsAt])
   @@index([userId, startsAt])
   @@index([reference])

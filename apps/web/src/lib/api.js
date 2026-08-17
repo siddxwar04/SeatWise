@@ -119,21 +119,6 @@ export const authApi = {
   changePassword: (data) => api.post('/auth/change-password', data),
 };
 
-export const menuApi = {
-  list: (restaurant, category) => {
-    const params = new URLSearchParams({ restaurant });
-    if (category) params.set('category', category);
-    return api.get(`/menu?${params}`);
-  },
-  listAll: (restaurant) =>
-    api.get(`/menu?${new URLSearchParams({ restaurant, includeUnavailable: 'true' })}`),
-  create: (data) => api.post('/menu', data),
-  update: (id, data) => api.patch(`/menu/${id}`, data),
-  setAvailability: (id, isAvailable) => api.patch(`/menu/${id}/availability`, { isAvailable }),
-  remove: (id) => api.delete(`/menu/${id}`),
-  safe: (params) => api.get(`/menu/safe?${new URLSearchParams(params)}`),
-};
-
 export const reservationApi = {
   rules: () => api.get('/reservations/rules'),
   availability: (restaurant, date, partySize) =>
@@ -155,33 +140,9 @@ export const chatApi = {
   send: (message, history = []) => api.post('/chat', { message, history }),
 };
 
-export const adminApi = {
-  reservations: (params = {}) => api.get(`/admin/reservations?${new URLSearchParams(params)}`),
-  updateStatus: (id, status, version, restaurant) =>
-    api.patch(`/admin/reservations/${id}/status?${new URLSearchParams({ restaurant })}`, {
-      status,
-      version,
-    }),
-  sendReminder: (id, restaurant) =>
-    api.post(`/admin/reservations/${id}/reminder?${new URLSearchParams({ restaurant })}`),
-  today: (restaurant) => api.get(`/admin/service/today?${new URLSearchParams({ restaurant })}`),
-  stats: (restaurant, days = 30) =>
-    api.get(`/admin/stats?${new URLSearchParams({ restaurant, days })}`),
-};
-
 export const waitlistApi = {
   join: (data) => api.post('/waitlist', data),
-  list: (restaurant, status) => {
-    const params = { restaurant };
-    if (status) params.status = status;
-    return api.get(`/dashboard/waitlist?${new URLSearchParams(params)}`);
-  },
 };
-
-
-/** Default venue for the marketing site until a picker is wired. */
-export const DEFAULT_RESTAURANT_SLUG =
-  import.meta.env.VITE_DEFAULT_RESTAURANT_SLUG || 'tastyfood-koramangala';
 
 /**
  * Called once at startup. A valid refresh cookie yields a new access token and

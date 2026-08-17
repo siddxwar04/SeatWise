@@ -2,7 +2,8 @@ import { BadRequestError } from '../../errors/AppError.js';
 import { sendWaitlistAvailable } from '../../lib/email.js';
 import { logger } from '../../lib/logger.js';
 import { prisma } from '../../lib/prisma.js';
-import { serviceDateFor } from '../../lib/slots.js';
+import { bookingInterval, serviceDateFor } from '../../lib/slots.js';
+import { assignPartiesToTables } from '../assignment/tableAssignment.service.js';
 import { resolveRestaurant } from '../restaurants/restaurant.service.js';
 
 function toPublic(entry) {
@@ -114,4 +115,118 @@ export async function listWaitlist(restaurantId, { status } = {}) {
   });
 
   return { entries: rows.map(toPublic) };
+}
+
+function isoDate(value) {
+  return value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10);
+}
+
+function publicAssignment(assignment) {
+  return {
+    party: toPublic(assignment.party),
+    tables: assignment.tables,
+    wastedSeats: assignment.wastedSeats,
+    combined: assignment.combined,
+    applyable: !assignment.combined,
+  };
+}
+
+/**
+ * Best-fit (and combinable-pair) suggestions for waiting parties.
+ * Groups by requested slot so a Friday 20:00 queue does not steal Saturday tables.
+ */
+export async function planWaitlistAssignments(restaurantId, { date, time } = {}) {
+  const entries = await prisma.waitlistEntry.findMany({
+    where: {
+      restaurantId,
+      status: 'WAITING',
+      ...(date ? { requestedDate: serviceDateFor(date) } : {}),
+      ...(time ? { requestedTime: time } : {}),
+    },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  const tables = await prisma.restaurantTable.findMany({
+    where: { restaurantId, isActive: true },
+  });
+
+  const groups = new Map();
+  for (const entry of entries) {
+    const key = `${isoDate(entry.requestedDate)}|${entry.requestedTime}`;
+    const list = groups.get(key);
+    if (list) list.push(entry);
+    else groups.set(key, [entry]);
+  }
+
+  const slots = [];
+  for (const [key, parties] of groups) {
+    const [slotDate, slotTime] = key.split('|');
+    const { startsAt, endsAt } = bookingInterval(slotDate, slotTime);
+    const occupying = await prisma.reservation.findMany({
+      where: {
+        restaurantId,
+        status: { in: ['PENDING', 'CONFIRMED', 'SEATED', 'COMPLETED'] },
+        startsAt: { lt: endsAt },
+        endsAt: { gt: startsAt },
+        tableId: { not: null },
+      },
+      select: { tableId: true },
+    });
+    const busy = new Set(occupying.map((r) => r.tableId));
+    const result = assignPartiesToTables(tables, parties, busy);
+    slots.push({
+      date: slotDate,
+      time: slotTime,
+      assignments: result.assignments.map(publicAssignment),
+      unassigned: result.unassigned.map(toPublic),
+    });
+  }
+
+  return { slots };
+}
+
+/**
+ * Convert applyable (single-table) suggestions into real bookings.
+ * Combined-table suggestions stay as suggestions — one reservation row cannot
+ * occupy two table_ids under the exclusion constraint.
+ */
+export async function applyWaitlistAssignments(restaurantId, options = {}) {
+  const plan = await planWaitlistAssignments(restaurantId, options);
+  const { createReservation } = await import('../reservations/booking.service.js');
+  const created = [];
+  const skipped = [];
+
+  for (const slot of plan.slots) {
+    for (const assignment of slot.assignments) {
+      if (!assignment.applyable) {
+        skipped.push({ party: assignment.party, reason: 'combined_needs_staff' });
+        continue;
+      }
+      try {
+        const reservation = await createReservation(
+          {
+            restaurantId,
+            tableId: assignment.tables[0].id,
+            guestName: assignment.party.guestName,
+            guestPhone: assignment.party.guestPhone,
+            guestEmail: assignment.party.guestEmail,
+            partySize: assignment.party.partySize,
+            date: slot.date,
+            time: slot.time,
+          },
+          null,
+          'WALK_IN',
+        );
+        await prisma.waitlistEntry.update({
+          where: { id: assignment.party.id },
+          data: { status: 'CONVERTED' },
+        });
+        created.push({ partyId: assignment.party.id, reference: reservation.reference });
+      } catch (err) {
+        skipped.push({ party: assignment.party, reason: err.message });
+      }
+    }
+  }
+
+  return { created, skipped, plan };
 }

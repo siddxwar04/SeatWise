@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { asyncHandler } from '../../lib/asyncHandler.js';
 import { requireAuth, requireRestaurantAdmin } from '../../middleware/requireAuth.js';
 import { validate } from '../../middleware/validate.js';
+import { assignWaitlistSchema } from '../waitlist/waitlist.schemas.js';
 import * as waitlistService from '../waitlist/waitlist.service.js';
 
 /**
@@ -32,5 +33,22 @@ dashboardRouter.get(
     res.json(
       await waitlistService.listWaitlist(req.restaurant.id, { status: req.query.status }),
     );
+  }),
+);
+
+dashboardRouter.post(
+  '/waitlist/assign',
+  validate({
+    query: restaurantQuery.omit({ status: true }),
+    body: assignWaitlistSchema,
+  }),
+  requireRestaurantAdmin(),
+  asyncHandler(async (req, res) => {
+    const options = { date: req.body.date, time: req.body.time };
+    if (req.body.apply) {
+      res.json(await waitlistService.applyWaitlistAssignments(req.restaurant.id, options));
+      return;
+    }
+    res.json(await waitlistService.planWaitlistAssignments(req.restaurant.id, options));
   }),
 );

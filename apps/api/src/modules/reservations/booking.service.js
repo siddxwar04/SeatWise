@@ -1,12 +1,19 @@
 import { Prisma } from '@prisma/client';
 import { env } from '../../config/env.js';
 import { BadRequestError, ConflictError } from '../../errors/AppError.js';
+import { CACHE_KEYS, invalidatePrefix } from '../../lib/cache.js';
 import { logger } from '../../lib/logger.js';
 import { prisma } from '../../lib/prisma.js';
 import { generateBookingReference } from '../../lib/reference.js';
 import { bookingInterval, serviceDateFor, utcToLocalParts, validateBookingTime } from '../../lib/slots.js';
-import { notifyMatchingWaitlist } from '../waitlist/waitlist.service.js';
+import { setTenantGuc } from '../../lib/tenant.js';
+import { selectBestFitTable } from '../assignment/tableAssignment.service.js';
+import { summariseOverbooking } from '../overbooking/overbooking.service.js';
+import { scoreReservation } from '../risk/riskScoring.service.js';
 import { isRestaurantAdmin } from '../restaurants/restaurant.service.js';
+import { notifyMatchingWaitlist } from '../waitlist/waitlist.service.js';
+
+export { selectBestFitTable };
 
 /**
  * ===========================================================================
@@ -49,6 +56,11 @@ import { isRestaurantAdmin } from '../restaurants/restaurant.service.js';
  * block each other. The exclusion constraint keys on table_id, which is
  * already per-restaurant, so it also never contends across venues.
  *
+ * Overbooking: when every physical table is taken, we still accept
+ * floor(Σ P(no-show)) extra covers with table_id NULL. Those rows do not
+ * hit the exclusion constraint (NULL table_id is excluded from it) and are
+ * assigned a real table at seat time if a no-show freed one.
+ *
  * Why pessimistic and not optimistic here: contention is genuinely high — a
  * popular Friday 8pm slot has many people racing for few tables. Optimistic
  * locking would mean most of them do the work, fail the version check, and
@@ -58,27 +70,32 @@ import { isRestaurantAdmin } from '../restaurants/restaurant.service.js';
  */
 
 /** Statuses that still occupy a table. Cancelled and no-show release it. */
-const OCCUPYING_STATUSES = ['PENDING', 'CONFIRMED', 'SEATED', 'COMPLETED'];
+export const OCCUPYING_STATUSES = ['PENDING', 'CONFIRMED', 'SEATED', 'COMPLETED'];
 
-/**
- * Best-fit table selection.
- *
- * Of the tables that are free and large enough, take the SMALLEST. Seating a
- * party of two at the ten-top means the next group of ten cannot be seated at
- * all — this is the bin-packing intuition, and best-fit is the standard greedy
- * heuristic for it. Ties break on label so allocation is deterministic and
- * therefore testable.
- */
-export function selectBestFitTable(candidates, busyTableIds) {
-  const free = candidates.filter((t) => !busyTableIds.has(t.id));
-  if (free.length === 0) return null;
+const TABLE_INCLUDE = {
+  table: {
+    select: { label: true, zone: true, capacity: true, restaurantId: true },
+  },
+};
 
-  return free.reduce((best, table) => {
-    if (table.capacity !== best.capacity) {
-      return table.capacity < best.capacity ? table : best;
-    }
-    return table.label < best.label ? table : best;
-  });
+export function riskFeaturesFor({ startsAt, partySize, status, priorBookings, priorNoShows }) {
+  const local = utcToLocalParts(startsAt);
+  const leadTimeHours = (startsAt.getTime() - Date.now()) / 3_600_000;
+  return {
+    leadTimeHours,
+    partySize,
+    dayOfWeek: local.dayOfWeek,
+    hour: local.hour,
+    isWeekend: local.isWeekend,
+    priorBookings: priorBookings ?? 0,
+    priorNoShows: priorNoShows ?? 0,
+    isConfirmed: status === 'CONFIRMED' || status === 'SEATED',
+  };
+}
+
+async function invalidateSlotCaches(restaurantId) {
+  if (!restaurantId) return;
+  await invalidatePrefix(CACHE_KEYS.overbookingPrefix(restaurantId));
 }
 
 /**
@@ -86,6 +103,7 @@ export function selectBestFitTable(candidates, busyTableIds) {
  *
  * `actor` is the signed-in user, or null for a guest booking.
  * `input.restaurantId` is required — bookings are never cross-venue.
+ * `input.tableId` pins allocation (waitlist apply) instead of running best-fit.
  */
 export async function createReservation(input, actor = null, channel = 'WEB') {
   if (!input.restaurantId) {
@@ -98,81 +116,103 @@ export async function createReservation(input, actor = null, channel = 'WEB') {
   const { startsAt, endsAt } = bookingInterval(input.date, input.time);
   const serviceDate = serviceDateFor(input.date);
   const restaurantId = input.restaurantId;
+  const leadTimeHours = (startsAt.getTime() - Date.now()) / 3_600_000;
 
-  // Retry only for the astronomically unlikely reference collision. A booking
-  // conflict is a real answer and is never retried.
   const MAX_REFERENCE_ATTEMPTS = 3;
 
   for (let attempt = 1; attempt <= MAX_REFERENCE_ATTEMPTS; attempt += 1) {
     try {
-      return await prisma.$transaction(
+      const reservation = await prisma.$transaction(
         async (tx) => {
+          await setTenantGuc(tx, restaurantId);
+
           /**
-           * Step 1 — lock every table that could seat this party *at this
-           * restaurant*.
-           *
-           * ORDER BY id is the deadlock guard described above. FOR UPDATE
-           * blocks any concurrent transaction that wants the same rows.
-           * restaurant_id in the WHERE keeps Venue A's lock set disjoint from
-           * Venue B's, so identical wall-clock slots do not serialise across
-           * tenants.
+           * Lock every active table at this restaurant, not only those that
+           * fit this party. Overbooking counts extras against the whole slot;
+           * locking a subset would let two overbook transactions race on
+           * disjoint candidate sets and both accept.
            */
-          const candidates = await tx.$queryRaw`
+          const locked = await tx.$queryRaw`
             SELECT id, label, capacity
             FROM restaurant_tables
             WHERE restaurant_id = ${restaurantId}::uuid
               AND is_active = true
-              AND capacity >= ${input.partySize}
             ORDER BY id
             FOR UPDATE
           `;
 
-          if (candidates.length === 0) {
+          if (locked.length === 0) {
             throw new ConflictError(
               `We do not have a table that seats ${input.partySize}. Please call us and we will arrange something.`,
             );
           }
 
-          /**
-           * Step 2 — of those, which are already occupied in this window?
-           *
-           * The overlap test is the half-open interval rule:
-           *   existing.starts_at < new.ends_at AND existing.ends_at > new.starts_at
-           * so a 19:00-20:30 booking does not block a 20:30 seating.
-           *
-           * This read is safe from phantoms because every candidate table is
-           * locked — no other transaction can be mid-insert against them.
-           * Candidates are already restaurant-scoped, so clashes cannot pull
-           * in another venue's bookings.
-           */
-          const candidateIds = candidates.map((t) => t.id);
-          const clashes = await tx.reservation.findMany({
+          const slotBookings = await tx.reservation.findMany({
             where: {
-              tableId: { in: candidateIds },
+              restaurantId,
               status: { in: OCCUPYING_STATUSES },
               startsAt: { lt: endsAt },
               endsAt: { gt: startsAt },
             },
-            select: { tableId: true },
+            select: { tableId: true, noShowRisk: true, isOverbooked: true },
           });
 
-          const busy = new Set(clashes.map((c) => c.tableId));
-          const table = selectBestFitTable(candidates, busy);
+          const busy = new Set(slotBookings.map((c) => c.tableId).filter(Boolean));
 
-          if (!table) {
-            // Phase 7 replaces this throw with the overbooking decision:
-            // if aggregate predicted no-show risk for the slot is high
-            // enough, release controlled extra capacity instead of refusing.
-            throw new ConflictError(
-              'That time is fully booked. Please choose another slot — the times shown update live.',
-              { waitlistEligible: true },
-            );
+          let table = null;
+          let isOverbooked = false;
+
+          if (input.tableId) {
+            table = locked.find((t) => t.id === input.tableId) ?? null;
+            if (!table || busy.has(table.id) || table.capacity < input.partySize) {
+              throw new ConflictError('That table is no longer free for this party.');
+            }
+          } else {
+            const candidates = locked.filter((t) => t.capacity >= input.partySize);
+            if (candidates.length === 0) {
+              throw new ConflictError(
+                `We do not have a table that seats ${input.partySize}. Please call us and we will arrange something.`,
+              );
+            }
+            table = selectBestFitTable(candidates, busy);
+
+            if (!table) {
+              const extra = summariseOverbooking(slotBookings);
+              if (extra.remainingExtra < 1) {
+                throw new ConflictError(
+                  'That time is fully booked. Please choose another slot — the times shown update live.',
+                  { waitlistEligible: true },
+                );
+              }
+              isOverbooked = true;
+            }
           }
 
-          /** Step 3 — write the booking while still holding the lock. */
-          const reservation = await tx.reservation.create({
+          let priorBookings = 0;
+          let priorNoShows = 0;
+          if (actor?.id) {
+            const guest = await tx.user.findUnique({
+              where: { id: actor.id },
+              select: { priorBookings: true, priorNoShows: true },
+            });
+            priorBookings = guest?.priorBookings ?? 0;
+            priorNoShows = guest?.priorNoShows ?? 0;
+          }
+
+          const scored = scoreReservation(
+            riskFeaturesFor({
+              startsAt,
+              partySize: input.partySize,
+              status: 'PENDING',
+              priorBookings,
+              priorNoShows,
+            }),
+          );
+
+          const reservationRow = await tx.reservation.create({
             data: {
               reference: generateBookingReference(),
+              restaurantId,
               userId: actor?.id ?? null,
               guestName: input.guestName,
               guestPhone: input.guestPhone,
@@ -181,27 +221,18 @@ export async function createReservation(input, actor = null, channel = 'WEB') {
               startsAt,
               endsAt,
               serviceDate,
-              tableId: table.id,
+              tableId: table?.id ?? null,
               status: 'PENDING',
               channel,
               specialRequests: input.specialRequests ?? null,
+              leadTimeHours,
+              noShowRisk: scored.noShowRisk,
+              riskModelVersion: scored.riskModelVersion,
+              isOverbooked,
             },
-            include: {
-              table: {
-                select: {
-                  label: true,
-                  zone: true,
-                  capacity: true,
-                  restaurantId: true,
-                },
-              },
-            },
+            include: TABLE_INCLUDE,
           });
 
-          /**
-           * Step 4 — keep the ML feature counter current inside the same
-           * transaction, so it can never drift from the booking rows.
-           */
           if (actor?.id) {
             await tx.user.update({
               where: { id: actor.id },
@@ -209,15 +240,16 @@ export async function createReservation(input, actor = null, channel = 'WEB') {
             });
           }
 
-          return reservation;
+          return reservationRow;
         },
         {
-          // Long enough to wait out a lock held by a slow peer, short enough
-          // that a stuck transaction cannot pile up connections indefinitely.
           timeout: 10_000,
           maxWait: 5_000,
         },
       );
+
+      await invalidateSlotCaches(restaurantId);
+      return reservation;
     } catch (err) {
       const isReferenceCollision =
         err instanceof Prisma.PrismaClientKnownRequestError &&
@@ -229,12 +261,6 @@ export async function createReservation(input, actor = null, channel = 'WEB') {
         continue;
       }
 
-      /**
-       * 23P01 is Postgres's exclusion_violation. Reaching it means the
-       * application-level check let something through and the database
-       * backstop caught it. That is the constraint doing its job, but it is
-       * also a bug worth knowing about, so it is logged loudly.
-       */
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2010') {
         const cause = String(err.meta?.code ?? '');
         if (cause === '23P01') {
@@ -264,29 +290,24 @@ export async function cancelReservation(reservationId, actor) {
   const updated = await prisma.$transaction(async (tx) => {
     const reservation = await tx.reservation.findUnique({
       where: { id: reservationId },
-      include: {
-        table: {
-          select: { label: true, zone: true, capacity: true, restaurantId: true },
-        },
-      },
+      include: TABLE_INCLUDE,
     });
 
     if (!reservation) {
       throw new ConflictError('That reservation no longer exists.');
     }
 
+    await setTenantGuc(tx, reservation.restaurantId);
+
+    const tenantId = reservation.restaurantId;
     const isOwner = reservation.userId && actor?.id === reservation.userId;
     let isAdmin = actor?.role === 'ADMIN';
 
-    // Restaurant admins (role USER + join row) can cancel for their venue;
-    // checked against the table's restaurant, not a JWT claim.
-    if (!isAdmin && actor?.id && reservation.table?.restaurantId) {
-      isAdmin = await isRestaurantAdmin(actor.id, reservation.table.restaurantId, actor.role);
+    if (!isAdmin && actor?.id && tenantId) {
+      isAdmin = await isRestaurantAdmin(actor.id, tenantId, actor.role);
     }
 
     if (!isOwner && !isAdmin) {
-      // Deliberately the same message a missing booking gets, so this cannot
-      // be used to probe which reservation ids exist.
       throw new ConflictError('That reservation no longer exists.');
     }
 
@@ -297,8 +318,6 @@ export async function cancelReservation(reservationId, actor) {
       throw new BadRequestError('This booking has already been seated and cannot be cancelled.');
     }
 
-    // Late cancellations still count against the guest's record — that signal
-    // is exactly what the no-show model learns from.
     const hoursNotice = (reservation.startsAt.getTime() - Date.now()) / 3_600_000;
 
     const row = await tx.reservation.update({
@@ -308,22 +327,20 @@ export async function cancelReservation(reservationId, actor) {
         cancelledAt: new Date(),
         version: { increment: 1 },
       },
-      include: {
-        table: {
-          select: { label: true, zone: true, capacity: true, restaurantId: true },
-        },
-      },
+      include: TABLE_INCLUDE,
     });
 
     logger.info({ reservationId, hoursNotice: Math.round(hoursNotice) }, 'reservation cancelled');
     return { reservation: row, newlyCancelled: true };
   });
 
-  if (updated.newlyCancelled && updated.reservation.table?.restaurantId) {
+  const tenantId = updated.reservation.restaurantId;
+  if (updated.newlyCancelled && tenantId) {
+    await invalidateSlotCaches(tenantId);
     try {
       const local = utcToLocalParts(updated.reservation.startsAt);
       await notifyMatchingWaitlist({
-        restaurantId: updated.reservation.table.restaurantId,
+        restaurantId: tenantId,
         date: local.date,
         time: local.time,
         partySize: updated.reservation.partySize,

@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { Icon } from '../components/ui/Icon.jsx';
 
 const ToastContext = createContext(null);
 
@@ -51,6 +52,10 @@ export function ToastProvider({ children }) {
       <div className="toast_stack" role="status" aria-live="polite" aria-atomic="false">
         {toasts.map((toast) => (
           <div key={toast.id} className={`toast toast_${toast.tone}`}>
+            <Icon
+              name={toast.tone === 'success' ? 'check' : toast.tone === 'error' ? 'alert' : 'info'}
+              className="toast_icon"
+            />
             <span>{toast.message}</span>
             <button
               type="button"
@@ -58,7 +63,7 @@ export function ToastProvider({ children }) {
               onClick={() => dismiss(toast.id)}
               aria-label="Dismiss notification"
             >
-              &times;
+              <Icon name="x" />
             </button>
           </div>
         ))}

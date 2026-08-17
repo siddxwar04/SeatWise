@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { validateCreateMenuItem } from '../../../web/src/lib/menuValidation.js';
+import { validateCreateMenuItem } from './menuValidation.js';
 
 /**
- * Cross-package import of the web validation helper so API CI still covers
- * the client mirror of menu.schemas.js (empty sortOrder must not become NaN).
+ * Shared menu-payload validator. It used to live in the web workspace and be
+ * imported across packages; the web app no longer renders a menu editor, so the
+ * helper moved here — next to menu.schemas.js, which it mirrors — rather than
+ * being deleted along with the UI that happened to be its first caller.
  */
 describe('validateCreateMenuItem', () => {
   const base = {

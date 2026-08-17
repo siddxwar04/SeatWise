@@ -39,17 +39,16 @@ The old critical defects this rewrite closes by design:
 
 ## Shipped vs reserved (read this before demos)
 
-**Shipped (Tier 1 — works today):** multi-restaurant schema, JWT auth, transactional bookings with row locks, availability grid, admin dashboard, menu CRUD from Postgres, OpenAI RAG concierge (`POST /api/chat` + floating chat widget), unit tests, concurrency proof.
+**Shipped (Tier 1 + yield layer — works today):** multi-restaurant schema, JWT auth, transactional bookings with row locks, availability grid, admin dashboard, menu CRUD from Postgres, **JS logistic-regression no-show scores**, **EV overbooking**, **waitlist table assignment**, occupancy/heatmap analytics, OpenAI RAG concierge (`POST /api/chat` + floating chat widget), unit tests, concurrency proof.
 
 **Schema reserved, not implemented (Tier 2):**
 
 | Reserved in schema / env                         | Status                                                             |
 | ------------------------------------------------ | ------------------------------------------------------------------ |
-| `noShowRisk`, `riskModelVersion`, `isOverbooked` | Columns exist; FastAPI ML + overbooking rule **not** wired         |
 | `BookingChannel.AI_ASSISTANT`                    | Enum value exists; only `WEB` (and seed channels) used in app code |
-| `ML_SERVICE_URL`                                 | Configured for a future FastAPI service; booking does not call it  |
+| `ML_SERVICE_URL`                                 | Optional Path B (Python) later; live scoring is in-process JS      |
 
-Admin UI may show a no-show risk column when null — that is display plumbing for Phase 6/7, not a live model.
+Admin UI shows a **color-coded no-show badge** on every booking (green <20%, amber 20–50%, red ≥50%). Scores are written at booking time by an in-process logistic regression (`riskScoring.service.js`) and drop when the booking is confirmed.
 
 ---
 
@@ -202,7 +201,7 @@ If you see pool timeouts or non-`ConflictError` rejections under load, that is a
 1. **Register / login / logout** — navbar changes; `/my-reservations` is gated.
 2. **Book a table** — live availability slots; confirmation shows a `TF-…` reference.
 3. **Double-booking** — fill a slot from two clients; second request gets a conflict.
-4. **Admin** (`/admin`) — confirm / seat / no-show; menu CRUD (add, 86, edit, delete).
+4. **Admin** (`/admin`) — confirm / seat / no-show; risk badges; overbooking banner; waitlist assign; heatmap; menu CRUD.
 5. **AI concierge** — Ask AI → natural-language venue recommend → Book a table card.
 6. **Whiteboard** — walk through `booking.service.js`: lock tables → overlap check → best-fit → insert.
 7. **Before/after** — open `legacy/` (or tag `v1-php`) next to the React app.
@@ -218,7 +217,7 @@ If you see pool timeouts or non-`ConflictError` rejections under load, that is a
 | 3 Reservations + row locking (+ multi-restaurant) | **Shipped**                                 |
 | 4 React UI (CSS port)                             | **Shipped**                                 |
 | 5 Menu from DB + admin dashboard                  | **Shipped**                                 |
-| 6 FastAPI no-show + overbooking                   | **Schema reserved** — not implemented       |
+| 6 In-process no-show LR + EV overbooking + assignment | **Shipped** (`riskScoring.service.js`)      |
 | 7 OpenAI NL concierge + pgvector RAG          | **Shipped** (`POST /api/chat`, chat widget) |
 
 See `TECH-STACK.md` for the definitive Node stack notes (the older Spring/Thymeleaf draft in git history is obsolete).

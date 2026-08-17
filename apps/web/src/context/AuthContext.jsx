@@ -1,38 +1,31 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { authApi, bootstrapSession, restaurantApi, setAccessToken } from '../lib/api.js';
+import * as session from '../services/session.js';
 
 const AuthContext = createContext(null);
 
 /**
- * Loads venues the user can staff-manage. Kept out of the JWT on purpose —
- * membership changes take effect on the next call without waiting for token
- * expiry. Failures yield an empty list so a flaky network never blocks login.
+ * Session state.
+ *
+ * `managedVenues` is loaded separately from the user rather than read off a token
+ * claim: venue membership changes should take effect on the next request, not
+ * whenever the access token happens to expire.
  */
-async function fetchManagedRestaurants() {
-  try {
-    const data = await restaurantApi.mine();
-    return data.restaurants ?? [];
-  } catch {
-    return [];
-  }
-}
-
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [managedRestaurants, setManagedRestaurants] = useState([]);
-  // Starts true so the navbar does not flash "Log In" for a signed-in user
+  const [managedVenues, setManagedVenues] = useState([]);
+  // Starts true so the navbar does not flash "Sign in" for a signed-in user
   // during the one-request session restore.
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
 
-    bootstrapSession()
-      .then(async (session) => {
-        if (cancelled || !session?.user) return;
-        setUser(session.user);
-        const venues = await fetchManagedRestaurants();
-        if (!cancelled) setManagedRestaurants(venues);
+    session
+      .restore()
+      .then((restored) => {
+        if (cancelled || !restored) return;
+        setUser(restored.user);
+        setManagedVenues(restored.managedVenues ?? []);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -44,33 +37,27 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = useCallback(async (credentials) => {
-    const session = await authApi.login(credentials);
-    setAccessToken(session.accessToken);
-    setUser(session.user);
-    const venues = await fetchManagedRestaurants();
-    setManagedRestaurants(venues);
-    return { user: session.user, managedRestaurants: venues };
+    const result = await session.login(credentials);
+    setUser(result.user);
+    setManagedVenues(result.managedVenues ?? []);
+    return result;
   }, []);
 
   const register = useCallback(async (data) => {
-    const session = await authApi.register(data);
-    setAccessToken(session.accessToken);
-    setUser(session.user);
-    setManagedRestaurants([]);
-    return session.user;
+    const result = await session.register(data);
+    setUser(result.user);
+    setManagedVenues([]);
+    return result;
   }, []);
 
   const logout = useCallback(async () => {
     try {
-      await authApi.logout();
-    } catch {
-      // Network/API failure must not block local sign-out.
+      await session.logout();
     } finally {
-      // Clear locally even if the request failed — the user asked to sign out
-      // and the UI must reflect that regardless of the network.
-      setAccessToken(null);
+      // Clear locally even if the request failed — the user asked to sign out and
+      // the UI must reflect that regardless of the network.
       setUser(null);
-      setManagedRestaurants([]);
+      setManagedVenues([]);
     }
   }, []);
 
@@ -81,14 +68,14 @@ export function AuthProvider({ children }) {
       login,
       register,
       logout,
-      setUser,
-      managedRestaurants,
+      managedVenues,
       isAuthenticated: user !== null,
-      isAdmin: user?.role === 'ADMIN',
-      /** Global ADMIN or at least one RestaurantAdmin membership. */
-      canAccessAdmin: user?.role === 'ADMIN' || managedRestaurants.length > 0,
+      /** Global admin, or manages at least one venue. */
+      canAccessConsole:
+        user?.role === 'ADMIN' || user?.role === 'RESTAURANT_ADMIN' || managedVenues.length > 0,
+      isDemo: Boolean(user?.demo),
     }),
-    [user, loading, login, register, logout, managedRestaurants],
+    [user, loading, login, register, logout, managedVenues],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,124 +1,263 @@
 /**
- * TastyFood design tokens — single source of truth.
- * No Tailwind in this project; every component consumes these CSS variables.
- * Spacing uses an 4px base scale (space-1 … space-16).
+ * SeatWise design tokens — the single source of truth for the whole UI.
+ *
+ * Two rules this file exists to enforce:
+ *
+ *  1. No component ever writes a raw hex value. Every colour, radius, shadow and
+ *     duration is named here, which is what makes the dark theme a 40-line
+ *     override instead of a rewrite.
+ *  2. Semantic names, not literal ones. Components ask for `--surface-raised` or
+ *     `--risk-high`, never `--violet-500`. The literal ramps at the top are
+ *     private plumbing; the semantic block below is the public API.
+ *
+ * Theme is driven by `data-theme` on <html>, set before first paint by the
+ * inline script in index.html so there is no flash of the wrong theme.
  */
+
 :root {
-  /* ——— Accent (single brand orange) ——— */
-  --color-accent: #e85d04;
-  --color-accent-hover: #c2410c;
-  --color-accent-pressed: #9a3412;
-  --color-accent-soft: rgba(232, 93, 4, 0.1);
-  --color-accent-glow: rgba(232, 93, 4, 0.32);
-  --color-accent-ring: rgba(232, 93, 4, 0.35);
+  color-scheme: light;
 
-  /* Legacy aliases used across style.css / app.css */
-  --primary: var(--color-accent);
-  --primary-dark: var(--color-accent-hover);
-  --primary-soft: var(--color-accent-soft);
-  --primary-glow: var(--color-accent-glow);
+  /* ══════════════════════════════════════════════ private ramps ══════════ */
 
-  /* ——— Warm neutral scale ——— */
-  --neutral-0: #ffffff;
-  --neutral-25: #fdfcfa;
-  --neutral-50: #faf7f2;
-  --neutral-100: #f3ebe3;
-  --neutral-150: #ebe3d9;
-  --neutral-200: #e0d6ca;
-  --neutral-300: #c9bdb0;
-  --neutral-400: #a8988a;
-  --neutral-500: #8a7b6e;
-  --neutral-600: #6b5f55;
-  --neutral-700: #4a4039;
-  --neutral-800: #2c2622;
-  --neutral-900: #1c1917;
-  --neutral-950: #0c0a09;
+  /* Brand — indigo/violet. Reads as software, not as a restaurant. */
+  --violet-50: #f2f1ff;
+  --violet-100: #e6e4ff;
+  --violet-200: #cdc9ff;
+  --violet-300: #aca4ff;
+  --violet-400: #8b80ff;
+  --violet-500: #6357f5;
+  --violet-600: #4f42e0;
+  --violet-700: #4034bb;
+  --violet-800: #342b95;
+  --violet-900: #221c66;
 
-  /* ——— Semantic surfaces & text ——— */
-  --surface: var(--neutral-0);
-  --surface-elevated: var(--neutral-25);
-  --surface-muted: var(--neutral-50);
-  --surface-sunken: var(--neutral-100);
-  --border-subtle: rgba(28, 25, 23, 0.07);
-  --border: rgba(28, 25, 23, 0.1);
-  --border-strong: rgba(28, 25, 23, 0.16);
-  --text-primary: var(--neutral-900);
-  --text-secondary: var(--neutral-600);
-  --text-muted: var(--neutral-500);
-  --text-on-accent: #ffffff;
+  /* Neutrals — a whisper of warmth so the paper does not read as clinical. */
+  --ink-0: #ffffff;
+  --ink-25: #fcfcfd;
+  --ink-50: #f7f7f9;
+  --ink-100: #f0f0f4;
+  --ink-150: #e7e7ed;
+  --ink-200: #dcdce4;
+  --ink-300: #c3c3ce;
+  --ink-400: #9c9caa;
+  --ink-500: #74748a;
+  --ink-600: #55556a;
+  --ink-700: #3c3c4d;
+  --ink-800: #24242f;
+  --ink-900: #14141c;
+  --ink-950: #0a0a10;
 
-  --bg-page: var(--neutral-50);
-  --bg-warm: radial-gradient(ellipse 120% 80% at 10% -10%, rgba(232, 93, 4, 0.07), transparent 50%),
-    radial-gradient(ellipse 90% 60% at 100% 0%, rgba(194, 65, 12, 0.05), transparent 45%),
-    linear-gradient(180deg, var(--neutral-50) 0%, var(--neutral-100) 55%, var(--neutral-150) 100%);
-  --bg-dark: var(--neutral-900);
-  --text-dark: var(--text-primary);
-  --text-light: var(--text-secondary);
-  --white: var(--neutral-0);
+  /* Data colours. These carry meaning (risk, scarcity, health) so they are
+     tuned for legibility at badge size, not for prettiness at hero size. */
+  --green-500: #0f9d76;
+  --green-600: #0b7d5e;
+  --amber-500: #d97706;
+  --amber-600: #b45309;
+  --red-500: #dc4646;
+  --red-600: #b91c1c;
+  --blue-500: #2563eb;
 
-  /* ——— Elevation (ambient + contact) ——— */
-  --shadow-xs: 0 1px 2px rgba(28, 25, 23, 0.04);
-  --shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.04), 0 4px 14px rgba(28, 25, 23, 0.05);
-  --shadow-md: 0 2px 4px rgba(28, 25, 23, 0.04), 0 12px 28px rgba(28, 25, 23, 0.08);
-  --shadow-lg: 0 4px 8px rgba(28, 25, 23, 0.04), 0 24px 48px rgba(28, 25, 23, 0.12);
-  --shadow-xl: 0 8px 16px rgba(28, 25, 23, 0.06), 0 32px 64px rgba(28, 25, 23, 0.16);
-  --shadow-accent: 0 4px 12px rgba(232, 93, 4, 0.2), 0 12px 32px rgba(232, 93, 4, 0.28);
-  --shadow: var(--shadow-md);
+  /* ══════════════════════════════════════════════ semantic: colour ═══════ */
 
-  /* ——— Radius ——— */
-  --radius-sm: 10px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
-  --radius-xl: 28px;
-  --radius: var(--radius-md);
-  --radius-pill: 999px;
+  --brand: var(--violet-600);
+  --brand-hover: var(--violet-700);
+  --brand-pressed: var(--violet-800);
+  --brand-text: var(--violet-700);
+  --brand-soft: var(--violet-50);
+  --brand-soft-border: var(--violet-200);
+  --brand-ring: rgba(99, 87, 245, 0.32);
+  --on-brand: #ffffff;
 
-  /* ——— Spacing (4px base) ——— */
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --space-5: 1.25rem;
-  --space-6: 1.5rem;
-  --space-8: 2rem;
-  --space-10: 2.5rem;
-  --space-12: 3rem;
-  --space-16: 4rem;
-  --space-20: 5rem;
-  --space-24: 6rem;
-  --space-section: clamp(4.5rem, 9vw, 7.5rem);
-  --space-section-sm: clamp(3rem, 6vw, 4.5rem);
-  --container: 1120px;
+  --canvas: var(--ink-50);
+  --surface: var(--ink-0);
+  --surface-raised: var(--ink-0);
+  --surface-muted: var(--ink-50);
+  --surface-sunken: var(--ink-100);
+  --surface-inset: var(--ink-150);
+  --surface-inverse: var(--ink-900);
+  --on-inverse: var(--ink-50);
 
-  /* ——— Typography ——— */
-  --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
-  --font-display: 'Fraunces', 'Times New Roman', serif;
+  --border-faint: rgba(20, 20, 28, 0.06);
+  --border: rgba(20, 20, 28, 0.1);
+  --border-strong: rgba(20, 20, 28, 0.18);
 
-  --text-display: clamp(3rem, 7.5vw, 4.75rem);
-  --text-hero: var(--text-display);
-  --text-h1: clamp(2.15rem, 4.2vw, 2.85rem);
-  --text-h2: clamp(1.75rem, 3.2vw, 2.35rem);
-  --text-h3: clamp(1.2rem, 2vw, 1.4rem);
-  --text-h4: 1.05rem;
-  --text-body-lg: 1.125rem;
-  --text-body: 1.05rem;
-  --text-caption: 0.8rem;
+  --text: var(--ink-900);
+  --text-secondary: var(--ink-600);
+  --text-muted: var(--ink-500);
+  --text-faint: var(--ink-400);
 
-  --leading-tight: 1.12;
-  --leading-snug: 1.35;
-  --leading-normal: 1.65;
-  --leading-relaxed: 1.75;
-  --tracking-display: -0.035em;
-  --tracking-tight: -0.025em;
-  --tracking-normal: -0.011em;
+  /* Risk semantics — the product's core vocabulary, so it gets first-class
+     tokens rather than ad-hoc colours per component. */
+  --risk-low: var(--green-600);
+  --risk-low-bg: rgba(15, 157, 118, 0.1);
+  --risk-medium: var(--amber-600);
+  --risk-medium-bg: rgba(217, 119, 6, 0.12);
+  --risk-high: var(--red-600);
+  --risk-high-bg: rgba(220, 70, 70, 0.11);
 
-  /* ——— Motion ——— */
+  --ok: var(--green-600);
+  --ok-bg: rgba(15, 157, 118, 0.1);
+  --warn: var(--amber-600);
+  --warn-bg: rgba(217, 119, 6, 0.12);
+  --danger: var(--red-600);
+  --danger-bg: rgba(220, 70, 70, 0.11);
+  --info: var(--blue-500);
+  --info-bg: rgba(37, 99, 235, 0.1);
+
+  /* ══════════════════════════════════════════════ semantic: depth ════════ */
+
+  /* Two-part shadows: a tight contact shadow plus a wide ambient one. A single
+     large blur always looks like a drop-shadow filter rather than elevation. */
+  --shadow-xs: 0 1px 2px rgba(20, 20, 28, 0.05);
+  --shadow-sm: 0 1px 2px rgba(20, 20, 28, 0.05), 0 2px 8px rgba(20, 20, 28, 0.04);
+  --shadow-md: 0 1px 3px rgba(20, 20, 28, 0.06), 0 8px 22px rgba(20, 20, 28, 0.07);
+  --shadow-lg: 0 2px 6px rgba(20, 20, 28, 0.07), 0 18px 44px rgba(20, 20, 28, 0.1);
+  --shadow-xl: 0 4px 12px rgba(20, 20, 28, 0.08), 0 32px 68px rgba(20, 20, 28, 0.14);
+  --shadow-brand: 0 2px 6px rgba(79, 66, 224, 0.22), 0 14px 32px rgba(79, 66, 224, 0.18);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+
+  /* ══════════════════════════════════════════════ shape & space ══════════ */
+
+  --r-xs: 6px;
+  --r-sm: 9px;
+  --r-md: 13px;
+  --r-lg: 18px;
+  --r-xl: 24px;
+  --r-2xl: 32px;
+  --r-pill: 999px;
+
+  --s-0: 0;
+  --s-1: 0.25rem;
+  --s-2: 0.5rem;
+  --s-3: 0.75rem;
+  --s-4: 1rem;
+  --s-5: 1.25rem;
+  --s-6: 1.5rem;
+  --s-7: 1.75rem;
+  --s-8: 2rem;
+  --s-10: 2.5rem;
+  --s-12: 3rem;
+  --s-16: 4rem;
+  --s-20: 5rem;
+  --s-24: 6rem;
+
+  --page-max: 1280px;
+  --page-narrow: 880px;
+  --page-gutter: clamp(1rem, 4vw, 2.5rem);
+  --nav-h: 64px;
+  --section-y: clamp(3.5rem, 7vw, 6rem);
+
+  /* ══════════════════════════════════════════════ typography ═════════════ */
+
+  --font-ui: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Fraunces', 'Iowan Old Style', Georgia, serif;
+  --font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', 'Cascadia Mono', Menlo, monospace;
+
+  /* Fluid where it earns it (display sizes), fixed where predictability matters
+     more than scale (body, captions, table cells). */
+  --t-display: clamp(2.5rem, 6vw, 4.25rem);
+  --t-h1: clamp(1.9rem, 3.6vw, 2.6rem);
+  --t-h2: clamp(1.45rem, 2.4vw, 1.9rem);
+  --t-h3: 1.2rem;
+  --t-h4: 1.0625rem;
+  --t-body-lg: 1.0625rem;
+  --t-body: 0.9375rem;
+  --t-sm: 0.875rem;
+  --t-xs: 0.8125rem;
+  --t-2xs: 0.75rem;
+
+  --lh-tight: 1.08;
+  --lh-snug: 1.28;
+  --lh-normal: 1.5;
+  --lh-relaxed: 1.65;
+  --tr-display: -0.03em;
+  --tr-tight: -0.02em;
+  --tr-normal: -0.008em;
+  --tr-wide: 0.02em;
+  --tr-caps: 0.08em;
+
+  /* ══════════════════════════════════════════════ motion ═════════════════ */
+
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
-  --duration-fast: 160ms;
-  --duration-micro: 200ms;
-  --duration-base: 280ms;
-  --duration-reveal: 420ms;
-  --ease: var(--ease-out);
-  --duration: var(--duration-micro);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --d-instant: 90ms;
+  --d-fast: 150ms;
+  --d-base: 240ms;
+  --d-slow: 380ms;
+
+  /* ══════════════════════════════════════════════ layers ═════════════════ */
+
+  --z-base: 1;
+  --z-sticky: 20;
+  --z-nav: 100;
+  --z-pop: 200;
+  --z-overlay: 300;
+  --z-sheet: 310;
+  --z-toast: 400;
+}
+
+/**
+ * Dark theme.
+ *
+ * Not an inversion. Surfaces get *lighter* as they rise (the opposite of light
+ * mode), borders switch to translucent white, and the brand steps two stops up
+ * the ramp because --violet-600 on a near-black canvas fails contrast.
+ */
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --brand: var(--violet-400);
+  --brand-hover: var(--violet-300);
+  --brand-pressed: var(--violet-200);
+  --brand-text: var(--violet-300);
+  --brand-soft: rgba(139, 128, 255, 0.13);
+  --brand-soft-border: rgba(139, 128, 255, 0.28);
+  --brand-ring: rgba(139, 128, 255, 0.4);
+  --on-brand: #0a0a10;
+
+  --canvas: #08080d;
+  --surface: #101018;
+  --surface-raised: #16161f;
+  --surface-muted: #131320;
+  --surface-sunken: #0c0c13;
+  --surface-inset: #1c1c28;
+  --surface-inverse: var(--ink-50);
+  --on-inverse: var(--ink-900);
+
+  --border-faint: rgba(255, 255, 255, 0.05);
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.2);
+
+  --text: #f3f3f7;
+  --text-secondary: #b6b6c6;
+  --text-muted: #8d8d9f;
+  --text-faint: #6b6b7d;
+
+  /* Lighter data colours: the 600s are unreadable on a dark surface. */
+  --risk-low: #3ddba9;
+  --risk-low-bg: rgba(61, 219, 169, 0.13);
+  --risk-medium: #fbbf4a;
+  --risk-medium-bg: rgba(251, 191, 74, 0.14);
+  --risk-high: #ff7b7b;
+  --risk-high-bg: rgba(255, 123, 123, 0.14);
+
+  --ok: #3ddba9;
+  --ok-bg: rgba(61, 219, 169, 0.13);
+  --warn: #fbbf4a;
+  --warn-bg: rgba(251, 191, 74, 0.14);
+  --danger: #ff7b7b;
+  --danger-bg: rgba(255, 123, 123, 0.14);
+  --info: #6ea8ff;
+  --info-bg: rgba(110, 168, 255, 0.14);
+
+  /* Shadows barely read on dark surfaces, so elevation leans on the lighter
+     surface ramp above; these stay for edge definition only. */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.5), 0 10px 26px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 4px 10px rgba(0, 0, 0, 0.55), 0 20px 48px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 6px 16px rgba(0, 0, 0, 0.6), 0 36px 72px rgba(0, 0, 0, 0.6);
+  --shadow-brand: 0 2px 8px rgba(99, 87, 245, 0.3), 0 16px 36px rgba(99, 87, 245, 0.24);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }

@@ -26,7 +26,7 @@ export function toPublicReservation(reservation) {
     status: reservation.status,
     channel: reservation.channel,
     specialRequests: reservation.specialRequests,
-    restaurantId: reservation.table?.restaurantId ?? null,
+    restaurantId: reservation.restaurantId ?? reservation.table?.restaurantId ?? null,
     table: reservation.table
       ? { label: reservation.table.label, zone: reservation.table.zone }
       : null,
@@ -51,7 +51,7 @@ export async function listForUser(userId, options) {
   const where = { userId };
 
   if (options.restaurantId) {
-    where.table = { restaurantId: options.restaurantId };
+    where.restaurantId = options.restaurantId;
   }
   if (options.status) {
     where.status = options.status;
@@ -92,8 +92,8 @@ export async function getById(reservationId, actor) {
   const isOwner = reservation?.userId && reservation.userId === actor?.id;
   let isAdmin = actor?.role === 'ADMIN';
 
-  if (!isAdmin && actor?.id && reservation?.table?.restaurantId) {
-    isAdmin = await isRestaurantAdmin(actor.id, reservation.table.restaurantId, actor.role);
+  if (!isAdmin && actor?.id && reservation?.restaurantId) {
+    isAdmin = await isRestaurantAdmin(actor.id, reservation.restaurantId, actor.role);
   }
 
   // A booking that exists but belongs to someone else returns exactly the

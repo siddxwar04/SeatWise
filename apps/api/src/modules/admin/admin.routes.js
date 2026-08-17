@@ -3,7 +3,10 @@ import { z } from 'zod';
 import { asyncHandler } from '../../lib/asyncHandler.js';
 import { requireAuth, requireRestaurantAdmin } from '../../middleware/requireAuth.js';
 import { validate } from '../../middleware/validate.js';
+import * as analyticsService from '../analytics/analytics.service.js';
+import * as overbookingService from '../overbooking/overbooking.service.js';
 import { idParamSchema, updateStatusSchema } from '../reservations/reservation.schemas.js';
+import { todayLocal } from '../../lib/slots.js';
 import { toPublicReservation } from '../reservations/reservation.service.js';
 import * as adminService from './admin.service.js';
 
@@ -116,5 +119,41 @@ adminRouter.post(
   requireRestaurantAdmin(),
   asyncHandler(async (req, res) => {
     res.json(await adminService.sendReminder(req.params.id, req.restaurant.id));
+  }),
+);
+
+adminRouter.get(
+  '/overbooking',
+  validate({
+    query: restaurantQuerySchema.extend({
+      date: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/)
+        .optional(),
+    }),
+  }),
+  requireRestaurantAdmin(),
+  asyncHandler(async (req, res) => {
+    const date = req.query.date ?? todayLocal();
+    const slots = await overbookingService.getDayOverbooking(req.restaurant.id, date);
+    res.json({
+      restaurantId: req.restaurant.id,
+      date,
+      slots,
+      highlights: slots.filter((s) => s.recommendedExtraBookings > 0),
+    });
+  }),
+);
+
+adminRouter.get(
+  '/analytics',
+  validate({
+    query: restaurantQuerySchema.extend({
+      days: z.coerce.number().int().min(1).max(365).default(30),
+    }),
+  }),
+  requireRestaurantAdmin(),
+  asyncHandler(async (req, res) => {
+    res.json(await analyticsService.getAnalytics(req.restaurant.id, req.query.days));
   }),
 );

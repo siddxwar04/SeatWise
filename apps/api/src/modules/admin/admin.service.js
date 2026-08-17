@@ -1,9 +1,14 @@
 import { BadRequestError, ConflictError, NotFoundError } from '../../errors/AppError.js';
+import { CACHE_KEYS, invalidatePrefix } from '../../lib/cache.js';
 import { sendHighRiskReminder } from '../../lib/email.js';
 import { logger } from '../../lib/logger.js';
 import { prisma } from '../../lib/prisma.js';
 import { serviceDateFor, todayLocal, utcToLocalParts } from '../../lib/slots.js';
+import { setTenantGuc } from '../../lib/tenant.js';
+import { selectBestFitTable } from '../assignment/tableAssignment.service.js';
+import { riskFeaturesFor } from '../reservations/booking.service.js';
 import { toPublicReservation } from '../reservations/reservation.service.js';
+import { scoreReservation } from '../risk/riskScoring.service.js';
 import { notifyMatchingWaitlist } from '../waitlist/waitlist.service.js';
 
 /**
@@ -35,7 +40,7 @@ function requireRestaurantScope(restaurantId) {
   if (!restaurantId) {
     throw new BadRequestError('restaurantId is required for admin queries.');
   }
-  return { table: { restaurantId } };
+  return { restaurantId };
 }
 
 export async function listReservations(filters) {
@@ -122,9 +127,12 @@ export async function updateStatus(
     });
     if (!current) throw new NotFoundError('Reservation not found.');
 
-    if (restaurantId && current.table?.restaurantId !== restaurantId) {
+    const tenantId = current.restaurantId;
+    if (restaurantId && tenantId !== restaurantId) {
       throw new NotFoundError('Reservation not found.');
     }
+
+    await setTenantGuc(tx, tenantId);
 
     if (current.status === nextStatus) return { row: current, changed: false };
 
@@ -141,13 +149,70 @@ export async function updateStatus(
       );
     }
 
+    let tableId = current.tableId;
+    let scored = {};
+
+    if (nextStatus === 'CONFIRMED') {
+      let priorBookings = 0;
+      let priorNoShows = 0;
+      if (current.userId) {
+        const guest = await tx.user.findUnique({
+          where: { id: current.userId },
+          select: { priorBookings: true, priorNoShows: true },
+        });
+        priorBookings = guest?.priorBookings ?? 0;
+        priorNoShows = guest?.priorNoShows ?? 0;
+      }
+      scored = scoreReservation(
+        riskFeaturesFor({
+          startsAt: current.startsAt,
+          partySize: current.partySize,
+          status: 'CONFIRMED',
+          priorBookings,
+          priorNoShows,
+        }),
+      );
+    }
+
+    if (nextStatus === 'SEATED' && !tableId) {
+      const local = utcToLocalParts(current.startsAt);
+      const locked = await tx.$queryRaw`
+        SELECT id, label, capacity
+        FROM restaurant_tables
+        WHERE restaurant_id = ${tenantId}::uuid
+          AND is_active = true
+          AND capacity >= ${current.partySize}
+        ORDER BY id
+        FOR UPDATE
+      `;
+      const clashes = await tx.reservation.findMany({
+        where: {
+          restaurantId: tenantId,
+          status: { in: ['PENDING', 'CONFIRMED', 'SEATED', 'COMPLETED'] },
+          startsAt: { lt: current.endsAt },
+          endsAt: { gt: current.startsAt },
+          tableId: { not: null },
+          id: { not: current.id },
+        },
+        select: { tableId: true },
+      });
+      const busy = new Set(clashes.map((c) => c.tableId));
+      const pick = selectBestFitTable(locked, busy);
+      if (pick) tableId = pick.id;
+      else logger.warn({ reservationId, time: local.time }, 'seated overbook with no free table');
+    }
+
     const row = await tx.reservation.update({
       where: { id: reservationId },
       data: {
         status: nextStatus,
         version: { increment: 1 },
+        tableId,
         ...(nextStatus === 'SEATED' ? { seatedAt: new Date() } : {}),
         ...(nextStatus === 'CANCELLED' ? { cancelledAt: new Date() } : {}),
+        ...(scored.noShowRisk != null
+          ? { noShowRisk: scored.noShowRisk, riskModelVersion: scored.riskModelVersion }
+          : {}),
       },
       include: {
         table: {
@@ -176,15 +241,20 @@ export async function updateStatus(
     return { row, changed: true, previous: current };
   });
 
+  const tenantId = updated.row.restaurantId;
+  if (updated.changed && tenantId) {
+    await invalidatePrefix(CACHE_KEYS.overbookingPrefix(tenantId));
+  }
+
   if (
     updated.changed &&
     (nextStatus === 'CANCELLED' || nextStatus === 'NO_SHOW') &&
-    updated.row.table?.restaurantId
+    tenantId
   ) {
     try {
       const local = utcToLocalParts(updated.row.startsAt);
       await notifyMatchingWaitlist({
-        restaurantId: updated.row.table.restaurantId,
+        restaurantId: tenantId,
         date: local.date,
         time: local.time,
         partySize: updated.row.partySize,
@@ -207,7 +277,7 @@ export async function sendReminder(reservationId, restaurantId) {
     },
   });
 
-  if (!reservation || reservation.table?.restaurantId !== restaurantId) {
+  if (!reservation || reservation.restaurantId !== restaurantId) {
     throw new NotFoundError('Reservation not found.');
   }
 

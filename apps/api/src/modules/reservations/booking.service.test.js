@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { selectBestFitTable } from './booking.service.js';
+import { selectBestFitTable } from '../assignment/tableAssignment.service.js';
 
 /**
  * Best-fit table selection is the interview centerpiece of the booking engine:
