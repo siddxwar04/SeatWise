@@ -2,8 +2,8 @@
  * Local restaurant photographs.
  *
  * Files live in apps/web/public/images/restaurants:
- *   {slug}.jpg        cover (cards, hero, detail)
- *   {slug}/1.jpg…4.jpg  gallery strip on Curated for tonight
+ *   {slug}.jpg              cover (every card)
+ *   {featured-slug}/1.jpg…4.jpg  gallery — only the curated hero per city
  *
  * Re-download with: node scripts/download-venue-photos.js
  */

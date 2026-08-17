@@ -253,7 +253,14 @@ async function main() {
     }
   }
 
-  for (const slug of Object.keys(COVERS)) {
+  for (const slug of [
+    'olive-and-grove',
+    'salt-and-tide',
+    'curry-culture-lab',
+    'nizam-and-noor',
+    'kadal-and-coconut',
+    'haveli-nine',
+  ]) {
     const ids = GALLERIES[slug] ?? BY_CUISINE[CUISINE_BY_SLUG[slug]] ?? DEFAULT_GALLERY;
     for (let i = 0; i < Math.min(4, ids.length); i += 1) {
       const dest = path.join(ROOT, slug, `${i + 1}.jpg`);
