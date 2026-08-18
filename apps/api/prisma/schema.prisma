@@ -172,6 +172,14 @@ model Restaurant {
   priceLevel Int      @default(2) @map("price_level")
   vibeTags   String[] @default([]) @map("vibe_tags")
 
+  /// City slug matching the frontend's CITIES fixture (`pune`, `mumbai`,
+  /// `bengaluru`, `hyderabad`, `chennai`, `delhi`) — the multi-city discovery
+  /// filter joins on this, not on `address`, which is free text.
+  city String @default("bengaluru") @db.VarChar(40)
+  /// Neighbourhood within the city, e.g. "Koramangala". Matches one entry in
+  /// that city's `areas` list on the frontend.
+  area String @default("Koramangala") @db.VarChar(80)
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -184,6 +192,7 @@ model Restaurant {
 
   @@index([isActive])
   @@index([cuisine])
+  @@index([city])
   @@map("restaurants")
 }
 

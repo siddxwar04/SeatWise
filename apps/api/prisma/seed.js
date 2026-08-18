@@ -1,9 +1,14 @@
 /**
- * Seed data — multi-restaurant.
+ * Seed data — multi-restaurant, multi-city.
  *
- * Three venues with distinct menus, floor plans, and RestaurantAdmin users so
- * local multi-tenant behaviour is obvious. Global ADMIN remains a platform
- * operator (no join-table row required).
+ * Three Bengaluru venues with distinct menus and floor plans (the original
+ * TastyFood set), plus one flagship venue in each of the other five SeatWise
+ * cities so the Discover page's city filter has something real to return.
+ * RestaurantAdmin users exist per venue so local multi-tenant behaviour is
+ * obvious. Global ADMIN remains a platform operator (no join-table row
+ * required). Only Koramangala gets authored reservation history — see
+ * seedDemoDemand — the other seven venues don't need it to prove multi-city
+ * search works.
  *
  * Idempotent. Safe to run repeatedly.
  */
@@ -27,6 +32,8 @@ const RESTAURANTS = [
     cuisine: 'Indian',
     priceLevel: 2,
     vibeTags: ['date-night', 'family', 'lively'],
+    city: 'bengaluru',
+    area: 'Koramangala',
   },
   {
     slug: 'tastyfood-indiranagar',
@@ -36,6 +43,8 @@ const RESTAURANTS = [
     cuisine: 'Dessert',
     priceLevel: 3,
     vibeTags: ['date-night', 'cozy', 'sweet'],
+    city: 'bengaluru',
+    area: 'Indiranagar',
   },
   {
     slug: 'tastyfood-whitefield',
@@ -45,7 +54,88 @@ const RESTAURANTS = [
     cuisine: 'Cafe',
     priceLevel: 1,
     vibeTags: ['casual', 'work-friendly', 'quick'],
+    city: 'bengaluru',
+    area: 'Whitefield',
   },
+  // One flagship venue per remaining SeatWise city — enough for the discovery
+  // filter and owner console to be genuinely multi-city, without hand-authoring
+  // a unique floor plan and menu per venue (they share DEFAULT_TABLES and the
+  // full MENU_CATALOGUE below).
+  {
+    slug: 'tastyfood-koregaon-park',
+    name: 'TastyFood Koregaon Park',
+    address: 'Lane 5, Koregaon Park, Pune 411001',
+    phone: '02041230000',
+    cuisine: 'Modern Indian',
+    priceLevel: 3,
+    vibeTags: ['date-night', 'lively'],
+    city: 'pune',
+    area: 'Koregaon Park',
+  },
+  {
+    slug: 'tastyfood-bandra',
+    name: 'TastyFood Bandra',
+    address: 'Linking Rd, Bandra West, Mumbai 400050',
+    phone: '02261230000',
+    cuisine: 'Coastal',
+    priceLevel: 3,
+    vibeTags: ['date-night', 'lively'],
+    city: 'mumbai',
+    area: 'Bandra West',
+  },
+  {
+    slug: 'tastyfood-banjara-hills',
+    name: 'TastyFood Banjara Hills',
+    address: 'Road No. 12, Banjara Hills, Hyderabad 500034',
+    phone: '04023550000',
+    cuisine: 'Biryani & Kebab',
+    priceLevel: 2,
+    vibeTags: ['family', 'lively'],
+    city: 'hyderabad',
+    area: 'Banjara Hills',
+  },
+  {
+    slug: 'tastyfood-besant-nagar',
+    name: 'TastyFood Besant Nagar',
+    address: 'Elliot\'s Beach Rd, Besant Nagar, Chennai 600090',
+    phone: '04424460000',
+    cuisine: 'Coastal',
+    priceLevel: 2,
+    vibeTags: ['casual', 'family'],
+    city: 'chennai',
+    area: 'Besant Nagar',
+  },
+  {
+    slug: 'tastyfood-hauz-khas',
+    name: 'TastyFood Hauz Khas',
+    address: 'Hauz Khas Village, Delhi 110016',
+    phone: '01141230000',
+    cuisine: 'North Indian',
+    priceLevel: 3,
+    vibeTags: ['date-night', 'lively'],
+    city: 'delhi',
+    area: 'Hauz Khas',
+  },
+];
+
+/** Shared floor plan for the five single-city flagship venues above. */
+const DEFAULT_TABLES = [
+  { label: 'T1', capacity: 2, zone: 'INDOOR' },
+  { label: 'T2', capacity: 2, zone: 'OUTDOOR' },
+  { label: 'T3', capacity: 4, zone: 'INDOOR' },
+  { label: 'T4', capacity: 4, zone: 'OUTDOOR' },
+  { label: 'T5', capacity: 6, zone: 'INDOOR' },
+  { label: 'P1', capacity: 8, zone: 'PRIVATE' },
+  { label: 'BAR-1', capacity: 2, zone: 'BAR', combinable: true, combineGroup: 'BAR' },
+  { label: 'BAR-2', capacity: 2, zone: 'BAR', combinable: true, combineGroup: 'BAR' },
+];
+
+const NEW_CITY_SLUGS = [
+  'tastyfood-koregaon-park',
+  'tastyfood-bandra',
+  'tastyfood-banjara-hills',
+  'tastyfood-besant-nagar',
+  'tastyfood-hauz-khas',
 ];
 
 /** Shared dish catalogue — assigned per restaurant with a venue-specific prefix on image alts only where needed. */
@@ -222,6 +312,7 @@ const MENU_BY_SLUG = {
     ...i,
     priceInPaise: Math.round(i.priceInPaise * 0.95),
   })),
+  ...Object.fromEntries(NEW_CITY_SLUGS.map((slug) => [slug, MENU_CATALOGUE])),
 };
 
 /**
@@ -263,6 +354,7 @@ const TABLES_BY_SLUG = {
     { label: 'T5', capacity: 8, zone: 'PRIVATE' },
     { label: 'T6', capacity: 10, zone: 'PRIVATE' },
   ],
+  ...Object.fromEntries(NEW_CITY_SLUGS.map((slug) => [slug, DEFAULT_TABLES])),
 };
 
 const VENUE_ADMINS = [
@@ -280,6 +372,31 @@ const VENUE_ADMINS = [
     email: 'admin.whitefield@tastyfood.local',
     username: 'Whitefield Manager',
     restaurantSlug: 'tastyfood-whitefield',
+  },
+  {
+    email: 'admin.koregaon-park@tastyfood.local',
+    username: 'Koregaon Park Manager',
+    restaurantSlug: 'tastyfood-koregaon-park',
+  },
+  {
+    email: 'admin.bandra@tastyfood.local',
+    username: 'Bandra Manager',
+    restaurantSlug: 'tastyfood-bandra',
+  },
+  {
+    email: 'admin.banjara-hills@tastyfood.local',
+    username: 'Banjara Hills Manager',
+    restaurantSlug: 'tastyfood-banjara-hills',
+  },
+  {
+    email: 'admin.besant-nagar@tastyfood.local',
+    username: 'Besant Nagar Manager',
+    restaurantSlug: 'tastyfood-besant-nagar',
+  },
+  {
+    email: 'admin.hauz-khas@tastyfood.local',
+    username: 'Hauz Khas Manager',
+    restaurantSlug: 'tastyfood-hauz-khas',
   },
 ];
 
@@ -330,6 +447,8 @@ async function main() {
         cuisine: venue.cuisine,
         priceLevel: venue.priceLevel,
         vibeTags: venue.vibeTags,
+        city: venue.city,
+        area: venue.area,
       },
       create: venue,
     });

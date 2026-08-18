@@ -10,6 +10,8 @@ const restaurantListSelect = {
   cuisine: true,
   priceLevel: true,
   vibeTags: true,
+  city: true,
+  area: true,
 };
 
 /**

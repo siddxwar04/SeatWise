@@ -13,6 +13,7 @@ import { adminRouter } from './modules/admin/admin.routes.js';
 import { authRouter } from './modules/auth/auth.routes.js';
 import { chatRouter } from './modules/chat/chat.routes.js';
 import { dashboardRouter } from './modules/dashboard/dashboard.routes.js';
+import { discoveryRouter } from './modules/discovery/discovery.routes.js';
 import { menuRouter } from './modules/menu/menu.routes.js';
 import { reservationRouter } from './modules/reservations/reservation.routes.js';
 import { restaurantRouter } from './modules/restaurants/restaurant.routes.js';
@@ -77,6 +78,7 @@ export function createApp() {
   });
 
   app.use('/api/auth', authRouter);
+  app.use('/api/discovery', discoveryRouter);
   app.use('/api/restaurants', restaurantRouter);
   app.use('/api/menu', menuRouter);
   app.use('/api/reservations', reservationRouter);
