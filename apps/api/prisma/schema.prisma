@@ -102,6 +102,16 @@ enum TableZone {
   BAR
 }
 
+/// How a diner books this venue — mirrors the frontend's BOOKING_TYPES.
+/// EXPERIENCE is prepaid and confirms instantly; WAITLIST takes no
+/// reservations at all, only queue joins.
+enum BookingType {
+  TABLE
+  COUNTER
+  EXPERIENCE
+  WAITLIST
+}
+
 // ---------------------------------------------------------------------------
 // Models
 // ---------------------------------------------------------------------------
@@ -188,6 +198,23 @@ model Restaurant {
   /// review is created — see reviews.service.js — never hand-incremented.
   ratingAvg   Float @default(0) @map("rating_avg")
   ratingCount Int   @default(0) @map("rating_count")
+
+  /// Venue-page marketing copy. All optional/defaulted so seeding an admin
+  /// -created restaurant with none of this still produces a valid row.
+  tagline    String?  @db.VarChar(200)
+  about      String?  @db.VarChar(1000)
+  signatures String[] @default([])
+  /// Editorial badge text ("Hard to get", "New this month"); null = not curated.
+  /// A boolean couldn't carry the label the frontend actually displays.
+  curated    String?  @db.VarChar(40)
+
+  bookingType  BookingType @default(TABLE) @map("booking_type")
+  walkIn       Boolean     @default(false) @map("walk_in")
+  /// Paise, matching MenuItem.priceInPaise. Only meaningful when
+  /// bookingType is EXPERIENCE; null everywhere else.
+  prepaidPaise Int?        @map("prepaid_paise")
+  /// Cancellation / house-rules text shown on the booking sheet.
+  policy       String?     @db.VarChar(500)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

@@ -157,3 +157,47 @@ adminRouter.get(
     res.json(await analyticsService.getAnalytics(req.restaurant.id, req.query.days));
   }),
 );
+
+/** Gap 7: high-risk-first action queue for tonight's open bookings. */
+adminRouter.get(
+  '/risk-queue',
+  validate({
+    query: z.object({
+      restaurant: restaurantSlug,
+      date: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/)
+        .optional(),
+    }),
+  }),
+  requireRestaurantAdmin(),
+  asyncHandler(async (req, res) => {
+    const date = req.query.date ?? todayLocal();
+    res.json(await adminService.getRiskQueue(req.restaurant.id, date));
+  }),
+);
+
+/** Gap 6: live table occupancy for the owner console's floor view. */
+adminRouter.get(
+  '/floor',
+  validate({ query: z.object({ restaurant: restaurantSlug }) }),
+  requireRestaurantAdmin(),
+  asyncHandler(async (req, res) => {
+    res.json({ restaurantId: req.restaurant.id, tables: await adminService.getFloorState(req.restaurant.id) });
+  }),
+);
+
+/**
+ * Cross-venue rollup for the owner landing page — every restaurant this user
+ * manages (global ADMIN sees all of them), not one at a time. No
+ * requireRestaurantAdmin here: there is no single :restaurant to scope to.
+ */
+adminRouter.get(
+  '/portfolio',
+  validate({
+    query: z.object({ days: z.coerce.number().int().min(1).max(365).default(30) }),
+  }),
+  asyncHandler(async (req, res) => {
+    res.json(await analyticsService.getPortfolioAnalytics(req.user.id, req.user.role, req.query.days));
+  }),
+);

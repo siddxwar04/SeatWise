@@ -23,6 +23,10 @@ const prisma = new PrismaClient();
 /** Prices are stored as integer paise, so ₹850 becomes 85000. */
 const rupees = (r) => r * 100;
 
+/** Shared house policy — every seeded venue is a standard TABLE booking, none
+ *  prepaid or EXPERIENCE, so one cancellation policy fits all of them. */
+const DEFAULT_POLICY = 'Free cancellation up to 2 hours before your reservation.';
+
 const RESTAURANTS = [
   {
     slug: 'tastyfood-koramangala',
@@ -34,6 +38,10 @@ const RESTAURANTS = [
     vibeTags: ['date-night', 'family', 'lively'],
     city: 'bengaluru',
     area: 'Koramangala',
+    tagline: 'Charcoal grills and sharing plates on a lively 4th Block corner.',
+    about:
+      'The flagship: a wood-fired grill menu built for groups, twelve tables spilling onto the street-side patio, and a bar that stays loud past ten.',
+    signatures: ['Royal Mixed Grill', 'Smoked BBQ Pizza', 'Party Platter'],
   },
   {
     slug: 'tastyfood-indiranagar',
@@ -45,6 +53,10 @@ const RESTAURANTS = [
     vibeTags: ['date-night', 'cozy', 'sweet'],
     city: 'bengaluru',
     area: 'Indiranagar',
+    tagline: 'Dessert-first menu in a cosy 100 Feet Road corner room.',
+    about:
+      'A dessert-and-brunch room that treats cake as the main course — small enough that regulars get remembered by order, not by name.',
+    signatures: ['Molten Lava', 'Authentic Kunafa', 'Berry Slice'],
   },
   {
     slug: 'tastyfood-whitefield',
@@ -56,6 +68,10 @@ const RESTAURANTS = [
     vibeTags: ['casual', 'work-friendly', 'quick'],
     city: 'bengaluru',
     area: 'Whitefield',
+    tagline: 'Fast, reliable breakfast-through-lunch for the ITPL crowd.',
+    about:
+      'A work-friendly cafe near the tech park — quick turnaround, laptop-friendly tables, and a menu built for a 40-minute lunch break.',
+    signatures: ['Sunrise Toast', 'Classic Club', 'Tropical Trio'],
   },
   // One flagship venue per remaining SeatWise city — enough for the discovery
   // filter and owner console to be genuinely multi-city, without hand-authoring
@@ -71,6 +87,10 @@ const RESTAURANTS = [
     vibeTags: ['date-night', 'lively'],
     city: 'pune',
     area: 'Koregaon Park',
+    tagline: 'Courtyard dining under fig trees, a Koregaon Park regular.',
+    about:
+      'A garden restaurant built around a wood-fired grill, mixing modern Indian plates with a wine list long enough to linger over.',
+    signatures: ['Charred octopus, burnt lemon', 'Lamb shoulder for the table', 'Fig and labneh flatbread'],
   },
   {
     slug: 'tastyfood-bandra',
@@ -82,6 +102,10 @@ const RESTAURANTS = [
     vibeTags: ['date-night', 'lively'],
     city: 'mumbai',
     area: 'Bandra West',
+    tagline: 'Coastal seafood a short walk off Linking Road.',
+    about:
+      'Coastal plates built around the daily catch, with a terrace that fills up fast on weekend evenings — book ahead or plan to wait.',
+    signatures: ['Day-boat catch, grilled', 'Malvani prawn curry', 'Sol kadi'],
   },
   {
     slug: 'tastyfood-banjara-hills',
@@ -93,6 +117,10 @@ const RESTAURANTS = [
     vibeTags: ['family', 'lively'],
     city: 'hyderabad',
     area: 'Banjara Hills',
+    tagline: 'Dum biryani finished at the table, Banjara Hills institution.',
+    about:
+      'A family-run biryani house built around one recipe done exactly right, with a private dining room for the parties that need it.',
+    signatures: ['Sealed mutton dum biryani', 'Galouti on warm parotta', 'Saffron phirni'],
   },
   {
     slug: 'tastyfood-besant-nagar',
@@ -104,6 +132,10 @@ const RESTAURANTS = [
     vibeTags: ['casual', 'family'],
     city: 'chennai',
     area: 'Besant Nagar',
+    tagline: 'Coastline seafood a few minutes from Elliot\'s Beach.',
+    about:
+      'Chettinad spice meets the daily catch, with an open-air section that catches the sea breeze after sundown.',
+    signatures: ['Chettinad crab', 'Meen kuzhambu', 'Filter coffee, table-side'],
   },
   {
     slug: 'tastyfood-hauz-khas',
@@ -115,6 +147,10 @@ const RESTAURANTS = [
     vibeTags: ['date-night', 'lively'],
     city: 'delhi',
     area: 'Hauz Khas',
+    tagline: 'Kebab-house classics overlooking the Hauz Khas deer park.',
+    about:
+      'A colonnaded dining room built for a slow evening — tandoor classics, a deep whisky list, and a terrace over the ruins.',
+    signatures: ['Tandoori lamb chops', 'Dal makhani, overnight simmer', 'Kulfi falooda'],
   },
 ];
 
@@ -449,8 +485,12 @@ async function main() {
         vibeTags: venue.vibeTags,
         city: venue.city,
         area: venue.area,
+        tagline: venue.tagline,
+        about: venue.about,
+        signatures: venue.signatures,
+        policy: DEFAULT_POLICY,
       },
-      create: venue,
+      create: { ...venue, policy: DEFAULT_POLICY },
     });
     restaurants[venue.slug] = row;
   }

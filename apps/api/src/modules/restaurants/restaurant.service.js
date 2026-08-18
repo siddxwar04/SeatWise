@@ -12,6 +12,16 @@ const restaurantListSelect = {
   vibeTags: true,
   city: true,
   area: true,
+  ratingAvg: true,
+  ratingCount: true,
+  tagline: true,
+  about: true,
+  signatures: true,
+  curated: true,
+  bookingType: true,
+  walkIn: true,
+  prepaidPaise: true,
+  policy: true,
 };
 
 /**

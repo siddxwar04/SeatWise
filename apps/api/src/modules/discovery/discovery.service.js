@@ -6,10 +6,11 @@ import { getDayAvailability } from '../reservations/availability.service.js';
  * Cross-venue discovery — the SeatWise Discover page's real backing endpoint.
  *
  * Deliberately narrower than the frontend's fixture-mode `searchVenues()`
- * (services/marketplace.js): quick filters that need fields this schema does
- * not have yet (`walkin`, `experience` — gap 4's marketing fields) are not
- * supported here, and there is no rating sort (gap 3, no Review model yet).
- * What IS here is real: availability comes from the same
+ * (services/marketplace.js) in one way: text search only matches name/
+ * cuisine/area, not tagline/signatures (would need a slower OR-across-JSON
+ * scan for little payoff at demo scale). `walkin` and `experience` quick
+ * filters and the `rating` sort now work — gaps 3 and 4 landed the fields
+ * they need. What IS here is real: availability comes from the same
  * getDayAvailability() the booking form uses, not a fixture slot string, so a
  * venue only shows as bookable if it actually has a free table (or open
  * overbooking headroom) for the requested party.
@@ -26,6 +27,12 @@ const restaurantSelect = {
   vibeTags: true,
   city: true,
   area: true,
+  ratingAvg: true,
+  ratingCount: true,
+  tagline: true,
+  curated: true,
+  bookingType: true,
+  walkIn: true,
 };
 
 function minutesOf(time) {
@@ -58,6 +65,9 @@ const SORTERS = {
   availability: (a, b) => b.availability.freeSlotCount - a.availability.freeSlotCount,
   'price-asc': (a, b) => a.priceLevel - b.priceLevel,
   'price-desc': (a, b) => b.priceLevel - a.priceLevel,
+  // Unrated venues (ratingCount 0) sink to the bottom rather than outranking
+  // a genuinely 5-star venue by tiebreak on an empty average of 0.
+  rating: (a, b) => b.ratingAvg - a.ratingAvg || b.ratingCount - a.ratingCount,
 };
 
 /**
@@ -144,6 +154,8 @@ export async function discoverRestaurants(query) {
         if (filter === 'tonight' && !isToday) return false;
         if (filter === 'outdoor' && !r.outdoorCapable) return false;
         if (filter === 'group' && r.maxTableCapacity < 6) return false;
+        if (filter === 'walkin' && !r.walkIn) return false;
+        if (filter === 'experience' && r.bookingType !== 'EXPERIENCE') return false;
       }
       return true;
     })

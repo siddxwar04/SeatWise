@@ -31,7 +31,7 @@ export const discoveryQuerySchema = z.object({
   price: csv,
   area: csv,
   q: z.string().trim().max(120).optional(),
-  /** tonight | outdoor | group — see discovery.service.js for what each checks. */
+  /** tonight | outdoor | group | walkin | experience — see discovery.service.js. */
   quick: csv,
-  sort: z.enum(['relevance', 'availability', 'price-asc', 'price-desc']).optional(),
+  sort: z.enum(['relevance', 'availability', 'price-asc', 'price-desc', 'rating']).optional(),
 });

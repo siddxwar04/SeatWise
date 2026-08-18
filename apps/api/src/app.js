@@ -17,6 +17,7 @@ import { discoveryRouter } from './modules/discovery/discovery.routes.js';
 import { menuRouter } from './modules/menu/menu.routes.js';
 import { reservationRouter } from './modules/reservations/reservation.routes.js';
 import { restaurantRouter } from './modules/restaurants/restaurant.routes.js';
+import { reviewsRouter } from './modules/reviews/reviews.routes.js';
 import { waitlistRouter } from './modules/waitlist/waitlist.routes.js';
 import { healthRouter } from './routes/health.js';
 
@@ -82,6 +83,7 @@ export function createApp() {
   app.use('/api/restaurants', restaurantRouter);
   app.use('/api/menu', menuRouter);
   app.use('/api/reservations', reservationRouter);
+  app.use('/api/reviews', reviewsRouter);
   app.use('/api/admin', adminRouter);
   app.use('/api/dashboard', dashboardRouter);
   app.use('/api/waitlist', waitlistRouter);

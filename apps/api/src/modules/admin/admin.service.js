@@ -5,10 +5,11 @@ import { logger } from '../../lib/logger.js';
 import { prisma } from '../../lib/prisma.js';
 import { serviceDateFor, todayLocal, utcToLocalParts } from '../../lib/slots.js';
 import { setTenantGuc } from '../../lib/tenant.js';
+import { SPEND_PER_COVER_PAISE } from '../analytics/analytics.service.js';
 import { selectBestFitTable } from '../assignment/tableAssignment.service.js';
 import { riskFeaturesFor } from '../reservations/booking.service.js';
 import { toPublicReservation } from '../reservations/reservation.service.js';
-import { scoreReservation } from '../risk/riskScoring.service.js';
+import { riskLevel, scoreReservation } from '../risk/riskScoring.service.js';
 import { notifyMatchingWaitlist } from '../waitlist/waitlist.service.js';
 
 /**
@@ -455,4 +456,130 @@ export async function listTables(restaurantId) {
     where: { restaurantId },
     orderBy: [{ capacity: 'asc' }, { label: 'asc' }],
   });
+}
+
+const FLOOR_OCCUPYING_STATUSES = ['PENDING', 'CONFIRMED', 'SEATED'];
+
+/**
+ * Gap 6: a snapshot of every table's status right now — free / seated /
+ * turning soon — for the owner console's floor view. Reporting, not
+ * planning: unlike selectBestFitTable (which decides where a NEW party
+ * should sit), this just reads which reservations currently overlap `at` and
+ * reflects that back per table.
+ */
+export async function getFloorState(restaurantId, at = new Date()) {
+  requireRestaurantScope(restaurantId);
+
+  const [tables, active] = await Promise.all([
+    prisma.restaurantTable.findMany({
+      where: { restaurantId, isActive: true },
+      select: { id: true, label: true, capacity: true, zone: true, combinable: true, combineGroup: true },
+      orderBy: { label: 'asc' },
+    }),
+    prisma.reservation.findMany({
+      where: {
+        restaurantId,
+        startsAt: { lte: at },
+        endsAt: { gt: at },
+        status: { in: FLOOR_OCCUPYING_STATUSES },
+      },
+      select: { tableId: true, partySize: true, guestName: true, startsAt: true, endsAt: true },
+    }),
+  ]);
+
+  const byTable = new Map(active.filter((r) => r.tableId).map((r) => [r.tableId, r]));
+
+  return tables.map((table) => {
+    const reservation = byTable.get(table.id);
+    if (!reservation) {
+      return {
+        ...table,
+        status: 'free',
+        partySize: 0,
+        guestName: null,
+        minutesIn: 0,
+        turnsInMinutes: 0,
+        turnsAt: null,
+      };
+    }
+
+    const minutesIn = Math.round((at.getTime() - reservation.startsAt.getTime()) / 60_000);
+    const turnsInMinutes = Math.round((reservation.endsAt.getTime() - at.getTime()) / 60_000);
+
+    return {
+      ...table,
+      // Same 15-minute "about to turn" threshold the frontend fixture uses.
+      status: turnsInMinutes <= 15 ? 'turning' : 'seated',
+      partySize: reservation.partySize,
+      guestName: reservation.guestName,
+      minutesIn,
+      turnsInMinutes,
+      turnsAt: utcToLocalParts(reservation.endsAt).time,
+    };
+  });
+}
+
+/**
+ * Gap 7: what a host should act on tonight, most urgent first. A thin
+ * reshape of Reservation.noShowRisk (already scored at booking time by
+ * scoreReservation — see booking.service.js) into bands + a suggested
+ * action. No new modeling.
+ */
+export async function getRiskQueue(restaurantId, dateStr) {
+  requireRestaurantScope(restaurantId);
+
+  const [reservations, restaurant] = await Promise.all([
+    prisma.reservation.findMany({
+      where: {
+        restaurantId,
+        serviceDate: serviceDateFor(dateStr),
+        status: { in: ['PENDING', 'CONFIRMED'] },
+      },
+      select: {
+        id: true,
+        reference: true,
+        guestName: true,
+        guestPhone: true,
+        partySize: true,
+        startsAt: true,
+        status: true,
+        noShowRisk: true,
+        riskModelVersion: true,
+      },
+      orderBy: { noShowRisk: 'desc' },
+    }),
+    prisma.restaurant.findUnique({ where: { id: restaurantId }, select: { priceLevel: true } }),
+  ]);
+
+  const spend = SPEND_PER_COVER_PAISE[restaurant?.priceLevel ?? 2] ?? SPEND_PER_COVER_PAISE[2];
+
+  const queue = reservations.map((reservation) => {
+    const band = riskLevel(reservation.noShowRisk);
+    // Bands exist to trigger exactly these three actions — a confirmed guest
+    // who is still high-risk gets a call, not another reminder they already
+    // acted on once.
+    const action =
+      band === 'high'
+        ? reservation.status === 'CONFIRMED'
+          ? 'call'
+          : 'remind'
+        : band === 'medium'
+          ? 'remind'
+          : 'none';
+
+    return {
+      ...reservation,
+      band,
+      action,
+      exposurePaise: Math.round((reservation.noShowRisk ?? 0) * reservation.partySize * spend),
+    };
+  });
+
+  const bands = ['high', 'medium', 'low'].map((band) => ({
+    band,
+    count: queue.filter((r) => r.band === band).length,
+    covers: queue.filter((r) => r.band === band).reduce((sum, r) => sum + r.partySize, 0),
+  }));
+
+  return { restaurantId, date: dateStr, queue, bands };
 }
