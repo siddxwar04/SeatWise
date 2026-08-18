@@ -131,6 +131,7 @@ model User {
   refreshTokens     RefreshToken[]
   restaurantAdmins  RestaurantAdmin[]
   waitlistEntries   WaitlistEntry[]
+  reviews           Review[]
 
   @@index([email])
   @@map("users")
@@ -180,6 +181,14 @@ model Restaurant {
   /// that city's `areas` list on the frontend.
   area String @default("Koramangala") @db.VarChar(80)
 
+  /// Denormalised from Review, same rationale as User.priorBookings/
+  /// priorNoShows: the discovery list's rating sort reads this on every
+  /// request, and recomputing AVG()/COUNT() per restaurant per search would be
+  /// wasteful. Recomputed from the real rows inside a transaction whenever a
+  /// review is created — see reviews.service.js — never hand-incremented.
+  ratingAvg   Float @default(0) @map("rating_avg")
+  ratingCount Int   @default(0) @map("rating_count")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -189,6 +198,7 @@ model Restaurant {
   embedding    RestaurantEmbedding?
   waitlist     WaitlistEntry[]
   reservations Reservation[]
+  reviews      Review[]
 
   @@index([isActive])
   @@index([cuisine])
@@ -338,6 +348,10 @@ model Reservation {
   /// instead — blocking beats retrying when collisions are likely.
   version Int @default(0)
 
+  /// One review per reservation, so a review always answers "which visit was
+  /// this" instead of a vague per-user, per-restaurant blob.
+  review Review?
+
   @@index([serviceDate, status])
   @@index([restaurantId, serviceDate, status])
   @@index([restaurantId, startsAt, endsAt])
@@ -403,4 +417,36 @@ model WaitlistEntry {
   @@index([restaurantId, status, requestedDate])
   @@index([userId])
   @@map("waitlist_entries")
+}
+
+/// Gap 3 of the SeatWise backend audit: no ratings existed at all. Tied to a
+/// specific completed reservation (not just user+restaurant) so a review always
+/// answers "which visit", and so one visit cannot be reviewed twice.
+model Review {
+  id String @id @default(uuid()) @db.Uuid
+
+  restaurantId String     @map("restaurant_id") @db.Uuid
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  reservationId String      @unique @map("reservation_id") @db.Uuid
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  /// Nullable like Reservation.userId — kept for symmetry even though writing a
+  /// review currently requires auth; a deleted account should not delete the
+  /// review it left.
+  userId String? @map("user_id") @db.Uuid
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  /// Snapshotted, same reasoning as Reservation.guestName — a later profile
+  /// rename should not silently rewrite the byline on a published review.
+  authorName String @map("author_name") @db.VarChar(80)
+
+  stars Int
+  body  String? @db.VarChar(1000)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([restaurantId, createdAt])
+  @@map("reviews")
 }
