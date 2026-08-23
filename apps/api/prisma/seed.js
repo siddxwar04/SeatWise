@@ -437,7 +437,7 @@ const VENUE_ADMINS = [
 ];
 
 async function main() {
-  console.log('Seeding TastyFood…');
+  console.log('Seeding SeatWise…');
 
   const rounds = Number(process.env.BCRYPT_ROUNDS ?? 12);
 
@@ -447,10 +447,10 @@ async function main() {
   const userPassword = process.env.SEED_USER_PASSWORD ?? 'Guest@12345';
 
   const platformAdmin = await prisma.user.upsert({
-    where: { email: 'admin@tastyfood.local' },
+    where: { email: 'admin@seatwise.local' },
     update: {},
     create: {
-      email: 'admin@tastyfood.local',
+      email: 'admin@seatwise.local',
       username: 'Platform Admin',
       passwordHash: await bcrypt.hash(adminPassword, rounds),
       role: 'ADMIN',
@@ -459,10 +459,10 @@ async function main() {
   });
 
   const guest = await prisma.user.upsert({
-    where: { email: 'guest@tastyfood.local' },
+    where: { email: 'guest@seatwise.local' },
     update: {},
     create: {
-      email: 'guest@tastyfood.local',
+      email: 'guest@seatwise.local',
       username: 'Sample Guest',
       phone: '9876543210',
       passwordHash: await bcrypt.hash(userPassword, rounds),

@@ -10,7 +10,7 @@ FROM base AS deps
 COPY package.json package-lock.json ./
 COPY apps/api/package.json ./apps/api/
 COPY apps/web/package.json ./apps/web/
-RUN npm ci --include-workspace-root --workspace @tastyfood/web
+RUN npm ci --include-workspace-root --workspace @seatwise/web
 
 # --- development ------------------------------------------------------------
 FROM base AS development

@@ -1,4 +1,4 @@
-# TastyFood — local development stack.
+# SeatWise — local development stack.
 #
 #   docker compose up -d postgres redis      # just the datastores
 #   docker compose up                        # the whole stack
@@ -6,7 +6,7 @@
 # The pgvector image is stock PostgreSQL 16 with the vector extension already
 # compiled in, so the Phase 8 migration can CREATE EXTENSION without a rebuild.
 
-name: tastyfood
+name: seatwise
 
 services:
   postgres:
@@ -14,9 +14,9 @@ services:
     container_name: tastyfood-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-tastyfood}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tastyfood}
-      POSTGRES_DB: ${POSTGRES_DB:-tastyfood}
+      POSTGRES_USER: ${POSTGRES_USER:-seatwise}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-seatwise}
+      POSTGRES_DB: ${POSTGRES_DB:-seatwise}
       # Deterministic collation so ORDER BY behaves identically across machines.
       POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C'
     ports:
@@ -24,7 +24,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-tastyfood} -d ${POSTGRES_DB:-tastyfood}']
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-seatwise} -d ${POSTGRES_DB:-seatwise}']
       interval: 5s
       timeout: 5s
       retries: 10
@@ -43,9 +43,9 @@ services:
     profiles: ['test']
     restart: unless-stopped
     environment:
-      POSTGRES_USER: tastyfood
-      POSTGRES_PASSWORD: tastyfood
-      POSTGRES_DB: tastyfood_test
+      POSTGRES_USER: seatwise
+      POSTGRES_PASSWORD: seatwise
+      POSTGRES_DB: seatwise_test
       POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C'
     ports:
       # 5433 so it can run beside the dev DB on 5432.
@@ -53,7 +53,7 @@ services:
     volumes:
       - postgres_test_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U tastyfood -d tastyfood_test']
+      test: ['CMD-SHELL', 'pg_isready -U seatwise -d seatwise_test']
       interval: 5s
       timeout: 5s
       retries: 10
@@ -84,7 +84,7 @@ services:
     env_file: .env
     environment:
       NODE_ENV: development
-      DATABASE_URL: postgresql://${POSTGRES_USER:-tastyfood}:${POSTGRES_PASSWORD:-tastyfood}@postgres:5432/${POSTGRES_DB:-tastyfood}?schema=public
+      DATABASE_URL: postgresql://${POSTGRES_USER:-seatwise}:${POSTGRES_PASSWORD:-seatwise}@postgres:5432/${POSTGRES_DB:-seatwise}?schema=public
       REDIS_URL: redis://redis:6379
       ML_SERVICE_URL: http://ml:8000
     ports:

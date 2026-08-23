@@ -13,7 +13,7 @@ FROM base AS deps
 COPY package.json package-lock.json ./
 COPY apps/api/package.json ./apps/api/
 COPY apps/web/package.json ./apps/web/
-RUN npm ci --include-workspace-root --workspace @tastyfood/api
+RUN npm ci --include-workspace-root --workspace @seatwise/api
 
 # --- development ------------------------------------------------------------
 FROM base AS development
@@ -32,7 +32,7 @@ FROM base AS production
 ENV NODE_ENV=production
 COPY package.json package-lock.json ./
 COPY apps/api/package.json ./apps/api/
-RUN npm ci --omit=dev --include-workspace-root --workspace @tastyfood/api \
+RUN npm ci --omit=dev --include-workspace-root --workspace @seatwise/api \
   && npm cache clean --force
 
 COPY apps/api/src ./apps/api/src

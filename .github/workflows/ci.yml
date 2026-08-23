@@ -13,20 +13,20 @@ jobs:
       postgres:
         image: pgvector/pgvector:pg16
         env:
-          POSTGRES_USER: tastyfood
-          POSTGRES_PASSWORD: tastyfood
-          POSTGRES_DB: tastyfood_test
+          POSTGRES_USER: seatwise
+          POSTGRES_PASSWORD: seatwise
+          POSTGRES_DB: seatwise_test
         ports:
           - 5433:5432
         options: >-
-          --health-cmd "pg_isready -U tastyfood -d tastyfood_test"
+          --health-cmd "pg_isready -U seatwise -d seatwise_test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
 
     env:
       NODE_ENV: test
-      DATABASE_URL: postgresql://tastyfood:tastyfood@localhost:5433/tastyfood_test?schema=public&connection_limit=30
+      DATABASE_URL: postgresql://seatwise:seatwise@localhost:5433/seatwise_test?schema=public&connection_limit=30
       JWT_ACCESS_SECRET: test-access-secret-at-least-32-characters-long
       JWT_REFRESH_SECRET: test-refresh-secret-at-least-32-characters-long
       ACCESS_TOKEN_TTL: 15m
@@ -64,6 +64,9 @@ jobs:
 
       - name: Unit tests
         run: npm test
+
+      - name: Web tests
+        run: npm run test:web
 
       - name: Concurrency tests
         run: npm run test:concurrency
