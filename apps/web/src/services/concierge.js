@@ -17,9 +17,17 @@ import { chatApi } from '../lib/api.js';
 import { searchVenues } from './marketplace.js';
 
 const OCCASION_HINTS = [
-  { keys: ['date', 'romantic', 'anniversary'], zones: ['BOOTH', 'OUTDOOR'], copy: 'quiet enough to talk' },
+  {
+    keys: ['date', 'romantic', 'anniversary'],
+    zones: ['BOOTH', 'OUTDOOR'],
+    copy: 'quiet enough to talk',
+  },
   { keys: ['birthday', 'group', 'friends', 'party'], minSeats: 6, copy: 'room for a group' },
-  { keys: ['business', 'client', 'work'], zones: ['PRIVATE', 'BOOTH'], copy: 'private enough for a meeting' },
+  {
+    keys: ['business', 'client', 'work'],
+    zones: ['PRIVATE', 'BOOTH'],
+    copy: 'private enough for a meeting',
+  },
   { keys: ['solo', 'alone', 'myself'], zones: ['COUNTER'], copy: 'good to eat at alone' },
 ];
 

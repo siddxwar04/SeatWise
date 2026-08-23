@@ -42,10 +42,11 @@ export function ConsolePage() {
     if (!venueSlug && managedVenues.length) setVenueSlug(managedVenues[0].slug);
   }, [managedVenues, venueSlug]);
 
-  const { data: service, status: serviceStatus, reload } = useAsync(
-    () => getService(venueSlug),
-    [venueSlug],
-  );
+  const {
+    data: service,
+    status: serviceStatus,
+    reload,
+  } = useAsync(() => getService(venueSlug), [venueSlug]);
   const { data: risk } = useAsync(() => getRiskQueue(venueSlug), [venueSlug, service]);
   const { data: overbooking } = useAsync(() => getOverbooking(venueSlug), [venueSlug, service]);
   const { data: floor } = useAsync(() => getFloor(venueSlug), [venueSlug]);
@@ -59,7 +60,10 @@ export function ConsolePage() {
             <Icon name="store" />
           </span>
           <h3>No venue assigned</h3>
-          <p>Your account is not linked to a restaurant. Sign in with the owner demo account to explore.</p>
+          <p>
+            Your account is not linked to a restaurant. Sign in with the owner demo account to
+            explore.
+          </p>
         </div>
       </div>
     );
@@ -71,7 +75,9 @@ export function ConsolePage() {
     <div className="wrap page console">
       <header className="console_head">
         <div className="row" style={{ gap: 'var(--s-4)' }}>
-          {venue && <Cover seed={venue.slug} name={venue.name} src={venue.image} size="sm" alt="" />}
+          {venue && (
+            <Cover seed={venue.slug} name={venue.name} src={venue.image} size="sm" alt="" />
+          )}
           <div>
             <span className="eyebrow">Restaurant console</span>
             <h1>{venue?.name ?? 'Loading…'}</h1>
@@ -102,7 +108,11 @@ export function ConsolePage() {
           <StatTile label="Covers today" value={service.summary.covers} icon="users" />
           <StatTile
             label="No-show rate so far"
-            value={service.summary.noShowRate === null ? '—' : `${Math.round(service.summary.noShowRate * 100)}%`}
+            value={
+              service.summary.noShowRate === null
+                ? '—'
+                : `${Math.round(service.summary.noShowRate * 100)}%`
+            }
             icon="percent"
           />
           <StatTile

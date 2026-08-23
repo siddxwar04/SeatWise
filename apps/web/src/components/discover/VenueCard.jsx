@@ -61,18 +61,25 @@ export function VenueCard({ venue, onOpen, onHoverPin }) {
         <p className="vcard_tagline">{venue.tagline}</p>
 
         <div className="vcard_tags">
-          <Badge tone={type.tone === 'brand' ? 'brand' : type.tone === 'muted' ? 'muted' : 'neutral'} icon={type.icon}>
+          <Badge
+            tone={type.tone === 'brand' ? 'brand' : type.tone === 'muted' ? 'muted' : 'neutral'}
+            icon={type.icon}
+          >
             {type.label}
             {venue.prepaid && ` · ${rupees(venue.prepaid)} prepaid`}
           </Badge>
-          {venue.tables.slice(0, 3).reduce((zones, t) => {
-            if (!zones.includes(t.zone)) zones.push(t.zone);
-            return zones;
-          }, []).slice(0, 2).map((zone) => (
-            <Badge key={zone} tone="muted">
-              {ZONES[zone]?.label ?? zone}
-            </Badge>
-          ))}
+          {venue.tables
+            .slice(0, 3)
+            .reduce((zones, t) => {
+              if (!zones.includes(t.zone)) zones.push(t.zone);
+              return zones;
+            }, [])
+            .slice(0, 2)
+            .map((zone) => (
+              <Badge key={zone} tone="muted">
+                {ZONES[zone]?.label ?? zone}
+              </Badge>
+            ))}
         </div>
 
         <DemandMeter demand={venue.demand} remaining={venue.remaining} />
@@ -80,13 +87,22 @@ export function VenueCard({ venue, onOpen, onHoverPin }) {
         {soldOut ? (
           <div className="vcard_fallback">
             <p>
-              <Icon name="info" /> No tables for {venue.slotsNear.length === 0 ? 'your party' : 'that time'}.
+              <Icon name="info" /> No tables for{' '}
+              {venue.slotsNear.length === 0 ? 'your party' : 'that time'}.
             </p>
             <div className="vcard_fallback_actions">
-              <button type="button" className="slot is-fallback" onClick={() => navigate(`/r/${venue.slug}#waitlist`)}>
+              <button
+                type="button"
+                className="slot is-fallback"
+                onClick={() => navigate(`/r/${venue.slug}#waitlist`)}
+              >
                 <Icon name="hourglass" /> Join waitlist
               </button>
-              <button type="button" className="slot is-ghost" onClick={() => navigate(`/r/${venue.slug}#waitlist`)}>
+              <button
+                type="button"
+                className="slot is-ghost"
+                onClick={() => navigate(`/r/${venue.slug}#waitlist`)}
+              >
                 <Icon name="bell" /> Notify me
               </button>
             </div>

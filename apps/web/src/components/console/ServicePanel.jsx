@@ -95,7 +95,8 @@ export function ServicePanel({ service, onChanged }) {
                     <span className="cell_sub">{booking.guestPhone}</span>
                     {booking.guest.priorNoShows > 0 && (
                       <span className="cell_sub" style={{ color: 'var(--danger)' }}>
-                        {booking.guest.priorNoShows} prior no-show{booking.guest.priorNoShows === 1 ? '' : 's'}
+                        {booking.guest.priorNoShows} prior no-show
+                        {booking.guest.priorNoShows === 1 ? '' : 's'}
                       </span>
                     )}
                   </td>
@@ -120,7 +121,12 @@ export function ServicePanel({ service, onChanged }) {
                         </Button>
                       ))}
                       {showReminder && (
-                        <Button variant="secondary" size="sm" disabled={busy} onClick={() => remind(booking)}>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          disabled={busy}
+                          onClick={() => remind(booking)}
+                        >
                           <Icon name="bell" /> Remind
                         </Button>
                       )}
@@ -132,7 +138,11 @@ export function ServicePanel({ service, onChanged }) {
             })}
             {service.bookings.length === 0 && (
               <tr>
-                <td colSpan={6} className="cell_sub" style={{ padding: 'var(--s-6)', textAlign: 'center' }}>
+                <td
+                  colSpan={6}
+                  className="cell_sub"
+                  style={{ padding: 'var(--s-6)', textAlign: 'center' }}
+                >
                   No bookings today.
                 </td>
               </tr>

@@ -30,7 +30,9 @@ export function OverbookingPanel({ plan }) {
 
         <div className="table_scroll">
           <table className="data_table">
-            <caption className="sr-only">Per-slot overbooking recommendation vs the naive estimate</caption>
+            <caption className="sr-only">
+              Per-slot overbooking recommendation vs the naive estimate
+            </caption>
             <thead>
               <tr>
                 <th>Slot</th>
@@ -64,7 +66,8 @@ export function OverbookingPanel({ plan }) {
                     {slot.recommendedExtra === 0
                       ? '—'
                       : percent(
-                          slot.options.find((o) => o.extra === slot.recommendedExtra)?.overflowProbability ?? 0,
+                          slot.options.find((o) => o.extra === slot.recommendedExtra)
+                            ?.overflowProbability ?? 0,
                           1,
                         )}
                   </td>

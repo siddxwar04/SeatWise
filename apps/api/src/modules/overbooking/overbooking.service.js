@@ -58,7 +58,9 @@ export async function getDayOverbooking(restaurantId, dateStr) {
 
     return generateSlots().map((time) => {
       const { startsAt, endsAt } = bookingInterval(dateStr, time);
-      const inSlot = bookings.filter((b) => intervalsOverlap(b.startsAt, b.endsAt, startsAt, endsAt));
+      const inSlot = bookings.filter((b) =>
+        intervalsOverlap(b.startsAt, b.endsAt, startsAt, endsAt),
+      );
       return {
         restaurantId,
         date: dateStr,

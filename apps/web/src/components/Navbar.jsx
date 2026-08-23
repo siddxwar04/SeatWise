@@ -101,9 +101,7 @@ export function Navbar() {
           <li>
             <Link
               to="/"
-              className={
-                location.pathname === '/' && !location.hash ? 'is-active' : undefined
-              }
+              className={location.pathname === '/' && !location.hash ? 'is-active' : undefined}
               aria-current={location.pathname === '/' && !location.hash ? 'page' : undefined}
             >
               Home

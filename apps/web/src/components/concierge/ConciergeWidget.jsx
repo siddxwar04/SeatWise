@@ -45,11 +45,18 @@ export function ConciergeWidget() {
 
     try {
       const data = await ask(text, history, { city: citySlug });
-      setMessages((prev) => [...prev, { role: 'assistant', content: data.reply, venues: data.venues }]);
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: data.reply, venues: data.venues },
+      ]);
     } catch {
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: 'Could not reach the concierge. Please try again.', isError: true },
+        {
+          role: 'assistant',
+          content: 'Could not reach the concierge. Please try again.',
+          isError: true,
+        },
       ]);
     } finally {
       setSending(false);
@@ -79,13 +86,27 @@ export function ConciergeWidget() {
 
             <div className="concierge_msgs" ref={listRef} role="log" aria-live="polite">
               {messages.map((msg, index) => (
-                <div key={index} className={`bubble bubble_${msg.role}${msg.isError ? ' is-error' : ''}`}>
+                <div
+                  key={index}
+                  className={`bubble bubble_${msg.role}${msg.isError ? ' is-error' : ''}`}
+                >
                   <p>{msg.content}</p>
                   {msg.venues?.length > 0 && (
                     <div className="bubble_venues">
                       {msg.venues.map((venue) => (
-                        <Link key={venue.slug} to={`/r/${venue.slug}`} className="bubble_venue" onClick={() => setOpen(false)}>
-                          <Cover seed={venue.slug} name={venue.name} src={venue.image} size="sm" alt="" />
+                        <Link
+                          key={venue.slug}
+                          to={`/r/${venue.slug}`}
+                          className="bubble_venue"
+                          onClick={() => setOpen(false)}
+                        >
+                          <Cover
+                            seed={venue.slug}
+                            name={venue.name}
+                            src={venue.image}
+                            size="sm"
+                            alt=""
+                          />
                           <div>
                             <strong>{venue.name}</strong>
                             <span>
@@ -133,13 +154,24 @@ export function ConciergeWidget() {
                 disabled={sending}
                 autoComplete="off"
               />
-              <IconButton icon="arrow-right" label="Send" type="submit" variant="primary" disabled={sending || !input.trim()} />
+              <IconButton
+                icon="arrow-right"
+                label="Send"
+                type="submit"
+                variant="primary"
+                disabled={sending || !input.trim()}
+              />
             </form>
           </motion.section>
         )}
       </AnimatePresence>
 
-      <button type="button" className="concierge_fab" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+      <button
+        type="button"
+        className="concierge_fab"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+      >
         <Icon name={open ? 'x' : 'sparkles'} />
         {!open && <span>Ask AI</span>}
       </button>

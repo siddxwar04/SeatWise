@@ -7,8 +7,7 @@
 .disc_hero {
   padding-block: clamp(2.5rem, 6vw, 4rem) var(--s-6);
   background:
-    radial-gradient(ellipse 100% 70% at 15% -10%, var(--brand-soft), transparent 55%),
-    var(--canvas);
+    radial-gradient(ellipse 100% 70% at 15% -10%, var(--brand-soft), transparent 55%), var(--canvas);
   border-bottom: 1px solid var(--border-faint);
 }
 
@@ -191,7 +190,9 @@
   font-weight: 600;
   color: var(--text-secondary);
   white-space: nowrap;
-  transition: border-color var(--d-fast) var(--ease-out), color var(--d-fast) var(--ease-out);
+  transition:
+    border-color var(--d-fast) var(--ease-out),
+    color var(--d-fast) var(--ease-out);
 }
 
 .chip:hover {
@@ -705,7 +706,9 @@
   font-size: var(--t-xs);
   font-weight: 600;
   color: var(--text);
-  transition: background-color var(--d-fast) var(--ease-out), border-color var(--d-fast) var(--ease-out);
+  transition:
+    background-color var(--d-fast) var(--ease-out),
+    border-color var(--d-fast) var(--ease-out);
 }
 
 .slot:hover {

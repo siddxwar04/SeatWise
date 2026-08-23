@@ -23,9 +23,7 @@ export function ChatRestaurantCard({ restaurant }) {
         <h4>{restaurant.name}</h4>
         <p className="chat_restaurant_meta">{restaurant.address}</p>
         {(price || zones) && (
-          <p className="chat_restaurant_meta">
-            {[price, zones].filter(Boolean).join(' · ')}
-          </p>
+          <p className="chat_restaurant_meta">{[price, zones].filter(Boolean).join(' · ')}</p>
         )}
       </div>
       <Link to={bookTo} className="btn btn-primary btn-small chat_restaurant_cta">

@@ -63,7 +63,9 @@ export function assignTables(tables, parties, options = {}) {
 
     // 1 — best single fit. `free` is sorted ascending, so the first match is the
     // tightest one, which is exactly the seat-preserving choice.
-    const single = available.find((t) => fits(t, party) && t.seats - party.partySize <= maxWastePerTable);
+    const single = available.find(
+      (t) => fits(t, party) && t.seats - party.partySize <= maxWastePerTable,
+    );
 
     if (single) {
       taken.add(single.id);

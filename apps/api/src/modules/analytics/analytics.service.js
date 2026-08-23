@@ -60,7 +60,8 @@ export async function getAnalytics(restaurantId, days = 30) {
     .reduce((sum, b) => sum + b.partySize, 0);
   const spend = SPEND_PER_COVER_PAISE[restaurant?.priceLevel ?? 2] ?? SPEND_PER_COVER_PAISE[2];
   const revenuePaise = settledCovers * spend;
-  const revenuePerTableHourPaise = availableTableHours === 0 ? 0 : Math.round(revenuePaise / availableTableHours);
+  const revenuePerTableHourPaise =
+    availableTableHours === 0 ? 0 : Math.round(revenuePaise / availableTableHours);
 
   const hours = hoursFromSlots();
   const heatmap = WEEKDAYS.map((day, dayIndex) => ({
@@ -80,7 +81,9 @@ export async function getAnalytics(restaurantId, days = 30) {
   }
 
   const noShows = bookings.filter((b) => b.status === 'NO_SHOW');
-  const completedOrNoShow = bookings.filter((b) => b.status === 'COMPLETED' || b.status === 'NO_SHOW').length;
+  const completedOrNoShow = bookings.filter(
+    (b) => b.status === 'COMPLETED' || b.status === 'NO_SHOW',
+  ).length;
   // Covers that walked out the door empty — the revenue the no-show model
   // exists to help an owner claw back via overbooking.
   const lostCovers = noShows.reduce((sum, b) => sum + b.partySize, 0);
@@ -99,7 +102,9 @@ export async function getAnalytics(restaurantId, days = 30) {
     noShowCount: noShows.length,
     lostRevenuePaise: lostCovers * spend,
     noShowRate:
-      completedOrNoShow === 0 ? null : Number(((noShows.length / completedOrNoShow) * 100).toFixed(1)),
+      completedOrNoShow === 0
+        ? null
+        : Number(((noShows.length / completedOrNoShow) * 100).toFixed(1)),
     heatmap,
     hours,
   };

@@ -51,7 +51,10 @@ function parseList(value) {
 function matchesText(restaurant, q) {
   if (!q) return true;
   const needle = q.trim().toLowerCase();
-  return [restaurant.name, restaurant.cuisine, restaurant.area].join(' ').toLowerCase().includes(needle);
+  return [restaurant.name, restaurant.cuisine, restaurant.area]
+    .join(' ')
+    .toLowerCase()
+    .includes(needle);
 }
 
 const SORTERS = {
@@ -60,7 +63,8 @@ const SORTERS = {
   // documented relevanceScore, just without the rating/curated/km terms this
   // schema cannot compute yet.
   relevance: (a, b) =>
-    (a.availability.nearestSlot?.offset ?? Infinity) - (b.availability.nearestSlot?.offset ?? Infinity) ||
+    (a.availability.nearestSlot?.offset ?? Infinity) -
+      (b.availability.nearestSlot?.offset ?? Infinity) ||
     b.availability.freeSlotCount - a.availability.freeSlotCount,
   availability: (a, b) => b.availability.freeSlotCount - a.availability.freeSlotCount,
   'price-asc': (a, b) => a.priceLevel - b.priceLevel,
@@ -111,35 +115,37 @@ export async function discoverRestaurants(query) {
   });
 
   const withAvailability = await Promise.all(
-    candidates.filter((r) => matchesText(r, q)).map(async (restaurant) => {
-      const [dayAvailability, tables] = await Promise.all([
-        getDayAvailability(restaurant.id, date, party),
-        needsTableShape
-          ? prisma.restaurantTable.findMany({
-              where: { restaurantId: restaurant.id, isActive: true },
-              select: { zone: true, capacity: true },
-            })
-          : Promise.resolve([]),
-      ]);
+    candidates
+      .filter((r) => matchesText(r, q))
+      .map(async (restaurant) => {
+        const [dayAvailability, tables] = await Promise.all([
+          getDayAvailability(restaurant.id, date, party),
+          needsTableShape
+            ? prisma.restaurantTable.findMany({
+                where: { restaurantId: restaurant.id, isActive: true },
+                select: { zone: true, capacity: true },
+              })
+            : Promise.resolve([]),
+        ]);
 
-      const openSlots = dayAvailability.slots.filter((s) => s.available);
-      const nearestSlot = openSlots.length
-        ? openSlots
-            .map((s) => ({ time: s.time, offset: Math.abs(minutesOf(s.time) - target) }))
-            .sort((a, b) => a.offset - b.offset)[0]
-        : null;
+        const openSlots = dayAvailability.slots.filter((s) => s.available);
+        const nearestSlot = openSlots.length
+          ? openSlots
+              .map((s) => ({ time: s.time, offset: Math.abs(minutesOf(s.time) - target) }))
+              .sort((a, b) => a.offset - b.offset)[0]
+          : null;
 
-      return {
-        ...restaurant,
-        availability: {
-          anyAvailable: dayAvailability.anyAvailable,
-          freeSlotCount: openSlots.length,
-          nearestSlot,
-        },
-        outdoorCapable: tables.some((t) => t.zone === 'OUTDOOR'),
-        maxTableCapacity: tables.reduce((max, t) => Math.max(max, t.capacity), 0),
-      };
-    }),
+        return {
+          ...restaurant,
+          availability: {
+            anyAvailable: dayAvailability.anyAvailable,
+            freeSlotCount: openSlots.length,
+            nearestSlot,
+          },
+          outdoorCapable: tables.some((t) => t.zone === 'OUTDOOR'),
+          maxTableCapacity: tables.reduce((max, t) => Math.max(max, t.capacity), 0),
+        };
+      }),
   );
 
   const isToday = date === todayLocal();

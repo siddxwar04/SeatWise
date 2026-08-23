@@ -166,12 +166,14 @@ export function serviceBook(venue, dateISO, { isToday = true } = {}) {
         prepaid,
         zone: random.chance(0.34) ? random.pick(venue.zones) : null,
         occasion: random.chance(0.22) ? random.pick(['Birthday', 'Anniversary', 'Business']) : null,
-        note: random.chance(0.14) ? random.pick([
-          'Window table if possible',
-          'One high chair needed',
-          'Nut allergy at the table',
-          'Celebrating — no candles please',
-        ]) : null,
+        note: random.chance(0.14)
+          ? random.pick([
+              'Window table if possible',
+              'One high chair needed',
+              'Nut allergy at the table',
+              'Celebrating — no candles please',
+            ])
+          : null,
         status,
         risk,
         /** Optimistic-concurrency token, mirroring the reservations API. */
@@ -231,7 +233,9 @@ export function waitlistFor(venue, dateISO) {
       status: waitedMinutes > 40 ? 'AT_RISK' : 'WAITING',
       /** Longest wait gets priority when the packer breaks a tie. */
       priority: waitedMinutes,
-      notifiedAt: random.chance(0.4) ? new Date(Date.now() - waitedMinutes * 60_000).toISOString() : null,
+      notifiedAt: random.chance(0.4)
+        ? new Date(Date.now() - waitedMinutes * 60_000).toISOString()
+        : null,
     };
   }).sort((a, b) => b.waitedMinutes - a.waitedMinutes);
 }

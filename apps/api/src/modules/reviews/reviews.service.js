@@ -1,4 +1,9 @@
-import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../../errors/AppError.js';
+import {
+  BadRequestError,
+  ConflictError,
+  ForbiddenError,
+  NotFoundError,
+} from '../../errors/AppError.js';
 import { prisma } from '../../lib/prisma.js';
 import { resolveRestaurant } from '../restaurants/restaurant.service.js';
 

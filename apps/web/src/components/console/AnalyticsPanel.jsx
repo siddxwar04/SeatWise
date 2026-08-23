@@ -22,13 +22,22 @@ export function AnalyticsPanel({ analytics }) {
   return (
     <div className="stack">
       <div className="stat_grid">
-        <StatTile label="Occupancy (30d)" value={`${Math.round(analytics.occupancy * 100)}%`} icon="gauge" />
+        <StatTile
+          label="Occupancy (30d)"
+          value={`${Math.round(analytics.occupancy * 100)}%`}
+          icon="gauge"
+        />
         <StatTile
           label="Revenue / table-hour"
           value={rupees(analytics.revenuePerTableHourPaise)}
           icon="trend-up"
         />
-        <StatTile label="No-show rate" value={percent(analytics.noShowRate)} icon="percent" tone="warn" />
+        <StatTile
+          label="No-show rate"
+          value={percent(analytics.noShowRate)}
+          icon="percent"
+          tone="warn"
+        />
         <StatTile
           label="Lost revenue (30d)"
           value={rupees(analytics.lostRevenuePaise)}

@@ -42,7 +42,13 @@ export function BookingConfirmPage() {
   return (
     <div className="wrap page confirm_page">
       <div className="confirm_card">
-        <Cover seed={booking.venue.slug} name={booking.venue.name} src={booking.venue.image} size="md" alt="" />
+        <Cover
+          seed={booking.venue.slug}
+          name={booking.venue.name}
+          src={booking.venue.image}
+          size="md"
+          alt=""
+        />
         <StatusBadge status={booking.status} />
         <h1>{booking.venue.name}</h1>
         <p className="confirm_when">

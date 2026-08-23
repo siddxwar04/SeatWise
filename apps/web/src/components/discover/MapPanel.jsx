@@ -13,7 +13,12 @@ import { seedHue } from '../../lib/cover.js';
 export function MapPanel({ venues, city, hovered, onHoverPin, onOpen }) {
   return (
     <aside className="mappanel" aria-label={`Schematic map of ${city.name}`}>
-      <svg className="mappanel_bg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+      <svg
+        className="mappanel_bg"
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
         <path d={city.map.river} className="mappanel_river" />
         {city.map.roads.map((d, i) => (
           <path key={i} d={d} className="mappanel_road" />
@@ -34,7 +39,11 @@ export function MapPanel({ venues, city, hovered, onHoverPin, onOpen }) {
             onClick={() => onOpen(venue)}
           >
             <span className="mappin_label">
-              {venue.remaining === 0 ? 'Full' : venue.bestSlot ? formatTime(venue.bestSlot.time) : '—'}
+              {venue.remaining === 0
+                ? 'Full'
+                : venue.bestSlot
+                  ? formatTime(venue.bestSlot.time)
+                  : '—'}
             </span>
             {active && <span className="mappin_card">{venue.name}</span>}
           </button>

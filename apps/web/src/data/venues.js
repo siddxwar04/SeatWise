@@ -56,7 +56,11 @@ const AUTHORED = [
     tagline: 'Charcoal grills and mezze under the fig trees.',
     about:
       'A courtyard restaurant built around a wood-fired grill, where the mezze list changes with whatever the Pune market has that morning. Twelve tables sit outside under strung lights; the four inside are for people who want to watch the pass.',
-    signatures: ['Charred octopus, burnt lemon', 'Lamb shoulder for the table', 'Fig and labneh flatbread'],
+    signatures: [
+      'Charred octopus, burnt lemon',
+      'Lamb shoulder for the table',
+      'Fig and labneh flatbread',
+    ],
     address: 'Lane 7, Koregaon Park',
   },
   {
@@ -84,7 +88,11 @@ const AUTHORED = [
     tagline: 'Twelve seats around the pass. The menu is whatever came in this morning.',
     about:
       'One counter, twelve stools, two services a night. There is no printed menu — the team cooks what the morning delivery justified and tells you about each plate as it lands.',
-    signatures: ['Whatever the boat brought', 'Cultured butter and sourdough', 'Brown-butter kulfi'],
+    signatures: [
+      'Whatever the boat brought',
+      'Cultured butter and sourdough',
+      'Brown-butter kulfi',
+    ],
     address: 'Off North Main Road, Kalyani Nagar',
   },
   {
@@ -1051,7 +1059,13 @@ function parseTables(spec, zones) {
  *  - waitlist venues take no bookings at all, so only the hold matters.
  */
 function policyFor(v) {
-  const base = { holdMinutes: 5, cancelHours: 4, graceMinutes: 15, depositPaise: null, largePartyFrom: 7 };
+  const base = {
+    holdMinutes: 5,
+    cancelHours: 4,
+    graceMinutes: 15,
+    depositPaise: null,
+    largePartyFrom: 7,
+  };
 
   if (v.type === 'experience') {
     return { ...base, cancelHours: 48, graceMinutes: 10, depositPaise: v.prepaid ?? null };

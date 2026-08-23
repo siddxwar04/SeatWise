@@ -85,7 +85,14 @@ export const Button = forwardRef(function Button(
 });
 
 /** Square, icon-only. `label` is required — it becomes the accessible name. */
-export function IconButton({ icon, label, variant = 'ghost', size = 'md', className = '', ...rest }) {
+export function IconButton({
+  icon,
+  label,
+  variant = 'ghost',
+  size = 'md',
+  className = '',
+  ...rest
+}) {
   return (
     <button
       type="button"

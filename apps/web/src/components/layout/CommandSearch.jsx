@@ -54,7 +54,9 @@ export function CommandSearch({ open, onClose }) {
 
     if (!needle) {
       // Empty state is a jump list: places you looked at recently, then cities.
-      const recentVenues = recent.map((slug) => VENUES.find((v) => v.slug === slug)).filter(Boolean);
+      const recentVenues = recent
+        .map((slug) => VENUES.find((v) => v.slug === slug))
+        .filter(Boolean);
       return [
         ...(recentVenues.length
           ? [{ group: 'Recently viewed', items: recentVenues.map(toVenueItem) }]
@@ -159,7 +161,13 @@ export function CommandSearch({ open, onClose }) {
                   >
                     {item.kind === 'venue' ? (
                       <>
-                        <Cover seed={item.slug} name={item.title} src={item.image} size="sm" alt="" />
+                        <Cover
+                          seed={item.slug}
+                          name={item.title}
+                          src={item.image}
+                          size="sm"
+                          alt=""
+                        />
                         <span className="cmd_text">
                           <strong>{item.title}</strong>
                           <span className="cmd_meta">{item.meta}</span>

@@ -55,7 +55,8 @@ export function FilterBar({ filters, onChange }) {
         : [...filters[key], value],
     });
 
-  const activeCount = filters.cuisines.length + filters.areas.length + filters.prices.length + filters.quick.length;
+  const activeCount =
+    filters.cuisines.length + filters.areas.length + filters.prices.length + filters.quick.length;
 
   return (
     <div className="filterbar scroller">

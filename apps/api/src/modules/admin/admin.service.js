@@ -247,11 +247,7 @@ export async function updateStatus(
     await invalidatePrefix(CACHE_KEYS.overbookingPrefix(tenantId));
   }
 
-  if (
-    updated.changed &&
-    (nextStatus === 'CANCELLED' || nextStatus === 'NO_SHOW') &&
-    tenantId
-  ) {
+  if (updated.changed && (nextStatus === 'CANCELLED' || nextStatus === 'NO_SHOW') && tenantId) {
     try {
       const local = utcToLocalParts(updated.row.startsAt);
       await notifyMatchingWaitlist({
@@ -473,7 +469,14 @@ export async function getFloorState(restaurantId, at = new Date()) {
   const [tables, active] = await Promise.all([
     prisma.restaurantTable.findMany({
       where: { restaurantId, isActive: true },
-      select: { id: true, label: true, capacity: true, zone: true, combinable: true, combineGroup: true },
+      select: {
+        id: true,
+        label: true,
+        capacity: true,
+        zone: true,
+        combinable: true,
+        combineGroup: true,
+      },
       orderBy: { label: 'asc' },
     }),
     prisma.reservation.findMany({

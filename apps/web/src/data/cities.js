@@ -17,7 +17,13 @@ export const CITIES = [
     /** Schematic geography for the map panel: river path + arterial roads. */
     map: {
       river: 'M0 66 Q 28 56 52 68 T 100 60',
-      roads: ['M8 0 L 22 100', 'M48 0 L 58 100', 'M82 0 L 76 100', 'M0 32 L 100 26', 'M0 84 L 100 90'],
+      roads: [
+        'M8 0 L 22 100',
+        'M48 0 L 58 100',
+        'M82 0 L 76 100',
+        'M0 32 L 100 26',
+        'M0 84 L 100 90',
+      ],
     },
   },
   {
@@ -39,7 +45,13 @@ export const CITIES = [
     areas: ['Indiranagar', 'Koramangala', 'Church Street', 'Jayanagar', 'Whitefield'],
     map: {
       river: 'M0 24 Q 26 34 48 24 T 100 32',
-      roads: ['M10 0 L 18 100', 'M40 0 L 52 100', 'M70 0 L 64 100', 'M0 56 L 100 62', 'M0 80 L 100 74'],
+      roads: [
+        'M10 0 L 18 100',
+        'M40 0 L 52 100',
+        'M70 0 L 64 100',
+        'M0 56 L 100 62',
+        'M0 80 L 100 74',
+      ],
     },
   },
   {
@@ -50,7 +62,13 @@ export const CITIES = [
     areas: ['Banjara Hills', 'Jubilee Hills', 'Gachibowli', 'Himayatnagar', 'Secunderabad'],
     map: {
       river: 'M0 52 Q 24 44 46 54 T 100 46',
-      roads: ['M12 0 L 20 100', 'M44 0 L 50 100', 'M76 0 L 70 100', 'M0 22 L 100 28', 'M0 78 L 100 84'],
+      roads: [
+        'M12 0 L 20 100',
+        'M44 0 L 50 100',
+        'M76 0 L 70 100',
+        'M0 22 L 100 28',
+        'M0 78 L 100 84',
+      ],
     },
   },
   {
@@ -62,7 +80,13 @@ export const CITIES = [
     map: {
       /* The coast runs down the right-hand edge — Chennai's defining line. */
       river: 'M86 0 Q 80 26 88 52 T 82 100',
-      roads: ['M10 0 L 16 100', 'M36 0 L 44 100', 'M62 0 L 58 100', 'M0 36 L 100 30', 'M0 72 L 100 78'],
+      roads: [
+        'M10 0 L 16 100',
+        'M36 0 L 44 100',
+        'M62 0 L 58 100',
+        'M0 36 L 100 30',
+        'M0 72 L 100 78',
+      ],
     },
   },
   {
@@ -73,7 +97,13 @@ export const CITIES = [
     areas: ['Hauz Khas', 'Connaught Place', 'Aerocity', 'Saket', 'Chanakyapuri'],
     map: {
       river: 'M84 0 Q 74 30 82 58 T 74 100',
-      roads: ['M6 0 L 14 100', 'M34 0 L 40 100', 'M58 0 L 54 100', 'M0 30 L 100 24', 'M0 68 L 100 72'],
+      roads: [
+        'M6 0 L 14 100',
+        'M34 0 L 40 100',
+        'M58 0 L 54 100',
+        'M0 30 L 100 24',
+        'M0 68 L 100 72',
+      ],
     },
   },
 ];

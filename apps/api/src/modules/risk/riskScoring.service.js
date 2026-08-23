@@ -62,12 +62,12 @@ export function extractFeatures(booking) {
   const priorBookings = Number(booking.priorBookings ?? 0);
   const priorNoShows = Number(booking.priorNoShows ?? 0);
 
-  const guestNoShowRate =
-    priorBookings <= 0 ? 0 : clamp01(priorNoShows / priorBookings);
+  const guestNoShowRate = priorBookings <= 0 ? 0 : clamp01(priorNoShows / priorBookings);
 
   const dayOfWeek = Number(booking.dayOfWeek ?? 0);
   const hour = Number(booking.hour ?? 0);
-  const isWeekend = Boolean(booking.isWeekend) || dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6;
+  const isWeekend =
+    Boolean(booking.isWeekend) || dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6;
 
   return {
     leadTime: clamp01(leadHours / 336),

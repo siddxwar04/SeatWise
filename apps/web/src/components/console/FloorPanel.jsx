@@ -47,7 +47,9 @@ export function FloorPanel({ floor }) {
                 <Icon name="seat" /> {table.seats}
               </span>
               <span className="floor_table_zone">{ZONES[table.zone]?.label ?? table.zone}</span>
-              {table.status !== 'free' && <span className="floor_table_turns">turns {table.turnsAt}</span>}
+              {table.status !== 'free' && (
+                <span className="floor_table_turns">turns {table.turnsAt}</span>
+              )}
             </div>
           ))}
         </div>
@@ -97,7 +99,11 @@ export function FloorPanel({ floor }) {
               ))}
               {plan.assignments.length === 0 && plan.unassigned.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="cell_sub" style={{ padding: 'var(--s-6)', textAlign: 'center' }}>
+                  <td
+                    colSpan={5}
+                    className="cell_sub"
+                    style={{ padding: 'var(--s-6)', textAlign: 'center' }}
+                  >
                     Nobody is waiting right now.
                   </td>
                 </tr>

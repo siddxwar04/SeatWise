@@ -131,7 +131,13 @@ export function VenuePage() {
 
             <div className="ratings_hist">
               {ratings.map((r) => (
-                <Bar key={r.stars} label={`${r.stars}★`} value={r.count} scale={maxRatingCount} right={r.count} />
+                <Bar
+                  key={r.stars}
+                  label={`${r.stars}★`}
+                  value={r.count}
+                  scale={maxRatingCount}
+                  right={r.count}
+                />
               ))}
             </div>
 
@@ -220,7 +226,12 @@ export function VenuePage() {
                   Fully booked for tonight. Join the queue and we will text you the moment a table
                   opens.
                 </p>
-                <Button variant="primary" block icon="hourglass" onClick={() => setWaitlistOpen(true)}>
+                <Button
+                  variant="primary"
+                  block
+                  icon="hourglass"
+                  onClick={() => setWaitlistOpen(true)}
+                >
                   Join waitlist
                 </Button>
               </div>

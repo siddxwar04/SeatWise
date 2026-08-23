@@ -80,7 +80,11 @@ export function RiskPanel({ queue }) {
               })}
               {queue.queue.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="cell_sub" style={{ padding: 'var(--s-6)', textAlign: 'center' }}>
+                  <td
+                    colSpan={7}
+                    className="cell_sub"
+                    style={{ padding: 'var(--s-6)', textAlign: 'center' }}
+                  >
                     No open bookings to score right now.
                   </td>
                 </tr>

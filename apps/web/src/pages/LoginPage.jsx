@@ -103,7 +103,12 @@ export function LoginPage() {
             <Icon name="sparkles" /> No backend is deployed — sign in with a demo account
           </p>
           {DEMO_ACCOUNTS.map((account) => (
-            <button key={account.email} type="button" className="auth_demo_card" onClick={() => fillDemo(account)}>
+            <button
+              key={account.email}
+              type="button"
+              className="auth_demo_card"
+              onClick={() => fillDemo(account)}
+            >
               <span className="auth_demo_role">{account.label}</span>
               <strong>{account.email}</strong>
               <span className="auth_demo_blurb">{account.blurb}</span>

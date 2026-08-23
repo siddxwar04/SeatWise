@@ -32,7 +32,10 @@ const FEATURES = [
   { label: 'Confirmation', why: 'An answered text is the strongest protective signal.' },
   { label: 'Guest history', why: 'Prior no-shows dominate; clean visits help, then saturate.' },
   { label: 'First-time guest', why: 'No history is riskier than a thin good one.' },
-  { label: 'Weekend / prime time', why: 'More competing plans, exactly where an empty seat costs most.' },
+  {
+    label: 'Weekend / prime time',
+    why: 'More competing plans, exactly where an empty seat costs most.',
+  },
   { label: 'Prepaid / deposit', why: 'Money down changes behaviour more than any reminder.' },
 ];
 

@@ -54,7 +54,10 @@ export function StatusBadge({ status, short = false }) {
  */
 export function RiskBadge({ risk, showLabel = true }) {
   return (
-    <span className={`risk risk-${risk.band}`} title={`${percent(risk.probability)} chance of no-show`}>
+    <span
+      className={`risk risk-${risk.band}`}
+      title={`${percent(risk.probability)} chance of no-show`}
+    >
       <span className="risk_dot" aria-hidden="true" />
       <strong className="num">{percent(risk.probability)}</strong>
       {showLabel && <span className="risk_word">{BAND_LABEL[risk.band]}</span>}
@@ -70,7 +73,8 @@ export function RiskBadge({ risk, showLabel = true }) {
  * sold.
  */
 export function DemandMeter({ demand, remaining, compactMode = false }) {
-  const level = demand >= 0.85 ? 'critical' : demand >= 0.6 ? 'high' : demand >= 0.35 ? 'medium' : 'low';
+  const level =
+    demand >= 0.85 ? 'critical' : demand >= 0.6 ? 'high' : demand >= 0.35 ? 'medium' : 'low';
   const copy =
     remaining === 0
       ? `Fully committed · ${percent(demand)} booked`

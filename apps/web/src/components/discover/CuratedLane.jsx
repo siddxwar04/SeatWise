@@ -84,7 +84,12 @@ export function CuratedLane({ venues, onOpen }) {
       {rest.length > 0 && (
         <div className="lane_rest">
           {rest.map((venue) => (
-            <button key={venue.id} type="button" className="lane_card" onClick={() => onOpen(venue)}>
+            <button
+              key={venue.id}
+              type="button"
+              className="lane_card"
+              onClick={() => onOpen(venue)}
+            >
               <span className="lane_card_media">
                 <Shot
                   src={venue.image}

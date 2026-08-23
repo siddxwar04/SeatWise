@@ -69,7 +69,13 @@ export function LogoMark({ variant = 'plain', size = 28, className = '' }) {
         ))}
 
         {/* …and one that never showed up. */}
-        <circle {...SEATS[3]} r="3.4" className="mark_seat is-empty" strokeWidth="2.2" fill="none" />
+        <circle
+          {...SEATS[3]}
+          r="3.4"
+          className="mark_seat is-empty"
+          strokeWidth="2.2"
+          fill="none"
+        />
       </g>
     </svg>
   );

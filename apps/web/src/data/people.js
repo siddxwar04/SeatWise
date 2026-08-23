@@ -14,16 +14,61 @@
 import { rng } from '../lib/prng.js';
 
 const FIRST_NAMES = [
-  'Aarav', 'Ananya', 'Rohan', 'Meera', 'Kabir', 'Priya', 'Vikram', 'Nisha',
-  'Arjun', 'Divya', 'Siddharth', 'Kavya', 'Rahul', 'Sneha', 'Aditya', 'Ishita',
-  'Farhan', 'Zoya', 'Neel', 'Tara', 'Karthik', 'Lakshmi', 'Imran', 'Ritu',
-  'Dev', 'Anjali', 'Manav', 'Pooja', 'Yash', 'Sara', 'Nikhil', 'Aisha',
+  'Aarav',
+  'Ananya',
+  'Rohan',
+  'Meera',
+  'Kabir',
+  'Priya',
+  'Vikram',
+  'Nisha',
+  'Arjun',
+  'Divya',
+  'Siddharth',
+  'Kavya',
+  'Rahul',
+  'Sneha',
+  'Aditya',
+  'Ishita',
+  'Farhan',
+  'Zoya',
+  'Neel',
+  'Tara',
+  'Karthik',
+  'Lakshmi',
+  'Imran',
+  'Ritu',
+  'Dev',
+  'Anjali',
+  'Manav',
+  'Pooja',
+  'Yash',
+  'Sara',
+  'Nikhil',
+  'Aisha',
 ];
 
 const LAST_NAMES = [
-  'Sharma', 'Iyer', 'Mehta', 'Reddy', 'Nair', 'Kapoor', 'Bose', 'Rao',
-  'Desai', 'Khan', 'Pillai', 'Joshi', 'Verma', 'Chatterjee', 'Menon', 'Shetty',
-  'Gupta', 'Fernandes', 'Bhat', 'Sinha',
+  'Sharma',
+  'Iyer',
+  'Mehta',
+  'Reddy',
+  'Nair',
+  'Kapoor',
+  'Bose',
+  'Rao',
+  'Desai',
+  'Khan',
+  'Pillai',
+  'Joshi',
+  'Verma',
+  'Chatterjee',
+  'Menon',
+  'Shetty',
+  'Gupta',
+  'Fernandes',
+  'Bhat',
+  'Sinha',
 ];
 
 /**
@@ -52,7 +97,14 @@ const REVIEW_BODIES = {
   ],
 };
 
-const OCCASIONS = ['Date night', 'Family dinner', 'With colleagues', 'Solo at the counter', 'Birthday', 'Catching up'];
+const OCCASIONS = [
+  'Date night',
+  'Family dinner',
+  'With colleagues',
+  'Solo at the counter',
+  'Birthday',
+  'Catching up',
+];
 
 /** Deterministic display name from a seeded stream. */
 function personFrom(random) {
@@ -73,10 +125,22 @@ export function reviewsFor(venue, count = 4) {
   for (let i = 0; i < count; i += 1) {
     const stars = random.weighted(
       venue.rating >= 4.7
-        ? [[5, 78], [4, 19], [3, 3]]
+        ? [
+            [5, 78],
+            [4, 19],
+            [3, 3],
+          ]
         : venue.rating >= 4.4
-          ? [[5, 55], [4, 35], [3, 10]]
-          : [[5, 40], [4, 40], [3, 20]],
+          ? [
+              [5, 55],
+              [4, 35],
+              [3, 10],
+            ]
+          : [
+              [5, 40],
+              [4, 40],
+              [3, 20],
+            ],
     );
 
     const body = random
@@ -146,13 +210,22 @@ export function guestBook(venue, size = 40) {
     ]);
 
     const priorVisits =
-      profile === 'regular' ? random.int(8, 24)
-      : profile === 'returning' ? random.int(2, 6)
-      : profile === 'risky' ? random.int(1, 5)
-      : 0;
+      profile === 'regular'
+        ? random.int(8, 24)
+        : profile === 'returning'
+          ? random.int(2, 6)
+          : profile === 'risky'
+            ? random.int(1, 5)
+            : 0;
 
     const priorNoShows =
-      profile === 'risky' ? random.int(1, 3) : profile === 'regular' ? (random.chance(0.12) ? 1 : 0) : 0;
+      profile === 'risky'
+        ? random.int(1, 3)
+        : profile === 'regular'
+          ? random.chance(0.12)
+            ? 1
+            : 0
+          : 0;
 
     return {
       id: `${venue.slug}-g${i}`,

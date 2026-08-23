@@ -30,9 +30,7 @@ dashboardRouter.get(
   validate({ query: restaurantQuery }),
   requireRestaurantAdmin(),
   asyncHandler(async (req, res) => {
-    res.json(
-      await waitlistService.listWaitlist(req.restaurant.id, { status: req.query.status }),
-    );
+    res.json(await waitlistService.listWaitlist(req.restaurant.id, { status: req.query.status }));
   }),
 );
 

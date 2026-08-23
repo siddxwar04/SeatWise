@@ -117,7 +117,14 @@ export function BookingSheet({ venue, date, open, initialTime, onClose }) {
           <Button variant="secondary" block onClick={close}>
             Cancel
           </Button>
-          <Button variant="primary" block type="submit" form="booking-form" loading={submitting} disabled={expired}>
+          <Button
+            variant="primary"
+            block
+            type="submit"
+            form="booking-form"
+            loading={submitting}
+            disabled={expired}
+          >
             {expired ? 'Hold expired' : 'Confirm booking'}
           </Button>
         </>
@@ -135,7 +142,11 @@ export function BookingSheet({ venue, date, open, initialTime, onClose }) {
         <div className="booking_grid">
           <Field label="Time">
             {() => (
-              <select className="input select" value={time} onChange={(e) => setTime(e.target.value)}>
+              <select
+                className="input select"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+              >
                 {venue.slots.map((s) => (
                   <option key={s.time} value={s.time}>
                     {formatTime(s.time)}
@@ -144,7 +155,9 @@ export function BookingSheet({ venue, date, open, initialTime, onClose }) {
               </select>
             )}
           </Field>
-          <Field label="Guests">{() => <Stepper value={party} onChange={setParty} max={venue.maxTableSeats + 4} />}</Field>
+          <Field label="Guests">
+            {() => <Stepper value={party} onChange={setParty} max={venue.maxTableSeats + 4} />}
+          </Field>
         </div>
 
         {availableZones.length > 1 && (
@@ -190,8 +203,8 @@ export function BookingSheet({ venue, date, open, initialTime, onClose }) {
         {venue.prepaid && (
           <div className="note note-brand">
             <Icon name="card" />
-            This is a prepaid experience — {rupees(venue.prepaid)} per guest, charged on confirmation.
-            Cancel up to {venue.policy.cancelHours} hours ahead for a full refund.
+            This is a prepaid experience — {rupees(venue.prepaid)} per guest, charged on
+            confirmation. Cancel up to {venue.policy.cancelHours} hours ahead for a full refund.
           </div>
         )}
       </form>

@@ -13,7 +13,13 @@ import { getVenue, VENUES } from '../data/venues.js';
 import { delay, ServiceError, store } from './config.js';
 
 /** Venues the signed-in owner manages. Demo owner runs a small group. */
-const MANAGED = ['olive-and-grove', 'forno-nove', 'salt-and-tide', 'nizam-and-noor', 'peppercorn-house'];
+const MANAGED = [
+  'olive-and-grove',
+  'forno-nove',
+  'salt-and-tide',
+  'nizam-and-noor',
+  'peppercorn-house',
+];
 
 export async function listManagedVenues() {
   await delay(140);
@@ -158,9 +164,7 @@ export async function getFloor(slug, date = todayISO()) {
       naiveWasted: naive.wasted,
       seatsSaved: Math.max(0, naive.wasted - packed.totalWasted),
     },
-    occupancy: tables.length
-      ? tables.filter((t) => t.status !== 'free').length / tables.length
-      : 0,
+    occupancy: tables.length ? tables.filter((t) => t.status !== 'free').length / tables.length : 0,
   };
 }
 
@@ -184,7 +188,10 @@ export async function updateBookingStatus(reference, status) {
 export async function sendReminder(reference) {
   await delay(420);
   const overrides = store.read(OVERRIDES_KEY, {});
-  overrides[reference] = { ...(overrides[reference] ?? {}), reminderSentAt: new Date().toISOString() };
+  overrides[reference] = {
+    ...(overrides[reference] ?? {}),
+    reminderSentAt: new Date().toISOString(),
+  };
   store.write(OVERRIDES_KEY, overrides);
   return { reference, sent: true };
 }

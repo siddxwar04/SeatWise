@@ -69,7 +69,10 @@ export function MyBookingsPage() {
           ))}
 
         {status === 'ready' && bookings.length === 0 && (
-          <EmptyState icon="calendar" title={filter === 'upcoming' ? 'Nothing coming up' : 'No bookings yet'}>
+          <EmptyState
+            icon="calendar"
+            title={filter === 'upcoming' ? 'Nothing coming up' : 'No bookings yet'}
+          >
             {filter === 'upcoming'
               ? 'When you book a table it will show up here.'
               : 'Find a restaurant on Discover to make your first booking.'}
@@ -82,7 +85,13 @@ export function MyBookingsPage() {
         {status === 'ready' &&
           bookings.map((booking) => (
             <article className="booking_row" key={booking.reference}>
-              <Cover seed={booking.venue.slug} name={booking.venue.name} src={booking.venue.image} size="sm" alt="" />
+              <Cover
+                seed={booking.venue.slug}
+                name={booking.venue.name}
+                src={booking.venue.image}
+                size="sm"
+                alt=""
+              />
 
               <div className="booking_row_main">
                 <div className="row spread">
@@ -92,7 +101,8 @@ export function MyBookingsPage() {
                   <StatusBadge status={booking.status} />
                 </div>
                 <p className="booking_row_meta">
-                  {formatDate(booking.date)} · {formatTime(booking.time)} · {guests(booking.partySize)}
+                  {formatDate(booking.date)} · {formatTime(booking.time)} ·{' '}
+                  {guests(booking.partySize)}
                   {booking.zone && ` · ${booking.zone.toLowerCase()}`}
                 </p>
                 <p className="booking_row_ref mono">{booking.reference}</p>

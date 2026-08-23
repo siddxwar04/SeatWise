@@ -59,7 +59,10 @@ export async function joinWaitlist(input, actor) {
     'waitlist joined',
   );
 
-  return { entry: toPublic(entry), message: 'You are on the waitlist. We will email you if a table opens.' };
+  return {
+    entry: toPublic(entry),
+    message: 'You are on the waitlist. We will email you if a table opens.',
+  };
 }
 
 /**

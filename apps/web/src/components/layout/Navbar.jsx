@@ -158,15 +158,33 @@ export function Navbar() {
                       <strong>{user.username}</strong>
                       <span>{user.email}</span>
                     </div>
-                    <PopItem icon="calendar-check" onClick={() => { close(); navigate('/bookings'); }}>
+                    <PopItem
+                      icon="calendar-check"
+                      onClick={() => {
+                        close();
+                        navigate('/bookings');
+                      }}
+                    >
                       My bookings
                     </PopItem>
                     {canAccessConsole && (
-                      <PopItem icon="gauge" onClick={() => { close(); navigate('/console'); }}>
+                      <PopItem
+                        icon="gauge"
+                        onClick={() => {
+                          close();
+                          navigate('/console');
+                        }}
+                      >
                         Restaurant console
                       </PopItem>
                     )}
-                    <PopItem icon="logout" onClick={() => { close(); handleLogout(); }}>
+                    <PopItem
+                      icon="logout"
+                      onClick={() => {
+                        close();
+                        handleLogout();
+                      }}
+                    >
                       Sign out
                     </PopItem>
                   </>

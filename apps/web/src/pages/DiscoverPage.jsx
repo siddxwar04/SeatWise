@@ -83,7 +83,9 @@ export function DiscoverPage() {
             <em>one search.</em>
           </h1>
           <p className="disc_sub">
-            {loading ? 'Searching…' : `${data?.total ?? 0} restaurants · ${data?.bookableNow ?? 0} bookable right now`}
+            {loading
+              ? 'Searching…'
+              : `${data?.total ?? 0} restaurants · ${data?.bookableNow ?? 0} bookable right now`}
           </p>
 
           <SearchRail query={query} onChange={setQuery} />
@@ -151,7 +153,12 @@ export function DiscoverPage() {
 
               {!loading &&
                 venues.map((venue) => (
-                  <VenueCard key={venue.id} venue={venue} onOpen={openVenue} onHoverPin={setHovered} />
+                  <VenueCard
+                    key={venue.id}
+                    venue={venue}
+                    onOpen={openVenue}
+                    onHoverPin={setHovered}
+                  />
                 ))}
 
               {!loading && venues.length === 0 && (
@@ -164,7 +171,13 @@ export function DiscoverPage() {
           )}
 
           {view !== 'list' && !loading && (
-            <MapPanel venues={venues} city={city} hovered={hovered} onHoverPin={setHovered} onOpen={openVenue} />
+            <MapPanel
+              venues={venues}
+              city={city}
+              hovered={hovered}
+              onHoverPin={setHovered}
+              onOpen={openVenue}
+            />
           )}
         </div>
       </div>

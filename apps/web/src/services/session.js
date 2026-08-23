@@ -128,7 +128,8 @@ export async function register({ username, email, password }) {
 
   const details = {};
   if (!username?.trim()) details.username = 'What should the restaurant call you?';
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email ?? '')) details.email = 'Enter a valid email address.';
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email ?? ''))
+    details.email = 'Enter a valid email address.';
   if ((password ?? '').length < 8) details.password = 'At least 8 characters.';
   if (Object.keys(details).length) {
     throw new ServiceError('Check the highlighted fields.', { code: 'VALIDATION', details });

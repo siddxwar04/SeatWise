@@ -5,7 +5,12 @@ import { CACHE_KEYS, invalidatePrefix } from '../../lib/cache.js';
 import { logger } from '../../lib/logger.js';
 import { prisma } from '../../lib/prisma.js';
 import { generateBookingReference } from '../../lib/reference.js';
-import { bookingInterval, serviceDateFor, utcToLocalParts, validateBookingTime } from '../../lib/slots.js';
+import {
+  bookingInterval,
+  serviceDateFor,
+  utcToLocalParts,
+  validateBookingTime,
+} from '../../lib/slots.js';
 import { setTenantGuc } from '../../lib/tenant.js';
 import { selectBestFitTable } from '../assignment/tableAssignment.service.js';
 import { summariseOverbooking } from '../overbooking/overbooking.service.js';

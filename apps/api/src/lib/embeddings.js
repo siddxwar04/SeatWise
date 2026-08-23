@@ -86,9 +86,7 @@ export async function embedTexts(texts) {
     model: getEmbeddingModel(),
     input: texts,
   });
-  return response.data
-    .sort((a, b) => a.index - b.index)
-    .map((row) => row.embedding);
+  return response.data.sort((a, b) => a.index - b.index).map((row) => row.embedding);
 }
 
 export async function embedText(text) {

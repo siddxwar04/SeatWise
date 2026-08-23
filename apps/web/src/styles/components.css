@@ -851,12 +851,11 @@
   flex: none;
   overflow: hidden;
   border-radius: var(--r-md);
-  background:
-    linear-gradient(
-      var(--cover-angle, 130deg),
-      hsl(var(--cover-h, 250) 62% 58%),
-      hsl(var(--cover-h2, 280) 58% 42%)
-    );
+  background: linear-gradient(
+    var(--cover-angle, 130deg),
+    hsl(var(--cover-h, 250) 62% 58%),
+    hsl(var(--cover-h2, 280) 58% 42%)
+  );
   isolation: isolate;
 }
 

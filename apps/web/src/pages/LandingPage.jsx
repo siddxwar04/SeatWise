@@ -26,9 +26,8 @@ export function LandingPage({ onContinue }) {
             </h1>
 
             <p className="landing_sub">
-              One place to find, filter, and book a table — across every city SeatWise
-              covers. Pick your city next and the rest works exactly the way it always
-              has.
+              One place to find, filter, and book a table — across every city SeatWise covers. Pick
+              your city next and the rest works exactly the way it always has.
             </p>
 
             <div className="row row-wrap landing_cta">
@@ -46,13 +45,7 @@ export function LandingPage({ onContinue }) {
           <div className="landing_visual" aria-hidden="true">
             <div className="landing_glow" />
 
-            <svg
-              className="landing_art"
-              viewBox="0 0 320 320"
-              width="320"
-              height="320"
-              fill="none"
-            >
+            <svg className="landing_art" viewBox="0 0 320 320" width="320" height="320" fill="none">
               <circle cx="160" cy="160" r="118" className="landing_art_plate" />
               <circle cx="160" cy="160" r="92" className="landing_art_rim" />
               <g className="landing_art_garnish">

@@ -162,7 +162,13 @@ export async function getVenueDetail(slug) {
     .sort((a, b) => b.rating - a.rating)
     .slice(0, 3);
 
-  return { venue, reviews: reviewsFor(venue), ratings: ratingBreakdown(venue), similar, city: getCity(venue.city) };
+  return {
+    venue,
+    reviews: reviewsFor(venue),
+    ratings: ratingBreakdown(venue),
+    similar,
+    city: getCity(venue.city),
+  };
 }
 
 /**
@@ -176,7 +182,9 @@ export async function getAvailability(slug, { date = todayISO(), party = 2, zone
   if (!venue) throw new ServiceError('Restaurant not found.', { code: 'NOT_FOUND' });
 
   const { bookable, combining } = capacityFor(venue, party);
-  const tablesThatFit = venue.tables.filter((t) => t.seats >= party && (!zone || t.zone === zone)).length;
+  const tablesThatFit = venue.tables.filter(
+    (t) => t.seats >= party && (!zone || t.zone === zone),
+  ).length;
 
   const slots = venue.slots.map((slot) => {
     const blocked = !bookable
@@ -216,7 +224,14 @@ function publicBooking(record) {
   return {
     ...record,
     venue: venue
-      ? { slug: venue.slug, name: venue.name, area: venue.area, city: venue.city, type: venue.type, image: venue.image }
+      ? {
+          slug: venue.slug,
+          name: venue.name,
+          area: venue.area,
+          city: venue.city,
+          type: venue.type,
+          image: venue.image,
+        }
       : { slug: record.venueSlug, name: record.venueName },
   };
 }

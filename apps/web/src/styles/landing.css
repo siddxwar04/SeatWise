@@ -5,8 +5,7 @@
 .landing_hero {
   padding-block: clamp(3rem, 8vw, 6rem);
   background:
-    radial-gradient(ellipse 90% 70% at 15% -10%, var(--brand-soft), transparent 55%),
-    var(--canvas);
+    radial-gradient(ellipse 90% 70% at 15% -10%, var(--brand-soft), transparent 55%), var(--canvas);
   border-bottom: 1px solid var(--border-faint);
 }
 
@@ -57,8 +56,7 @@
   inset: 6%;
   border-radius: var(--r-2xl);
   background:
-    radial-gradient(circle at 30% 25%, var(--brand-soft), transparent 60%),
-    var(--surface-raised);
+    radial-gradient(circle at 30% 25%, var(--brand-soft), transparent 60%), var(--surface-raised);
   border: 1px solid var(--border-faint);
   box-shadow: var(--shadow-lg);
 }

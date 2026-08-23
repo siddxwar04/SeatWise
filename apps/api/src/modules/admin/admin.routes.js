@@ -183,7 +183,10 @@ adminRouter.get(
   validate({ query: z.object({ restaurant: restaurantSlug }) }),
   requireRestaurantAdmin(),
   asyncHandler(async (req, res) => {
-    res.json({ restaurantId: req.restaurant.id, tables: await adminService.getFloorState(req.restaurant.id) });
+    res.json({
+      restaurantId: req.restaurant.id,
+      tables: await adminService.getFloorState(req.restaurant.id),
+    });
   }),
 );
 
@@ -198,6 +201,8 @@ adminRouter.get(
     query: z.object({ days: z.coerce.number().int().min(1).max(365).default(30) }),
   }),
   asyncHandler(async (req, res) => {
-    res.json(await analyticsService.getPortfolioAnalytics(req.user.id, req.user.role, req.query.days));
+    res.json(
+      await analyticsService.getPortfolioAnalytics(req.user.id, req.user.role, req.query.days),
+    );
   }),
 );
