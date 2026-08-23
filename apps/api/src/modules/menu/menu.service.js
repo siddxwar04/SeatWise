@@ -20,7 +20,11 @@ function toPublicMenuItem(item) {
     name: item.name,
     description: item.description,
     price: item.priceInPaise / 100,
-    priceLabel: `₹${Math.round(item.priceInPaise / 100)}`,
+    priceLabel: new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(item.priceInPaise / 100),
     category: item.category,
     imageUrl: item.imageUrl,
     imageAlt: item.imageAlt,

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ZONES } from '../../data/cities.js';
 import { formatDateLong, formatTime, rupees } from '../../lib/format.js';
@@ -71,10 +71,10 @@ export function BookingSheet({ venue, date, open, initialTime, onClose }) {
     }
   };
 
-  const close = () => {
+  const close = useCallback(() => {
     onClose();
     setDone(null);
-  };
+  }, [onClose]);
 
   if (done) {
     return (

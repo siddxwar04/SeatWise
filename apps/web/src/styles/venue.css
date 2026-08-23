@@ -66,19 +66,43 @@
 .vpage_sig {
   display: flex;
   flex-direction: column;
-  gap: var(--s-2);
+  gap: var(--s-3);
+  max-width: 28rem;
 }
 
 .vpage_sig li {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: var(--s-2);
   font-size: var(--t-sm);
   color: var(--text-secondary);
 }
 
 .vpage_sig svg {
+  flex-shrink: 0;
   color: var(--brand-text);
+  transform: translateY(0.15em);
+}
+
+.vpage_sig_name {
+  flex: 0 1 auto;
+  color: var(--text-primary);
+}
+
+/* Classic menu leader: name …… ₹price */
+.vpage_sig_lead {
+  flex: 1 1 auto;
+  min-width: 1.25rem;
+  border-bottom: 1px dotted color-mix(in srgb, var(--border) 85%, transparent);
+  transform: translateY(-0.35em);
+}
+
+.vpage_sig_price {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: 550;
+  letter-spacing: 0.01em;
+  color: var(--text-primary);
 }
 
 .ratings_hist {

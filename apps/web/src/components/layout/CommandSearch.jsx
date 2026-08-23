@@ -5,6 +5,7 @@ import { VENUES } from '../../data/venues.js';
 import { useMarket } from '../../context/MarketContext.jsx';
 import { useDebounced } from '../../lib/hooks.js';
 import { priceBand } from '../../lib/format.js';
+import { signatureNames } from '../../lib/signaturePrice.js';
 import { Cover, StarRating } from '../ui/Data.jsx';
 import { Icon } from '../ui/Icon.jsx';
 import { Sheet } from '../ui/Overlay.jsx';
@@ -24,7 +25,7 @@ function score(venue, needle) {
   if (name.includes(needle)) return 70;
   if (venue.cuisine.toLowerCase().includes(needle)) return 45;
   if (venue.area.toLowerCase().includes(needle)) return 40;
-  if ((venue.signatures ?? []).join(' ').toLowerCase().includes(needle)) return 20;
+  if (signatureNames(venue.signatures).join(' ').toLowerCase().includes(needle)) return 20;
   return 0;
 }
 

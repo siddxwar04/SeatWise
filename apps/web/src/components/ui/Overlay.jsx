@@ -75,6 +75,11 @@ export function PopItem({ children, selected, onClick, icon, hint }) {
 export function Sheet({ open, onClose, title, subtitle, children, footer, size = 'md' }) {
   const panelRef = useRef(null);
   const restoreTo = useRef(null);
+  // Keep the latest onClose without re-binding the focus effect. BookingSheet
+  // (and anything with a countdown) re-renders often; if this effect depended
+  // on an inline onClose it would steal focus from inputs every tick.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   const isMobile = useIsMobile();
   const reduce = useReducedMotion();
 
@@ -90,7 +95,7 @@ export function Sheet({ open, onClose, title, subtitle, children, footer, size =
 
     const onKeyDown = (event) => {
       if (event.key === 'Escape') {
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (event.key !== 'Tab') return;
@@ -118,7 +123,7 @@ export function Sheet({ open, onClose, title, subtitle, children, footer, size =
       document.removeEventListener('keydown', onKeyDown);
       restoreTo.current?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   const slide = isMobile ? { y: '100%' } : { y: 14, scale: 0.98 };
 

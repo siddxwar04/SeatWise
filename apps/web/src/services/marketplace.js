@@ -7,6 +7,7 @@
 
 import { minutesOf, todayISO } from '../lib/format.js';
 import { assignTables } from '../lib/assignment.js';
+import { signatureNames } from '../lib/signaturePrice.js';
 import { CITIES, getCity } from '../data/cities.js';
 import { ratingBreakdown, reviewsFor } from '../data/people.js';
 import { floorState, waitlistFor } from '../data/serviceBook.js';
@@ -24,7 +25,7 @@ function nowMinutes() {
 function matchesText(venue, query) {
   if (!query) return true;
   const needle = query.trim().toLowerCase();
-  return [venue.name, venue.cuisine, venue.area, venue.tagline, ...(venue.signatures ?? [])]
+  return [venue.name, venue.cuisine, venue.area, venue.tagline, ...signatureNames(venue.signatures)]
     .join(' ')
     .toLowerCase()
     .includes(needle);

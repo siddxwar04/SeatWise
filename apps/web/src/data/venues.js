@@ -25,6 +25,7 @@
 
 import { seedHue } from '../lib/cover.js';
 import { rng } from '../lib/prng.js';
+import { priceSignatures } from '../lib/signaturePrice.js';
 import { venueImage, venueImageSrcSet } from './venuePhotos.js';
 
 /* ══════════════════════════════════════════════════════════ authored data ══ */
@@ -594,7 +595,12 @@ const AUTHORED = [
     tagline: 'A bakery counter that does an evening service of six seats.',
     about:
       'Bread all day, then six counter seats for an evening menu of whatever the bakers want to cook. Booking is the only way to get one of the six.',
-    signatures: ['Six-seat evening menu', 'Miso banana bread', 'Cold brew, house roast'],
+    // Explicit paise so the bakery demo matches the product copy (₹180 / ₹220).
+    signatures: [
+      { name: 'Six-seat evening menu', priceInPaise: 180000 },
+      { name: 'Miso banana bread', priceInPaise: 18000 },
+      { name: 'Cold brew, house roast', priceInPaise: 22000 },
+    ],
     address: '7th Block, Koramangala',
   },
 
@@ -1088,6 +1094,8 @@ function derive(v) {
     tables,
     seats,
     slots,
+    /** Name + paise — venue page and any diner surface that lists dishes. */
+    signatures: priceSignatures(v.signatures, v.price),
     prepaid: v.prepaid ?? null,
     curated: v.curated ?? null,
     walkIn: v.walkIn ?? false,

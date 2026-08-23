@@ -23,6 +23,47 @@ const prisma = new PrismaClient();
 /** Prices are stored as integer paise, so ₹850 becomes 85000. */
 const rupees = (r) => r * 100;
 
+/** URL-safe slug for a signature dish that isn't in MENU_CATALOGUE. */
+function slugifyDish(name) {
+  return String(name)
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 80);
+}
+
+/**
+ * Tier-aware signature prices (₹150–₹2,500) for dishes we invent at seed time.
+ * Matches the demo frontend's signaturePrice helper so live and demo feel alike.
+ */
+function signaturePricePaise(name, priceLevel = 2, index = 0) {
+  const tier = {
+    1: { drink: 90, sweet: 120, snack: 150, plate: 220, share: 380, tasting: 650 },
+    2: { drink: 160, sweet: 220, snack: 280, plate: 420, share: 720, tasting: 1400 },
+    3: { drink: 260, sweet: 340, snack: 480, plate: 780, share: 1200, tasting: 2200 },
+    4: { drink: 380, sweet: 480, snack: 650, plate: 1400, share: 2100, tasting: 2500 },
+  }[Math.min(4, Math.max(1, priceLevel))] ?? {
+    drink: 160,
+    sweet: 220,
+    snack: 280,
+    plate: 420,
+    share: 720,
+    tasting: 1400,
+  };
+
+  const n = name.toLowerCase();
+  let band = 'plate';
+  if (/\b(menu|course|tasting|omakase|for two|for the table)\b/.test(n)) band = 'tasting';
+  else if (/\b(coffee|chai|brew|soda|highball|beer|wine|sol\s?kadi|filter)\b/.test(n)) band = 'drink';
+  else if (/\b(bread|bun|toast|dessert|phirni|kunafa|slice|cake|biscuit)\b/.test(n)) band = 'sweet';
+  else if (/\b(platter|shoulder|biryani|sharing|chops|catch)\b/.test(n)) band = 'share';
+
+  const wobble = ((name.length * 17 + index * 31) % 9) * 10 - 40;
+  const rupee = Math.min(2500, Math.max(90, Math.round((tier[band] + wobble) / 10) * 10));
+  return rupee * 100;
+}
+
 /** Shared house policy — every seeded venue is a standard TABLE booking, none
  *  prepaid or EXPERIENCE, so one cancellation policy fits all of them. */
 const DEFAULT_POLICY = 'Free cancellation up to 2 hours before your reservation.';
@@ -527,6 +568,39 @@ async function main() {
         },
         update: item,
         create: { ...item, restaurantId },
+      });
+    }
+  }
+
+  // Signature dishes are marketing names on Restaurant.signatures. Ensure each
+  // one also exists as a MenuItem with a real price so the venue page can join
+  // them (city flagships use names that aren't in MENU_CATALOGUE).
+  for (const venue of RESTAURANTS) {
+    const restaurantId = restaurants[venue.slug].id;
+    for (const [index, name] of (venue.signatures ?? []).entries()) {
+      const slug = slugifyDish(name);
+      const existing = await prisma.menuItem.findUnique({
+        where: { restaurantId_slug: { restaurantId, slug } },
+        select: { id: true },
+      });
+      if (existing) continue;
+
+      const priceInPaise = signaturePricePaise(name, venue.priceLevel, index);
+      await prisma.menuItem.create({
+        data: {
+          restaurantId,
+          slug,
+          name,
+          description: `House signature — ${name}.`,
+          priceInPaise,
+          category: 'LUNCH',
+          imageUrl: '/images/menu-grill.jpg',
+          imageAlt: name,
+          allergens: [],
+          dietaryTags: [],
+          isAvailable: true,
+          sortOrder: 100 + index,
+        },
       });
     }
   }

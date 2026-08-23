@@ -114,12 +114,22 @@ export function VenuePage() {
           <section className="vpage_section">
             <h2>Signature dishes</h2>
             <ul className="vpage_sig">
-              {venue.signatures.map((dish) => (
-                <li key={dish}>
-                  <Icon name="sparkles" />
-                  {dish}
-                </li>
-              ))}
+              {venue.signatures.map((dish) => {
+                const name = typeof dish === 'string' ? dish : dish.name;
+                const priceInPaise = typeof dish === 'string' ? null : dish.priceInPaise;
+                return (
+                  <li key={name}>
+                    <Icon name="sparkles" />
+                    <span className="vpage_sig_name">{name}</span>
+                    {priceInPaise != null && (
+                      <>
+                        <span className="vpage_sig_lead" aria-hidden="true" />
+                        <span className="vpage_sig_price">{rupees(priceInPaise)}</span>
+                      </>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </section>
 

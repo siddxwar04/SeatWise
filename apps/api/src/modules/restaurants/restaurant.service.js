@@ -67,7 +67,41 @@ export async function getRestaurantBySlug(slug) {
     select: restaurantListSelect,
   });
   if (!restaurant) throw new NotFoundError('That restaurant was not found.');
-  return restaurant;
+  return attachSignaturePrices(restaurant);
+}
+
+/**
+ * Venue-page signatures are marketing names (String[]). Attach MenuItem prices
+ * when the names match so diners see ₹ amounts next to dishes without a second
+ * round-trip. Unmatched names keep `priceInPaise: null` — the UI hides the price.
+ */
+async function attachSignaturePrices(restaurant) {
+  const names = restaurant.signatures ?? [];
+  if (names.length === 0) {
+    return { ...restaurant, signatures: [] };
+  }
+
+  const items = await prisma.menuItem.findMany({
+    where: {
+      restaurantId: restaurant.id,
+      isAvailable: true,
+      name: { in: names, mode: 'insensitive' },
+    },
+    select: { name: true, priceInPaise: true },
+  });
+
+  const byName = new Map(items.map((item) => [item.name.toLowerCase(), item.priceInPaise]));
+
+  return {
+    ...restaurant,
+    // Keep the raw string array for list/search clients; add priced dishes for
+    // the venue page. Frontends that only read `signatures` as strings still work.
+    signatures: names,
+    signatureDishes: names.map((name) => ({
+      name,
+      priceInPaise: byName.get(name.toLowerCase()) ?? null,
+    })),
+  };
 }
 
 /**

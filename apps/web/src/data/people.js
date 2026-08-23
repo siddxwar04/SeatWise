@@ -143,9 +143,12 @@ export function reviewsFor(venue, count = 4) {
             ],
     );
 
+    const sigNames = (venue.signatures ?? []).map((s) =>
+      s && typeof s === 'object' && s.name ? s.name : String(s),
+    );
     const body = random
       .pick(REVIEW_BODIES[stars])
-      .replace('{sig}', random.pick(venue.signatures ?? ['the tasting menu']));
+      .replace('{sig}', random.pick(sigNames.length ? sigNames : ['the tasting menu']));
 
     out.push({
       id: `${venue.slug}-r${i}`,
