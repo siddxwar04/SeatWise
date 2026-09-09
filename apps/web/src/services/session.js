@@ -117,9 +117,9 @@ export async function login({ email, password }) {
   return { user: session.user, managedVenues: await managedFor(session.user) };
 }
 
-export async function register({ username, email, password }) {
+export async function register({ username, email, password, confirmPassword }) {
   if (LIVE_API) {
-    const session = await authApi.register({ username, email, password });
+    const session = await authApi.register({ username, email, password, confirmPassword });
     setAccessToken(session.accessToken);
     return { user: session.user, managedVenues: [] };
   }
@@ -131,6 +131,9 @@ export async function register({ username, email, password }) {
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email ?? ''))
     details.email = 'Enter a valid email address.';
   if ((password ?? '').length < 8) details.password = 'At least 8 characters.';
+  if (!details.password && password !== confirmPassword) {
+    details.confirmPassword = 'Passwords do not match.';
+  }
   if (Object.keys(details).length) {
     throw new ServiceError('Check the highlighted fields.', { code: 'VALIDATION', details });
   }

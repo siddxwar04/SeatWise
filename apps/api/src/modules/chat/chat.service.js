@@ -94,6 +94,10 @@ export async function chat({ message, history = [] }) {
       name: true,
       address: true,
       phone: true,
+      cuisine: true,
+      area: true,
+      priceLevel: true,
+      ratingAvg: true,
       tables: {
         where: { isActive: true },
         select: { zone: true },
@@ -156,6 +160,10 @@ export async function chat({ message, history = [] }) {
         name: r.name,
         address: r.address,
         phone: r.phone,
+        cuisine: r.cuisine,
+        area: r.area,
+        price: r.priceLevel,
+        rating: r.ratingAvg,
         zones,
         priceRange:
           prices.length === 0

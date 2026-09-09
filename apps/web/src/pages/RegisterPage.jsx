@@ -9,7 +9,7 @@ import { ApiError } from '../lib/api.js';
 import { ServiceError } from '../services/config.js';
 
 export function RegisterPage() {
-  const [form, setForm] = useState({ username: '', email: '', password: '' });
+  const [form, setForm] = useState({ username: '', email: '', password: '', confirmPassword: '' });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
@@ -75,7 +75,16 @@ export function RegisterPage() {
           value={form.password}
           onChange={update('password')}
           error={errors.password}
-          hint="At least 8 characters."
+          hint="At least 10 characters, with upper, lower and a number."
+          autoComplete="new-password"
+          required
+        />
+        <TextField
+          label="Confirm password"
+          type="password"
+          value={form.confirmPassword}
+          onChange={update('confirmPassword')}
+          error={errors.confirmPassword}
           autoComplete="new-password"
           required
         />

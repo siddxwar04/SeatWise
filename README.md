@@ -361,6 +361,21 @@ Concurrency tests use `.env.test`. Do not point that file at a shared or product
 
 ---
 
+## Deployment
+
+The API and web build to separate containers (`apps/api/Dockerfile`, `apps/web/Dockerfile` — production target), meant to run as two services, e.g. on Railway/Render.
+
+The refresh-token cookie is `httpOnly` + `SameSite=strict`, so it only survives requests that the browser sees as same-origin. If the SPA called the API's own domain directly, the browser would drop the cookie on every request and login would silently fail (public, unauthenticated routes like `/api/chat` would still work). To keep the browser talking to one origin, the production nginx container proxies `/api/*` and `/health` to the API service instead of serving them itself:
+
+| Variable     | Where       | Notes                                                                                                                                                                               |
+| ------------ | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `API_URL`    | web service | Backend's base URL (e.g. `https://seatwise-api.onrender.com`), no trailing slash. Baked into nginx's config via `envsubst` at container start — see `apps/web/nginx.conf.template`. |
+| `WEB_ORIGIN` | API service | Public URL of the web service (CORS `Origin` check — unchanged by the proxy, since the browser's `Origin` header is still the web origin).                                          |
+
+If a host doesn't run the web Docker image as-is (e.g. a static-only host), reproduce the same effect with that host's rewrite/proxy feature: forward `/api/*` and `/health` to the API's origin so the browser never leaves the web origin.
+
+---
+
 ## Docker
 
 ```bash

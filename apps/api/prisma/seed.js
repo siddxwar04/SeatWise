@@ -197,6 +197,28 @@ const RESTAURANTS = [
       'A colonnaded dining room built for a slow evening — tandoor classics, a deep whisky list, and a terrace over the ruins.',
     signatures: ['Tandoori lamb chops', 'Dal makhani, overnight simmer', 'Kulfi falooda'],
   },
+  // Prepaid tasting-menu experience. Referenced by the frontend's demo fixture
+  // (apps/web/src/data/venues.js) but never carried over into this seed after
+  // the live-API switch — booking it against the real API 404ed with "That
+  // restaurant was not found" until this entry existed.
+  {
+    slug: 'golconda-terrace',
+    name: 'Golconda Terrace',
+    address: 'Financial District, Gachibowli, Hyderabad 500032',
+    phone: '04023450000',
+    cuisine: 'Modern Indian',
+    priceLevel: 4,
+    vibeTags: ['date-night', 'experience', 'rooftop'],
+    city: 'hyderabad',
+    area: 'Gachibowli',
+    tagline: 'Ten courses on a rooftop facing the fort.',
+    about:
+      'A rooftop tasting menu that leans Telangana — millet, gongura, wild game when the licence allows. Two sittings, prepaid, and the second one gets the fort lit up.',
+    signatures: ['Ten-course Deccan menu', 'Gongura and quail', 'Jowar and jaggery'],
+    bookingType: 'EXPERIENCE',
+    prepaidPaise: rupees(3500),
+    walkIn: false,
+  },
 ];
 
 /** Shared floor plan for the five single-city flagship venues above. */
@@ -394,6 +416,7 @@ const MENU_BY_SLUG = {
     priceInPaise: Math.round(i.priceInPaise * 0.95),
   })),
   ...Object.fromEntries(NEW_CITY_SLUGS.map((slug) => [slug, MENU_CATALOGUE])),
+  'golconda-terrace': MENU_CATALOGUE,
 };
 
 /**
@@ -436,7 +459,747 @@ const TABLES_BY_SLUG = {
     { label: 'T6', capacity: 10, zone: 'PRIVATE' },
   ],
   ...Object.fromEntries(NEW_CITY_SLUGS.map((slug) => [slug, DEFAULT_TABLES])),
+  // Matches the frontend fixture's floor plan for this venue: '4x2 3x4 1x10',
+  // outdoor rooftop seating plus one private table for the tasting-menu sitting.
+  'golconda-terrace': [
+    { label: 'T1', capacity: 2, zone: 'OUTDOOR' },
+    { label: 'T2', capacity: 2, zone: 'OUTDOOR' },
+    { label: 'T3', capacity: 2, zone: 'OUTDOOR' },
+    { label: 'T4', capacity: 2, zone: 'OUTDOOR' },
+    { label: 'T5', capacity: 4, zone: 'OUTDOOR' },
+    { label: 'T6', capacity: 4, zone: 'OUTDOOR' },
+    { label: 'T7', capacity: 4, zone: 'PRIVATE' },
+    { label: 'P1', capacity: 10, zone: 'PRIVATE' },
+  ],
 };
+
+/**
+ * The demo market — apps/web/src/data/venues.js's 33-venue fixture.
+ *
+ * The discovery/search UI reads that fixture directly (it has no cross-venue
+ * search endpoint yet), while booking always resolves a restaurant against
+ * this database by slug. Before this block, only `golconda-terrace` existed
+ * on both sides — every other fixture venue 404ed at booking time with "That
+ * restaurant was not found." Seeding a real row (with tables + menu) per
+ * fixture slug closes that gap without the discovery UI having to change.
+ *
+ * Field values are transcribed from the fixture's AUTHORED array; `tables` /
+ * `zones` mirror its compact notation and are expanded below by
+ * parseFixtureTables, the same algorithm as the frontend's parseTables.
+ */
+const CITY_DISPLAY = {
+  pune: 'Pune',
+  mumbai: 'Mumbai',
+  bengaluru: 'Bengaluru',
+  hyderabad: 'Hyderabad',
+  chennai: 'Chennai',
+  delhi: 'Delhi',
+};
+
+const CITY_STD_CODE = {
+  pune: '020',
+  mumbai: '022',
+  bengaluru: '080',
+  hyderabad: '040',
+  chennai: '044',
+  delhi: '011',
+};
+
+/** Fixture zone tokens (MAIN/OUTDOOR/BAR/BOOTH/COUNTER/PRIVATE) -> Prisma's TableZone. */
+const FIXTURE_ZONE_MAP = {
+  MAIN: 'INDOOR',
+  OUTDOOR: 'OUTDOOR',
+  BAR: 'BAR',
+  BOOTH: 'INDOOR',
+  COUNTER: 'BAR',
+  PRIVATE: 'PRIVATE',
+};
+
+const ZONE_LABEL_PREFIX = { INDOOR: 'T', OUTDOOR: 'O', BAR: 'BAR-', PRIVATE: 'P' };
+
+const TYPE_TO_BOOKING_TYPE = {
+  table: 'TABLE',
+  counter: 'COUNTER',
+  experience: 'EXPERIENCE',
+  waitlist: 'WAITLIST',
+};
+
+/** A couple of fixture venues price signatures explicitly rather than by tier. */
+const SIGNATURE_PRICE_OVERRIDES = {
+  'sourdough-society': {
+    'Six-seat evening menu': 180000,
+    'Miso banana bread': 18000,
+    'Cold brew, house roast': 22000,
+  },
+};
+
+/** No real numbers exist for the fixture venues, so fabricate a stable one per city. */
+function phoneFor(city, index) {
+  const std = CITY_STD_CODE[city] ?? '080';
+  return `${std}${String(49000000 + index).padStart(8, '0')}`;
+}
+
+function vibeTagsFor(type, walkIn) {
+  if (type === 'experience') return ['date-night', 'experience'];
+  if (type === 'counter') return ['date-night', 'intimate'];
+  if (type === 'waitlist') return ['lively', 'casual'];
+  return walkIn ? ['casual', 'family'] : ['date-night', 'lively'];
+}
+
+/**
+ * `'4x2 6x4 1x8'` + `['MAIN', 'OUTDOOR']` -> labelled RestaurantTable rows.
+ * Mirrors the frontend's parseTables in data/venues.js: biggest tables first,
+ * tables of 8+ go to the first listed zone, everything else round-robins so
+ * no zone ends up empty.
+ */
+function parseFixtureTables(spec, zones) {
+  const groups = spec
+    .trim()
+    .split(/\s+/)
+    .map((token) => {
+      const [count, seats] = token.split('x').map(Number);
+      return { count, seats };
+    })
+    .sort((a, b) => b.seats - a.seats);
+
+  const mappedZones = zones.map((zone) => FIXTURE_ZONE_MAP[zone] ?? 'INDOOR');
+  const counters = {};
+  const tables = [];
+  let zoneIndex = 0;
+
+  for (const group of groups) {
+    for (let i = 0; i < group.count; i += 1) {
+      const zone = group.seats >= 8 ? mappedZones[0] : mappedZones[zoneIndex++ % mappedZones.length];
+      counters[zone] = (counters[zone] ?? 0) + 1;
+      const prefix = ZONE_LABEL_PREFIX[zone] ?? 'T';
+      tables.push({ label: `${prefix}${counters[zone]}`, capacity: group.seats, zone });
+    }
+  }
+  return tables;
+}
+
+const MARKET_VENUES = [
+  /* ─────────────────────────────────────────────────────────────── Pune ──── */
+  {
+    slug: 'olive-and-grove',
+    name: 'Olive & Grove',
+    city: 'pune',
+    area: 'Koregaon Park',
+    cuisine: 'Mediterranean',
+    price: 3,
+    curated: 'Hard to get',
+    tagline: 'Charcoal grills and mezze under the fig trees.',
+    about:
+      'A courtyard restaurant built around a wood-fired grill, where the mezze list changes with whatever the Pune market has that morning. Twelve tables sit outside under strung lights; the four inside are for people who want to watch the pass.',
+    signatures: [
+      'Charred octopus, burnt lemon',
+      'Lamb shoulder for the table',
+      'Fig and labneh flatbread',
+    ],
+    type: 'table',
+    walkIn: false,
+    tables: '2x2 5x4 2x6 1x8',
+    zones: ['MAIN', 'OUTDOOR', 'BAR'],
+    address: 'Lane 7, Koregaon Park',
+  },
+  {
+    slug: 'kite-and-string',
+    name: 'Kite & String',
+    city: 'pune',
+    area: 'Kalyani Nagar',
+    cuisine: 'Small plates',
+    price: 3,
+    curated: 'Hard to get',
+    tagline: 'Twelve seats around the pass. The menu is whatever came in this morning.',
+    about:
+      'One counter, twelve stools, two services a night. There is no printed menu — the team cooks what the morning delivery justified and tells you about each plate as it lands.',
+    signatures: ['Whatever the boat brought', 'Cultured butter and sourdough', 'Brown-butter kulfi'],
+    type: 'counter',
+    walkIn: false,
+    tables: '6x2',
+    zones: ['COUNTER'],
+    address: 'Off North Main Road, Kalyani Nagar',
+  },
+  {
+    slug: 'forno-nove',
+    name: 'Forno Nove',
+    city: 'pune',
+    area: 'Koregaon Park',
+    cuisine: 'Italian',
+    price: 2,
+    tagline: 'Wood-fired Neapolitan, ninety-second bakes, natural wine on tap.',
+    about:
+      'A neighbourhood pizzeria that takes its dough more seriously than its dining room. Ninety-second bakes at 450°C, a short natural-wine list poured by the glass, and booths that comfortably take a party of six.',
+    signatures: ['Margherita, 48-hour dough', 'Nduja and honey', 'Tiramisù, made at 4pm daily'],
+    type: 'table',
+    walkIn: true,
+    tables: '4x2 6x4 3x6 1x10',
+    zones: ['MAIN', 'OUTDOOR', 'BOOTH'],
+    address: 'Lane 5, Koregaon Park',
+  },
+  {
+    slug: 'the-saffron-room',
+    name: 'The Saffron Room',
+    city: 'pune',
+    area: 'Deccan',
+    cuisine: 'North Indian',
+    price: 3,
+    curated: "Chef's table",
+    tagline: 'Dum biryani finished at the table. Fourth-generation family recipe.',
+    about:
+      'A fixed eight-course menu served twice a night, ending with a sealed biryani handi cracked open at the table. Prepaid, because the kitchen buys for exactly the number of guests booked.',
+    signatures: ['Sealed mutton dum biryani', 'Galouti on warm parotta', 'Saffron phirni'],
+    type: 'experience',
+    prepaid: 250000,
+    walkIn: false,
+    tables: '2x4 3x6 1x12',
+    zones: ['PRIVATE', 'MAIN'],
+    address: 'Off Fergusson College Road, Deccan',
+  },
+  {
+    slug: 'hachi-omakase',
+    name: 'Hachi Omakase',
+    city: 'pune',
+    area: 'Baner',
+    cuisine: 'Japanese',
+    price: 4,
+    curated: 'Hard to get',
+    tagline: 'Eighteen courses, one sitting a night, silent kitchen.',
+    about:
+      'Eight seats, one service, eighteen courses. Fish is flown in twice a week and the counter is silent by design — the chef talks, nobody else has to.',
+    signatures: ['Eighteen-course omakase', 'Aged akami', 'Tamago, last course'],
+    type: 'experience',
+    prepaid: 680000,
+    walkIn: false,
+    tables: '4x2',
+    zones: ['COUNTER'],
+    address: 'Baner Road, Baner',
+  },
+  {
+    slug: 'copper-kettle-bakehouse',
+    name: 'Copper Kettle Bakehouse',
+    city: 'pune',
+    area: 'Viman Nagar',
+    cuisine: 'Bakery',
+    price: 1,
+    curated: 'New this month',
+    tagline: 'All-day sourdough, laminated pastry, walk-ins always welcome.',
+    about:
+      'A bakery that stays open for dinner. Sourdough goes in at 4am, the pastry case is refilled at 3pm, and there is always a table — booking simply saves you the wait on a Sunday.',
+    signatures: ['Country loaf, sold by weight', 'Kunafa croissant', 'Cardamom bun'],
+    type: 'table',
+    walkIn: true,
+    tables: '8x2 4x4 1x6',
+    zones: ['MAIN', 'OUTDOOR'],
+    address: 'Phoenix Lane, Viman Nagar',
+  },
+  {
+    slug: 'nine-yards',
+    name: 'Nine Yards',
+    city: 'pune',
+    area: 'Kharadi',
+    cuisine: 'Small plates',
+    price: 2,
+    tagline: 'Snack-forward bar menu, terrace over the river.',
+    about:
+      'Built for after work: a terrace, a short list of highballs, and food that arrives in the order it is ready rather than in courses.',
+    signatures: ['Pepper-fry chicken bao', 'Masala fries, obviously', 'Kokum highball'],
+    type: 'table',
+    walkIn: true,
+    tables: '6x2 4x4 2x6',
+    zones: ['MAIN', 'OUTDOOR', 'BAR'],
+    address: 'Riverside Road, Kharadi',
+  },
+  {
+    slug: 'basil-and-clay',
+    name: 'Basil & Clay',
+    city: 'pune',
+    area: 'Baner',
+    cuisine: 'Italian',
+    price: 2,
+    tagline: 'Handmade pasta, twenty covers, corner shopfront.',
+    about:
+      'Twenty covers and no reservations — join the remote queue and walk over when you are called. Pasta is rolled behind the counter between services.',
+    signatures: ['Cacio e pepe, finished in the wheel', 'Ragù bianco', 'Affogato'],
+    type: 'waitlist',
+    walkIn: true,
+    tables: '5x2 3x4',
+    zones: ['MAIN', 'BOOTH'],
+    address: 'Sanewadi, Baner',
+  },
+
+  /* ─────────────────────────────────────────────────────────────── Mumbai ──── */
+  {
+    slug: 'salt-and-tide',
+    name: 'Salt & Tide',
+    city: 'mumbai',
+    area: 'Bandra West',
+    cuisine: 'Coastal',
+    price: 3,
+    curated: 'Hard to get',
+    tagline: 'Day-boat catch, Goan and Malvani, salt air on the terrace.',
+    about:
+      'The board is written twice a day depending on what the day boats land. Malvani masalas, a Goan sausage plate that never leaves the menu, and a terrace worth the wait for.',
+    signatures: ['Day-boat catch, recheado', 'Prawn balchão on pão', 'Solkadhi'],
+    type: 'table',
+    walkIn: false,
+    tables: '4x2 6x4 2x6 1x8',
+    zones: ['MAIN', 'OUTDOOR', 'BAR'],
+    address: 'Chapel Road, Bandra West',
+  },
+  {
+    slug: 'mill-and-marrow',
+    name: 'Mill & Marrow',
+    city: 'mumbai',
+    area: 'Lower Parel',
+    cuisine: 'Modern Indian',
+    price: 4,
+    curated: 'Tasting menu',
+    tagline: 'Twelve courses through a mill-district kitchen.',
+    about:
+      'A tasting menu that reads regional India without the greatest-hits routine: millet, offal, river fish, and a dessert course built on jaggery. Prepaid ticket, one seating, no substitutions beyond allergies.',
+    signatures: ['Twelve-course menu', 'Bone-marrow kulcha', 'Jaggery and curd leaf'],
+    type: 'experience',
+    prepaid: 450000,
+    walkIn: false,
+    tables: '3x2 4x4 1x8',
+    zones: ['MAIN', 'PRIVATE'],
+    address: 'Todi Mills, Lower Parel',
+  },
+  {
+    slug: 'harbour-and-vine',
+    name: 'Harbour & Vine',
+    city: 'mumbai',
+    area: 'Colaba',
+    cuisine: 'European',
+    price: 3,
+    tagline: 'A proper wine list and a room that has seen things.',
+    about:
+      'High ceilings, marble tables, and 240 bottles. The kitchen is unfashionably classical and very good at it — a roast chicken for two that takes 40 minutes and is worth every one.',
+    signatures: ['Roast chicken for two', 'Steak frites', 'Île flottante'],
+    type: 'table',
+    walkIn: true,
+    tables: '6x2 6x4 2x6 1x10',
+    zones: ['MAIN', 'BOOTH', 'BAR'],
+    address: 'Colaba Causeway',
+  },
+  {
+    slug: 'tiffin-room-42',
+    name: 'Tiffin Room 42',
+    city: 'mumbai',
+    area: 'Andheri West',
+    cuisine: 'South Indian',
+    price: 1,
+    tagline: 'Idli at seven in the morning, and still going at eleven at night.',
+    about:
+      'Four generations, one griddle, and a queue that moves faster than it looks. Bookings exist for the handful of tables at the back; everyone else takes a number.',
+    signatures: ['Ghee podi idli', 'Rava dosa', 'Filter coffee, two glasses'],
+    type: 'table',
+    walkIn: true,
+    tables: '10x2 6x4 2x6',
+    zones: ['MAIN'],
+    address: 'Lokhandwala, Andheri West',
+  },
+  {
+    slug: 'neon-gully',
+    name: 'Neon Gully',
+    city: 'mumbai',
+    area: 'Lower Parel',
+    cuisine: 'Pan-Asian',
+    price: 2,
+    tagline: 'Street-food Asia, loud room, no reservations.',
+    about:
+      'Bangkok-by-way-of-Parel: skewers, curries and a sound system with opinions. No bookings — join the queue from your phone and it will tell you when to start walking.',
+    signatures: ['Pork jowl skewers', 'Khao soi', 'Lychee and chilli slush'],
+    type: 'waitlist',
+    walkIn: true,
+    tables: '8x2 4x4',
+    zones: ['MAIN', 'BAR'],
+    address: 'Kamala Mills, Lower Parel',
+  },
+  {
+    slug: 'the-marine-terrace',
+    name: 'The Marine Terrace',
+    city: 'mumbai',
+    area: 'Colaba',
+    cuisine: 'European',
+    price: 4,
+    curated: 'Sea view',
+    tagline: 'Sunset over the water, and a bar that stays for the night.',
+    about:
+      'The terrace faces west, which is the entire proposition between six and seven. Book the 7pm if you want the light; book the 9:30 if you want the room to yourself.',
+    signatures: ['Oysters, three ways', 'Butter-poached lobster', 'Negroni service'],
+    type: 'table',
+    walkIn: false,
+    tables: '4x2 4x4 2x6 1x12',
+    zones: ['OUTDOOR', 'MAIN', 'PRIVATE'],
+    address: 'Apollo Bunder, Colaba',
+  },
+
+  /* ────────────────────────────────────────────────────────────── Bengaluru ──── */
+  {
+    slug: 'ficus-and-fig',
+    name: 'Ficus & Fig',
+    city: 'bengaluru',
+    area: 'Indiranagar',
+    cuisine: 'Mediterranean',
+    price: 3,
+    tagline: 'A courtyard, a fig tree, and a wood oven that runs all evening.',
+    about:
+      'Built around an actual fig tree in a 12th Main courtyard. Flatbreads out of the wood oven, a lot of vegetables treated properly, and a garden bar that fills up by eight.',
+    signatures: ['Whipped feta, hot honey', 'Wood-oven flatbread', 'Charred aubergine'],
+    type: 'table',
+    walkIn: true,
+    tables: '5x2 5x4 2x6 1x8',
+    zones: ['MAIN', 'OUTDOOR', 'BAR'],
+    address: '12th Main, Indiranagar',
+  },
+  {
+    slug: 'malt-and-mash',
+    name: 'Malt & Mash',
+    city: 'bengaluru',
+    area: 'Koramangala',
+    cuisine: 'Brewpub',
+    price: 2,
+    tagline: 'Eight taps, a long room, and a wait that is honestly part of it.',
+    about:
+      'A brewery that never took bookings and is not going to start. The remote queue tells you the truth about the wait, which on a Friday is ninety minutes and on a Tuesday is none.',
+    signatures: ['Hefeweizen, brewed on site', 'Pork ribs', 'Beer-cheese kulcha'],
+    type: 'waitlist',
+    walkIn: true,
+    tables: '10x4 4x6 2x10',
+    zones: ['MAIN', 'OUTDOOR', 'BAR'],
+    address: '5th Block, Koramangala',
+  },
+  {
+    slug: 'curry-culture-lab',
+    name: 'Curry Culture Lab',
+    city: 'bengaluru',
+    area: 'Church Street',
+    cuisine: 'Modern Indian',
+    price: 3,
+    curated: 'Tasting menu',
+    tagline: 'Nine courses that argue with what a curry is.',
+    about:
+      'A counter kitchen working through regional gravies as technique rather than nostalgia. Nine courses, two sittings, and a menu card you take home with the pairings written on it.',
+    signatures: ['Nine-course menu', 'Fermented rice and crab', 'Coconut ash sorbet'],
+    type: 'experience',
+    prepaid: 320000,
+    walkIn: false,
+    tables: '6x2 3x4',
+    zones: ['COUNTER', 'MAIN'],
+    address: 'Church Street, Central Bengaluru',
+  },
+  {
+    slug: 'dosa-republic',
+    name: 'Dosa Republic',
+    city: 'bengaluru',
+    area: 'Jayanagar',
+    cuisine: 'South Indian',
+    price: 1,
+    tagline: 'Thirty-one dosas. The benne masala is the one.',
+    about:
+      'A 4th Block institution with a griddle that has not cooled since 1991. Tables turn in twenty minutes, which is why there is nearly always one free.',
+    signatures: ['Benne masala dosa', 'Set dosa, three to a plate', 'Kesari bath'],
+    type: 'table',
+    walkIn: true,
+    tables: '12x2 8x4 2x6',
+    zones: ['MAIN'],
+    address: '4th Block, Jayanagar',
+  },
+  {
+    slug: 'smoke-and-bone',
+    name: 'Smoke & Bone',
+    city: 'bengaluru',
+    area: 'Indiranagar',
+    cuisine: 'Barbecue',
+    price: 3,
+    tagline: 'Fourteen-hour brisket, sold until it runs out.',
+    about:
+      'The smoker goes on at four in the morning and the board comes down when the meat is gone — usually around ten. Booths take six, and the terrace takes whoever is left.',
+    signatures: ['Fourteen-hour brisket', 'Burnt-end pav', 'Pickle plate'],
+    type: 'table',
+    walkIn: true,
+    tables: '4x2 6x4 3x6 1x10',
+    zones: ['MAIN', 'BOOTH', 'OUTDOOR'],
+    address: '80 Feet Road, Indiranagar',
+  },
+  {
+    slug: 'sourdough-society',
+    name: 'Sourdough Society',
+    city: 'bengaluru',
+    area: 'Koramangala',
+    cuisine: 'Bakery',
+    price: 2,
+    curated: 'New this month',
+    tagline: 'A bakery counter that does an evening service of six seats.',
+    about:
+      'Bread all day, then six counter seats for an evening menu of whatever the bakers want to cook. Booking is the only way to get one of the six.',
+    signatures: ['Six-seat evening menu', 'Miso banana bread', 'Cold brew, house roast'],
+    type: 'counter',
+    walkIn: true,
+    tables: '6x2 2x4',
+    zones: ['COUNTER', 'OUTDOOR'],
+    address: '7th Block, Koramangala',
+  },
+
+  /* ────────────────────────────────────────────────────────────── Hyderabad ──── */
+  {
+    slug: 'nizam-and-noor',
+    name: 'Nizam & Noor',
+    city: 'hyderabad',
+    area: 'Banjara Hills',
+    cuisine: 'Biryani & Kebab',
+    price: 3,
+    curated: 'Hard to get',
+    tagline: 'Kacchi gosht biryani, sealed and opened at your table.',
+    about:
+      'The biryani is layered raw and sealed with dough, which means it is committed to an hour before you arrive — the reason this kitchen cares more than most whether you actually turn up.',
+    signatures: ['Kacchi gosht biryani', 'Pathar ka gosht', 'Double ka meetha'],
+    type: 'table',
+    walkIn: false,
+    tables: '4x2 8x4 4x6 2x12',
+    zones: ['MAIN', 'PRIVATE', 'OUTDOOR'],
+    address: 'Road No. 12, Banjara Hills',
+  },
+  {
+    slug: 'deccan-smokehouse',
+    name: 'Deccan Smokehouse',
+    city: 'hyderabad',
+    area: 'Jubilee Hills',
+    cuisine: 'Barbecue',
+    price: 3,
+    tagline: 'Rock-terrace grill, Deccan spices, long tables.',
+    about:
+      'Built into the boulders above Jubilee Hills, with a grill on the terrace and long shared tables that make a party of nine easy — which almost nowhere else here does.',
+    signatures: ['Guntur chilli lamb chops', 'Smoked pumpkin', 'Filter-coffee ice cream'],
+    type: 'table',
+    walkIn: true,
+    tables: '5x2 6x4 2x6 1x8',
+    zones: ['MAIN', 'OUTDOOR', 'BAR'],
+    address: 'Road No. 36, Jubilee Hills',
+  },
+  {
+    slug: 'charminar-chai-rooms',
+    name: 'Charminar Chai Rooms',
+    city: 'hyderabad',
+    area: 'Himayatnagar',
+    cuisine: 'South Indian',
+    price: 1,
+    tagline: 'Irani chai and Osmania biscuits, since 1974.',
+    about:
+      'Marble tables, ceiling fans, and a chai urn that has been running for fifty years. Nobody has ever taken a booking here, but the queue is now on your phone instead of the pavement.',
+    signatures: ['Irani chai', 'Osmania biscuits', 'Keema pav, till it lasts'],
+    type: 'waitlist',
+    walkIn: true,
+    tables: '14x2 6x4',
+    zones: ['MAIN'],
+    address: 'Himayatnagar Main Road',
+  },
+  {
+    slug: 'basil-hive',
+    name: 'Basil Hive',
+    city: 'hyderabad',
+    area: 'Jubilee Hills',
+    cuisine: 'Italian',
+    price: 2,
+    tagline: 'Pasta rolled at the counter you are sitting at.',
+    about:
+      'A pasta counter, ten seats deep, where the sheeter runs between orders. Short menu, house wine by the carafe, out in an hour if you want to be.',
+    signatures: ['Tagliatelle, ragù di casa', 'Cacio e pepe', 'Espresso granita'],
+    type: 'counter',
+    walkIn: true,
+    tables: '8x2 3x4',
+    zones: ['COUNTER', 'MAIN'],
+    address: 'Road No. 45, Jubilee Hills',
+  },
+
+  /* ─────────────────────────────────────────────────────────────── Chennai ──── */
+  {
+    slug: 'kadal-and-coconut',
+    name: 'Kadal & Coconut',
+    city: 'chennai',
+    area: 'Besant Nagar',
+    cuisine: 'Coastal',
+    price: 2,
+    curated: 'Sea view',
+    tagline: 'Elliot’s Beach catch, fried in coconut oil, eaten outside.',
+    about:
+      'Two streets from the beach, with the day’s catch on ice by the door. Meen kuzhambu, banana-leaf fry, and a terrace where the sea breeze does the air conditioning.',
+    signatures: ['Meen kuzhambu', 'Banana-leaf fish fry', 'Elaneer payasam'],
+    type: 'table',
+    walkIn: true,
+    tables: '6x2 6x4 2x6 1x8',
+    zones: ['OUTDOOR', 'MAIN'],
+    address: '2nd Avenue, Besant Nagar',
+  },
+  {
+    slug: 'peppercorn-house',
+    name: 'Peppercorn House',
+    city: 'chennai',
+    area: 'Nungambakkam',
+    cuisine: 'Chettinad',
+    price: 3,
+    curated: 'Hard to get',
+    tagline: 'Chettinad cooking with the pepper turned all the way up.',
+    about:
+      'Masalas ground daily on stone, a kozhi rasam that regulars order before they sit down, and a back room that takes a party of ten without notice.',
+    signatures: ['Kozhi rasam', 'Nandu masala', 'Paal paniyaram'],
+    type: 'table',
+    walkIn: false,
+    tables: '4x2 6x4 3x6 1x10',
+    zones: ['MAIN', 'PRIVATE', 'BOOTH'],
+    address: 'Sterling Road, Nungambakkam',
+  },
+  {
+    slug: 'marina-filter-room',
+    name: 'Marina Filter Room',
+    city: 'chennai',
+    area: 'T. Nagar',
+    cuisine: 'South Indian',
+    price: 1,
+    tagline: 'Degree coffee and ghee roast, no reservations, never has been.',
+    about:
+      'A room that has not changed since 1968 and does not intend to. The only new thing is that the queue now sends you a message instead of making you stand in it.',
+    signatures: ['Degree coffee', 'Ghee roast', 'Sambar vadai'],
+    type: 'waitlist',
+    walkIn: true,
+    tables: '16x2 6x4',
+    zones: ['MAIN'],
+    address: 'Ranganathan Street, T. Nagar',
+  },
+  {
+    slug: 'sixty-feet-east',
+    name: 'Sixty Feet East',
+    city: 'chennai',
+    area: 'Adyar',
+    cuisine: 'Pan-Asian',
+    price: 3,
+    tagline: 'Bangkok and Hanoi by way of a corner house in Adyar.',
+    about:
+      'Curries built from scratch pastes, a bar that takes its sodas seriously, and booths that stay quiet enough to hear the other side of the table.',
+    signatures: ['Massaman short rib', 'Bún chả', 'Kaffir lime soda'],
+    type: 'table',
+    walkIn: true,
+    tables: '5x2 5x4 2x6',
+    zones: ['MAIN', 'BAR', 'BOOTH'],
+    address: 'Sardar Patel Road, Adyar',
+  },
+  {
+    slug: 'the-salt-cellar',
+    name: 'The Salt Cellar',
+    city: 'chennai',
+    area: 'ECR',
+    cuisine: 'European',
+    price: 4,
+    curated: "Chef's table",
+    tagline: 'One sitting, eight courses, forty minutes down the coast road.',
+    about:
+      'A single 8pm sitting in a converted beach house. The drive is the point as much as the food — go early and stay for the last course outside.',
+    signatures: ['Eight-course coastal menu', 'Cured pomfret', 'Salt-baked pineapple'],
+    type: 'experience',
+    prepaid: 380000,
+    walkIn: false,
+    tables: '4x2 2x4 1x8',
+    zones: ['PRIVATE', 'OUTDOOR'],
+    address: 'East Coast Road, Muttukadu',
+  },
+
+  /* ─────────────────────────────────────────────────────────────── Delhi NCR ──── */
+  {
+    slug: 'haveli-nine',
+    name: 'Haveli Nine',
+    city: 'delhi',
+    area: 'Hauz Khas',
+    cuisine: 'North Indian',
+    price: 3,
+    curated: "Chef's table",
+    tagline: 'A courtyard haveli, nine courses, two sittings.',
+    about:
+      'Dishes traced to specific Purani Dilli households, served in a restored courtyard. Prepaid because the kitchen shops for the exact covers booked, every single day.',
+    signatures: ['Nine-course Dilli menu', 'Nihari, Sunday only', 'Shahi tukda'],
+    type: 'experience',
+    prepaid: 300000,
+    walkIn: false,
+    tables: '4x2 4x4 2x6 1x12',
+    zones: ['PRIVATE', 'MAIN', 'OUTDOOR'],
+    address: 'Deer Park Road, Hauz Khas',
+  },
+  {
+    slug: 'the-chandni-table',
+    name: 'The Chandni Table',
+    city: 'delhi',
+    area: 'Connaught Place',
+    cuisine: 'Biryani & Kebab',
+    price: 2,
+    tagline: 'Old Delhi kebabs, inner-circle address, open late.',
+    about:
+      'The seekh recipe came from a Ballimaran shop that closed in 2009; the family brought it here. Late kitchen, big booths, and a queue that thins out after ten.',
+    signatures: ['Mutton seekh', 'Butter chicken, 1970s recipe', 'Rabri faluda'],
+    type: 'table',
+    walkIn: true,
+    tables: '8x2 8x4 3x6 1x10',
+    zones: ['MAIN', 'BOOTH'],
+    address: 'Inner Circle, Connaught Place',
+  },
+  {
+    slug: 'cloud-nine-aerocity',
+    name: 'Cloud Nine',
+    city: 'delhi',
+    area: 'Aerocity',
+    cuisine: 'Pan-Asian',
+    price: 4,
+    tagline: 'A late kitchen for people who just landed.',
+    about:
+      'Sushi, robata and a bar that runs to one in the morning, ten minutes from the terminal. Half the room is booked the same day, which is why availability here moves fast.',
+    signatures: ['Robata black cod', 'Toro tartare', 'Yuzu highball'],
+    type: 'table',
+    walkIn: false,
+    tables: '5x2 4x4 2x6 1x8',
+    zones: ['MAIN', 'BAR', 'PRIVATE'],
+    address: 'Aerocity Hospitality District',
+  },
+  {
+    slug: 'kebab-kothi',
+    name: 'Kebab Kothi',
+    city: 'delhi',
+    area: 'Saket',
+    cuisine: 'North Indian',
+    price: 2,
+    tagline: 'Awadhi kebabs off a coal sigri, in the garden, no bookings.',
+    about:
+      'Coal sigris in a walled garden and a galouti that has ruined other galoutis for a lot of people. Never taken a reservation; the remote queue is the compromise.',
+    signatures: ['Galouti kebab', 'Kakori seekh', 'Sheermal'],
+    type: 'waitlist',
+    walkIn: true,
+    tables: '10x2 5x4 2x6',
+    zones: ['MAIN', 'OUTDOOR'],
+    address: 'Press Enclave Road, Saket',
+  },
+];
+
+for (const [index, v] of MARKET_VENUES.entries()) {
+  RESTAURANTS.push({
+    slug: v.slug,
+    name: v.name,
+    address: `${v.address}, ${CITY_DISPLAY[v.city]}`,
+    phone: phoneFor(v.city, index),
+    cuisine: v.cuisine,
+    priceLevel: v.price,
+    vibeTags: vibeTagsFor(v.type, v.walkIn),
+    city: v.city,
+    area: v.area,
+    tagline: v.tagline,
+    about: v.about,
+    signatures: v.signatures,
+    curated: v.curated ?? null,
+    bookingType: TYPE_TO_BOOKING_TYPE[v.type] ?? 'TABLE',
+    walkIn: v.walkIn,
+    prepaidPaise: v.prepaid ?? null,
+  });
+  TABLES_BY_SLUG[v.slug] = parseFixtureTables(v.tables, v.zones);
+  MENU_BY_SLUG[v.slug] = MENU_CATALOGUE;
+}
 
 const VENUE_ADMINS = [
   {
@@ -533,6 +1296,10 @@ async function main() {
         tagline: venue.tagline,
         about: venue.about,
         signatures: venue.signatures,
+        curated: venue.curated ?? null,
+        bookingType: venue.bookingType ?? 'TABLE',
+        walkIn: venue.walkIn ?? false,
+        prepaidPaise: venue.prepaidPaise ?? null,
         policy: DEFAULT_POLICY,
       },
       create: { ...venue, policy: DEFAULT_POLICY },
@@ -585,7 +1352,9 @@ async function main() {
       });
       if (existing) continue;
 
-      const priceInPaise = signaturePricePaise(name, venue.priceLevel, index);
+      const priceInPaise =
+        SIGNATURE_PRICE_OVERRIDES[venue.slug]?.[name] ??
+        signaturePricePaise(name, venue.priceLevel, index);
       await prisma.menuItem.create({
         data: {
           restaurantId,

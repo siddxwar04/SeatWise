@@ -24,6 +24,25 @@ server {
         add_header Cache-Control "no-cache, must-revalidate";
     }
 
+    # Proxy the API through this same origin. The refresh token cookie is
+    # httpOnly + SameSite=strict, so it only ever travels on same-origin
+    # requests — if the browser called the API's own domain directly, it
+    # would silently drop the cookie and every login would fail. ${API_URL}
+    # is filled in from the environment at container start (see Dockerfile).
+    location /api/ {
+        proxy_pass ${API_URL}/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /health {
+        proxy_pass ${API_URL}/health;
+        proxy_set_header Host $host;
+    }
+
     # SPA fallback: unknown paths are client-side routes, not 404s.
     location / {
         try_files $uri $uri/ /index.html;

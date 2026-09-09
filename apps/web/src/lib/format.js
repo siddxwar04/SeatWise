@@ -129,7 +129,9 @@ export function initials(name) {
 
 /** `₹₹₹` for a 1–4 price band. */
 export function priceBand(level) {
-  return '₹'.repeat(Math.max(1, Math.min(4, level)));
+  const n = Number(level);
+  if (!Number.isFinite(n)) return '₹';
+  return '₹'.repeat(Math.max(1, Math.min(4, n)));
 }
 
 /** ISO timestamp → `4 min ago` / `2 h ago` / `22 Aug`. */
