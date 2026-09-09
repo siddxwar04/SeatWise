@@ -1,4 +1,4 @@
-# TastyFood — Final Tech Stack (v2)
+#SeatWise — Final Tech Stack (v2)
 
 Definitive list for the **Node rebuild**. An earlier draft targeted Java/Spring/Thymeleaf; that path was abandoned in favour of the stack already implemented under `apps/`.
 
