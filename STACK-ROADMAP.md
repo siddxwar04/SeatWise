@@ -1,4 +1,4 @@
-# TastyFood — Roadmap (Node v2)
+# SeatWise — Roadmap (Node v2)
 
 > **Stack decision (locked):** Node.js + Express + Prisma + React.  
 > An earlier Java/Spring/Thymeleaf draft lived here; ignore it. See `TECH-STACK.md` and `README.md`.
