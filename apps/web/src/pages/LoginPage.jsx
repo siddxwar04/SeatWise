@@ -94,6 +94,9 @@ export function LoginPage() {
           </Button>
 
           <p className="auth_switch">
+            <Link to="/forgot-password">Forgot password?</Link>
+          </p>
+          <p className="auth_switch">
             New to SeatWise? <Link to="/register">Create an account</Link>
           </p>
         </form>

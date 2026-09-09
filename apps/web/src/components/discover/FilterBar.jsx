@@ -17,6 +17,7 @@ function MultiFilter({ label, icon, items, selected, onToggle, render }) {
   return (
     <Dropdown
       label={label}
+      portal
       trigger={({ open, toggle }) => (
         <button
           type="button"

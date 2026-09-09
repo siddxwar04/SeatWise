@@ -1,4 +1,5 @@
 import { BadRequestError, NotFoundError } from '../../errors/AppError.js';
+import { logger } from '../../lib/logger.js';
 import { prisma } from '../../lib/prisma.js';
 
 const restaurantListSelect = {
@@ -123,6 +124,80 @@ export async function isRestaurantAdmin(userId, restaurantId, role) {
   });
 
   return Boolean(membership);
+}
+
+function slugify(value) {
+  const base = value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 70);
+  return base || 'restaurant';
+}
+
+async function uniqueSlug(base) {
+  let slug = base;
+  let suffix = 1;
+  // eslint-disable-next-line no-await-in-loop -- collisions are rare; a loop over a handful of names beats a clever query.
+  while (await prisma.restaurant.findUnique({ where: { slug }, select: { id: true } })) {
+    suffix += 1;
+    slug = `${base}-${suffix}`;
+  }
+  return slug;
+}
+
+/**
+ * A small, mixed-capacity starter floor so a freshly listed restaurant is
+ * immediately bookable — nobody wants to onboard into an empty room with
+ * "no table that seats 2" on every request.
+ */
+const STARTER_TABLES = [
+  { label: 'T1', capacity: 2, zone: 'INDOOR' },
+  { label: 'T2', capacity: 2, zone: 'INDOOR' },
+  { label: 'T3', capacity: 4, zone: 'INDOOR' },
+  { label: 'T4', capacity: 4, zone: 'INDOOR' },
+  { label: 'T5', capacity: 6, zone: 'INDOOR' },
+  { label: 'P1', capacity: 4, zone: 'OUTDOOR' },
+];
+
+/**
+ * Self-serve owner onboarding. Creates the restaurant, a starter floor, and
+ * the RestaurantAdmin row linking it to the caller — all in one transaction,
+ * so the owner console has something real to show the instant this returns.
+ */
+export async function createRestaurant(input, ownerUserId) {
+  const slug = await uniqueSlug(slugify(input.name));
+
+  const restaurant = await prisma.$transaction(async (tx) => {
+    const created = await tx.restaurant.create({
+      data: {
+        slug,
+        name: input.name,
+        address: input.address,
+        phone: input.phone,
+        cuisine: input.cuisine ?? 'Indian',
+        priceLevel: input.priceLevel ?? 2,
+        city: input.city,
+        area: input.area,
+        tagline: input.tagline ?? null,
+        about: input.about ?? null,
+      },
+    });
+
+    await tx.restaurantAdmin.create({
+      data: { userId: ownerUserId, restaurantId: created.id },
+    });
+
+    await tx.restaurantTable.createMany({
+      data: STARTER_TABLES.map((table) => ({ ...table, restaurantId: created.id })),
+    });
+
+    return created;
+  }, { timeout: 10_000, maxWait: 5_000 });
+
+  logger.info({ restaurantId: restaurant.id, ownerUserId, slug }, 'restaurant self-registered');
+  return { ...restaurant, signatures: [], signatureDishes: [] };
 }
 
 /**

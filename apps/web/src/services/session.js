@@ -151,6 +151,26 @@ export async function register({ username, email, password, confirmPassword }) {
   return { user: session.user, managedVenues: [] };
 }
 
+export async function forgotPassword(email) {
+  if (LIVE_API) return authApi.forgotPassword({ email });
+
+  await delay(500);
+  return { message: 'If that email exists, a reset link is on its way.' };
+}
+
+export async function resetPassword({ token, newPassword, confirmPassword }) {
+  if (LIVE_API) return authApi.resetPassword({ token, newPassword, confirmPassword });
+
+  await delay(500);
+  if (newPassword !== confirmPassword) {
+    throw new ServiceError('Passwords do not match.', {
+      code: 'VALIDATION',
+      details: { confirmPassword: 'Passwords do not match.' },
+    });
+  }
+  return { message: 'Password updated. Please sign in.' };
+}
+
 export async function logout() {
   if (LIVE_API) {
     try {

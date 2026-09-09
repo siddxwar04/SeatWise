@@ -5,8 +5,10 @@ import { validate } from '../../middleware/validate.js';
 import * as controller from './auth.controller.js';
 import {
   changePasswordSchema,
+  forgotPasswordSchema,
   loginSchema,
   registerSchema,
+  resetPasswordSchema,
   updateProfileSchema,
 } from './auth.schemas.js';
 
@@ -18,6 +20,20 @@ authRouter.post('/register', authLimiter, validate({ body: registerSchema }), co
 authRouter.post('/login', authLimiter, validate({ body: loginSchema }), controller.login);
 
 authRouter.post('/refresh', refreshLimiter, controller.refresh);
+
+authRouter.post(
+  '/forgot-password',
+  authLimiter,
+  validate({ body: forgotPasswordSchema }),
+  controller.forgotPassword,
+);
+
+authRouter.post(
+  '/reset-password',
+  authLimiter,
+  validate({ body: resetPasswordSchema }),
+  controller.resetPassword,
+);
 
 // Logout is intentionally public: an expired access token must not stop
 // someone from ending their session. It authenticates via the refresh cookie.

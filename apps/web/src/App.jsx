@@ -12,12 +12,14 @@ import { ToastProvider } from './context/ToastContext.jsx';
 import { BookingConfirmPage } from './pages/BookingConfirmPage.jsx';
 import { ConsolePage } from './pages/console/ConsolePage.jsx';
 import { DiscoverPage } from './pages/DiscoverPage.jsx';
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage.jsx';
 import { ForRestaurantsPage } from './pages/ForRestaurantsPage.jsx';
 import { LandingPage } from './pages/LandingPage.jsx';
 import { LoginPage } from './pages/LoginPage.jsx';
 import { MyBookingsPage } from './pages/MyBookingsPage.jsx';
 import { NotFoundPage } from './pages/NotFoundPage.jsx';
 import { RegisterPage } from './pages/RegisterPage.jsx';
+import { ResetPasswordPage } from './pages/ResetPasswordPage.jsx';
 import { VenuePage } from './pages/VenuePage.jsx';
 import './styles/tokens.css';
 import './styles/base.css';
@@ -75,6 +77,8 @@ function AppRoutes() {
         <Route path="/for-restaurants" element={<ForRestaurantsPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route
           path="/bookings"
           element={

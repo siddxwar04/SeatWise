@@ -2,7 +2,9 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { asyncHandler } from '../../lib/asyncHandler.js';
 import { requireAuth } from '../../middleware/requireAuth.js';
+import { writeLimiter } from '../../middleware/rateLimit.js';
 import { validate } from '../../middleware/validate.js';
+import { createRestaurantSchema } from './restaurant.schemas.js';
 import * as restaurantService from './restaurant.service.js';
 
 export const restaurantRouter = Router();
@@ -22,6 +24,23 @@ restaurantRouter.get(
   '/',
   asyncHandler(async (_req, res) => {
     res.json({ restaurants: await restaurantService.listActiveRestaurants() });
+  }),
+);
+
+/**
+ * Self-serve owner onboarding: any signed-in user may list a restaurant and
+ * becomes its RestaurantAdmin immediately. There is no separate approval
+ * step — the audit's successor product had no path to owner status at all
+ * short of a platform admin hand-seeding a row.
+ */
+restaurantRouter.post(
+  '/',
+  requireAuth,
+  writeLimiter,
+  validate({ body: createRestaurantSchema }),
+  asyncHandler(async (req, res) => {
+    const restaurant = await restaurantService.createRestaurant(req.body, req.user.id);
+    res.status(201).json({ restaurant });
   }),
 );
 

@@ -117,6 +117,8 @@ export const authApi = {
   me: () => api.get('/auth/me'),
   updateProfile: (data) => api.patch('/auth/me', data),
   changePassword: (data) => api.post('/auth/change-password', data),
+  forgotPassword: (data) => api.post('/auth/forgot-password', data),
+  resetPassword: (data) => api.post('/auth/reset-password', data),
 };
 
 export const reservationApi = {
@@ -134,6 +136,8 @@ export const restaurantApi = {
   /** Venues the current user may administer (ADMIN → all; else RestaurantAdmin). */
   mine: () => api.get('/restaurants/mine'),
   get: (slug) => api.get(`/restaurants/${slug}`),
+  /** Self-serve owner onboarding — creates the venue and grants console access. */
+  create: (data) => api.post('/restaurants', data),
 };
 
 export const chatApi = {
@@ -142,6 +146,37 @@ export const chatApi = {
 
 export const waitlistApi = {
   join: (data) => api.post('/waitlist', data),
+};
+
+/** Restaurant-scoped owner console. Every call is pinned to one venue via `restaurant` (slug). */
+export const adminApi = {
+  serviceToday: (restaurant) =>
+    api.get(`/admin/service/today?${new URLSearchParams({ restaurant })}`),
+  tables: (restaurant) => api.get(`/admin/tables?${new URLSearchParams({ restaurant })}`),
+  updateReservationStatus: (id, restaurant, status, version) =>
+    api.patch(`/admin/reservations/${id}/status?${new URLSearchParams({ restaurant })}`, {
+      status,
+      ...(version !== undefined ? { version } : {}),
+    }),
+  sendReminder: (id, restaurant) =>
+    api.post(`/admin/reservations/${id}/reminder?${new URLSearchParams({ restaurant })}`),
+  overbooking: (restaurant, date) =>
+    api.get(`/admin/overbooking?${new URLSearchParams({ restaurant, ...(date ? { date } : {}) })}`),
+  analytics: (restaurant, days) =>
+    api.get(`/admin/analytics?${new URLSearchParams({ restaurant, days: String(days) })}`),
+  riskQueue: (restaurant, date) =>
+    api.get(`/admin/risk-queue?${new URLSearchParams({ restaurant, ...(date ? { date } : {}) })}`),
+  floor: (restaurant) => api.get(`/admin/floor?${new URLSearchParams({ restaurant })}`),
+  portfolio: (days) => api.get(`/admin/portfolio?${new URLSearchParams({ days: String(days) })}`),
+};
+
+export const dashboardApi = {
+  waitlist: (restaurant, status) =>
+    api.get(
+      `/dashboard/waitlist?${new URLSearchParams({ restaurant, ...(status ? { status } : {}) })}`,
+    ),
+  assignWaitlist: (restaurant, body) =>
+    api.post(`/dashboard/waitlist/assign?${new URLSearchParams({ restaurant })}`, body),
 };
 
 /**

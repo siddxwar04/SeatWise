@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { env } from '../../config/env.js';
-import { ConflictError, UnauthorizedError } from '../../errors/AppError.js';
+import { BadRequestError, ConflictError, UnauthorizedError } from '../../errors/AppError.js';
+import { sendPasswordReset } from '../../lib/email.js';
 import { logger } from '../../lib/logger.js';
 import { prisma } from '../../lib/prisma.js';
 import {
@@ -9,6 +10,10 @@ import {
   hashRefreshToken,
   signAccessToken,
 } from '../../lib/tokens.js';
+
+/** Reset links are short-lived — long enough to check email, short enough
+ *  that a leaked link is not a standing risk. */
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 
 /**
  * A precomputed bcrypt hash of a value nobody will ever submit.
@@ -213,6 +218,63 @@ export async function changePassword(userId, input) {
   // it after a compromise does not actually lock the attacker out.
   await logoutAllSessions(userId);
   logger.info({ userId }, 'password changed — all sessions revoked');
+}
+
+/**
+ * "Forgot password". Same response whether or not the account exists — the
+ * caller only ever sees "if that email exists, a link is on its way", which
+ * closes the enumeration gap login already guards against.
+ */
+export async function requestPasswordReset(email) {
+  const user = await prisma.user.findUnique({ where: { email } });
+
+  if (!user) {
+    logger.info({ email }, 'password reset requested for unknown email');
+    return { emailed: false, resetUrl: null };
+  }
+
+  const token = generateRefreshToken();
+  await prisma.passwordResetToken.create({
+    data: {
+      userId: user.id,
+      tokenHash: hashRefreshToken(token),
+      expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS),
+    },
+  });
+
+  const resetUrl = `${env.WEB_ORIGIN}/reset-password?token=${token}`;
+  const result = await sendPasswordReset({ to: user.email, guestName: user.username, resetUrl });
+
+  logger.info({ userId: user.id, emailed: result.ok }, 'password reset requested');
+  return { emailed: result.ok, resetUrl };
+}
+
+/** Consumes a reset token exactly once and revokes every session for the account. */
+export async function resetPassword(token, newPassword) {
+  const stored = await prisma.passwordResetToken.findUnique({
+    where: { tokenHash: hashRefreshToken(token) },
+  });
+
+  if (!stored || stored.usedAt || stored.expiresAt < new Date()) {
+    throw new BadRequestError('That reset link is invalid or has expired.');
+  }
+
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: stored.userId },
+      data: { passwordHash: await bcrypt.hash(newPassword, env.BCRYPT_ROUNDS) },
+    }),
+    prisma.passwordResetToken.update({
+      where: { id: stored.id },
+      data: { usedAt: new Date() },
+    }),
+    prisma.refreshToken.updateMany({
+      where: { userId: stored.userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    }),
+  ]);
+
+  logger.info({ userId: stored.userId }, 'password reset via token — all sessions revoked');
 }
 
 /**

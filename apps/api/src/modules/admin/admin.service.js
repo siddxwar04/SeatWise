@@ -329,7 +329,10 @@ export async function getTodayService(restaurantId) {
       serviceDate: serviceDateFor(today),
       status: { in: ['PENDING', 'CONFIRMED', 'SEATED'] },
     },
-    include: { table: { select: { label: true, zone: true, restaurantId: true } } },
+    include: {
+      table: { select: { label: true, zone: true, restaurantId: true } },
+      user: { select: { priorBookings: true, priorNoShows: true } },
+    },
     orderBy: { startsAt: 'asc' },
   });
 
@@ -345,6 +348,14 @@ export async function getTodayService(restaurantId) {
       ...toPublicReservation(r),
       noShowRisk: r.noShowRisk,
       isOverbooked: r.isOverbooked,
+      // Shaped for the owner console's ServicePanel: a badge needs a band,
+      // and a guest-history line needs the counters the risk model itself
+      // reads (see riskFeaturesFor in booking.service.js).
+      risk: { probability: r.noShowRisk ?? 0, band: riskLevel(r.noShowRisk) ?? 'low' },
+      guest: {
+        priorBookings: r.user?.priorBookings ?? 0,
+        priorNoShows: r.user?.priorNoShows ?? 0,
+      },
     })),
   };
 }
@@ -548,6 +559,8 @@ export async function getRiskQueue(restaurantId, dateStr) {
         status: true,
         noShowRisk: true,
         riskModelVersion: true,
+        leadTimeHours: true,
+        user: { select: { priorBookings: true, priorNoShows: true } },
       },
       orderBy: { noShowRisk: 'desc' },
     }),
@@ -556,7 +569,7 @@ export async function getRiskQueue(restaurantId, dateStr) {
 
   const spend = SPEND_PER_COVER_PAISE[restaurant?.priceLevel ?? 2] ?? SPEND_PER_COVER_PAISE[2];
 
-  const queue = reservations.map((reservation) => {
+  const queue = reservations.map(({ user, ...reservation }) => {
     const band = riskLevel(reservation.noShowRisk);
     // Bands exist to trigger exactly these three actions — a confirmed guest
     // who is still high-risk gets a call, not another reminder they already
@@ -570,11 +583,16 @@ export async function getRiskQueue(restaurantId, dateStr) {
           ? 'remind'
           : 'none';
 
+    const local = utcToLocalParts(reservation.startsAt);
+
     return {
       ...reservation,
+      time: local.time,
+      leadTimeDays: reservation.leadTimeHours == null ? 0 : Math.round(reservation.leadTimeHours / 24),
       band,
       action,
       exposurePaise: Math.round((reservation.noShowRisk ?? 0) * reservation.partySize * spend),
+      guest: { priorBookings: user?.priorBookings ?? 0, priorNoShows: user?.priorNoShows ?? 0 },
     };
   });
 

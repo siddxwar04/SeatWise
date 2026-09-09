@@ -1,3 +1,4 @@
+import { isProduction } from '../../config/env.js';
 import { asyncHandler } from '../../lib/asyncHandler.js';
 import { REFRESH_COOKIE_NAME, refreshCookieOptions } from '../../lib/tokens.js';
 import * as authService from './auth.service.js';
@@ -55,6 +56,22 @@ export const logoutAll = asyncHandler(async (req, res) => {
   const count = await authService.logoutAllSessions(req.user.id);
   res.clearCookie(REFRESH_COOKIE_NAME, { ...refreshCookieOptions(), maxAge: undefined });
   res.json({ revokedSessions: count });
+});
+
+export const forgotPassword = asyncHandler(async (req, res) => {
+  const result = await authService.requestPasswordReset(req.body.email);
+  res.json({
+    message: 'If that email exists, a reset link is on its way.',
+    // Dev/demo convenience only: with no RESEND_API_KEY configured there is no
+    // other way to reach the link. Never sent once email is actually sent, and
+    // never sent in production regardless.
+    ...(!isProduction && !result.emailed && result.resetUrl ? { resetUrl: result.resetUrl } : {}),
+  });
+});
+
+export const resetPassword = asyncHandler(async (req, res) => {
+  await authService.resetPassword(req.body.token, req.body.newPassword);
+  res.json({ message: 'Password updated. Please sign in.' });
 });
 
 export const me = asyncHandler(async (req, res) => {

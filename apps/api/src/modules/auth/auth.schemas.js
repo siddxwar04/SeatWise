@@ -82,3 +82,16 @@ export const changePasswordSchema = z
     message: 'Passwords do not match',
     path: ['confirmPassword'],
   });
+
+export const forgotPasswordSchema = z.object({ email });
+
+export const resetPasswordSchema = z
+  .object({
+    token: z.string().trim().min(20, 'Reset link is invalid or has expired').max(128),
+    newPassword: password,
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  });

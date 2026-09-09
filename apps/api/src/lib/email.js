@@ -105,6 +105,17 @@ export async function sendHighRiskReminder({
   return sendEmail(to, `Reminder — ${restaurantName} on ${date}`, html);
 }
 
+export async function sendPasswordReset({ to, guestName, resetUrl }) {
+  const html = layout(
+    'Reset your password',
+    `<p>Hi ${escapeHtml(guestName || 'there')},</p>
+     <p>We received a request to reset your TastyFood password. This link expires in 1 hour.</p>
+     <p style="margin:24px 0"><a href="${escapeHtml(resetUrl)}" style="display:inline-block;background:#e85d04;color:#fff;text-decoration:none;padding:12px 20px;border-radius:999px;font-weight:700">Reset password</a></p>
+     <p>If you did not request this, you can safely ignore this email — your password will not change.</p>`,
+  );
+  return sendEmail(to, 'Reset your TastyFood password', html);
+}
+
 export async function sendWaitlistAvailable({
   to,
   guestName,

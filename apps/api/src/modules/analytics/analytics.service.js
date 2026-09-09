@@ -20,6 +20,54 @@ function hoursFromSlots() {
   return hours.sort();
 }
 
+const LEAD_TIME_BUCKETS = [
+  { label: 'Same day', maxHours: 24 },
+  { label: '1–3 days', maxHours: 24 * 3 },
+  { label: '4–7 days', maxHours: 24 * 7 },
+  { label: '1–4 weeks', maxHours: 24 * 28 },
+  { label: '1+ month', maxHours: Infinity },
+];
+
+const PARTY_SIZE_BUCKETS = [
+  { label: '1–2', max: 2 },
+  { label: '3–4', max: 4 },
+  { label: '5–6', max: 6 },
+  { label: '7+', max: Infinity },
+];
+
+/**
+ * No-show rate per bucket, over *settled* bookings only (COMPLETED or
+ * NO_SHOW) — an upcoming PENDING booking has no outcome yet, and mixing it in
+ * would just dilute every rate toward zero.
+ */
+function bucketRates(settled, buckets, valueOf) {
+  const counts = buckets.map(() => ({ total: 0, noShows: 0 }));
+
+  for (const booking of settled) {
+    const value = valueOf(booking);
+    const index = buckets.findIndex((b) => value <= (b.maxHours ?? b.max));
+    const bucket = counts[index === -1 ? buckets.length - 1 : index];
+    bucket.total += 1;
+    if (booking.status === 'NO_SHOW') bucket.noShows += 1;
+  }
+
+  return buckets.map((b, i) => ({
+    bucket: b.label,
+    count: counts[i].total,
+    rate: counts[i].total === 0 ? 0 : counts[i].noShows / counts[i].total,
+  }));
+}
+
+function confirmationBreakdown(settled) {
+  const completed = settled.filter((b) => b.status === 'COMPLETED').length;
+  const noShows = settled.filter((b) => b.status === 'NO_SHOW').length;
+  const total = completed + noShows;
+  return [
+    { bucket: 'Completed', count: completed, rate: total === 0 ? 0 : completed / total },
+    { bucket: 'No-show', count: noShows, rate: total === 0 ? 0 : noShows / total },
+  ];
+}
+
 /**
  * Owner analytics: occupancy, revenue per table-hour, no-show heatmap.
  *
@@ -42,7 +90,7 @@ export async function getAnalytics(restaurantId, days = 30) {
     }),
     prisma.reservation.findMany({
       where: { restaurantId, createdAt: { gte: since } },
-      select: { startsAt: true, partySize: true, status: true },
+      select: { startsAt: true, partySize: true, status: true, createdAt: true },
     }),
   ]);
 
@@ -80,10 +128,16 @@ export async function getAnalytics(restaurantId, days = 30) {
     if (booking.status === 'NO_SHOW') cell.noShows += 1;
   }
 
+  for (const row of heatmap) {
+    for (const cell of row.cells) {
+      cell.rate = cell.bookings === 0 ? 0 : cell.noShows / cell.bookings;
+    }
+  }
+
   const noShows = bookings.filter((b) => b.status === 'NO_SHOW');
   const completedOrNoShow = bookings.filter(
     (b) => b.status === 'COMPLETED' || b.status === 'NO_SHOW',
-  ).length;
+  );
   // Covers that walked out the door empty — the revenue the no-show model
   // exists to help an owner claw back via overbooking.
   const lostCovers = noShows.reduce((sum, b) => sum + b.partySize, 0);
@@ -102,11 +156,19 @@ export async function getAnalytics(restaurantId, days = 30) {
     noShowCount: noShows.length,
     lostRevenuePaise: lostCovers * spend,
     noShowRate:
-      completedOrNoShow === 0
+      completedOrNoShow.length === 0
         ? null
-        : Number(((noShows.length / completedOrNoShow) * 100).toFixed(1)),
+        : Number(((noShows.length / completedOrNoShow.length) * 100).toFixed(1)),
     heatmap,
     hours,
+    /** Which lever to pull, not just the aggregate rate — see AnalyticsPanel. */
+    byLeadTime: bucketRates(
+      completedOrNoShow,
+      LEAD_TIME_BUCKETS,
+      (b) => (b.startsAt.getTime() - b.createdAt.getTime()) / 3_600_000,
+    ),
+    byPartySize: bucketRates(completedOrNoShow, PARTY_SIZE_BUCKETS, (b) => b.partySize),
+    byConfirmation: confirmationBreakdown(completedOrNoShow),
   };
 }
 

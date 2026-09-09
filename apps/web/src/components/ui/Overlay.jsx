@@ -1,6 +1,7 @@
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
-import { useDismiss, useIsMobile, useScrollLock } from '../../lib/hooks.js';
+import { createPortal } from 'react-dom';
+import { useIsMobile, useScrollLock } from '../../lib/hooks.js';
 import { Icon } from './Icon.jsx';
 import { IconButton } from './Button.jsx';
 
@@ -10,32 +11,83 @@ import { IconButton } from './Button.jsx';
  * `trigger` is a render prop so the caller keeps ownership of its own button
  * markup; this component only owns the open state, the outside-click and Escape
  * handling, and the panel positioning.
+ *
+ * `portal`: render the panel into `document.body`, positioned from the
+ * trigger's measured rect, instead of absolutely inside the trigger's own
+ * box. Needed when the trigger sits inside a horizontally scrolling ancestor
+ * (`overflow-x: auto` also clips the y axis) — otherwise the panel opens but
+ * is clipped to invisible.
  */
-export function Dropdown({ trigger, children, align = 'start', label, width }) {
+export function Dropdown({ trigger, children, align = 'start', label, width, portal = false }) {
   const [open, setOpen] = useState(false);
-  const ref = useDismiss(open, () => setOpen(false));
+  const [rect, setRect] = useState(null);
+  const wrapRef = useRef(null);
+  const panelRef = useRef(null);
   const reduce = useReducedMotion();
 
-  return (
-    <div className="pop_wrap" ref={ref}>
-      {trigger({ open, toggle: () => setOpen((v) => !v), close: () => setOpen(false) })}
+  useEffect(() => {
+    if (!open) return undefined;
 
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            className={`pop pop-${align}`}
-            style={width ? { width } : undefined}
-            role="dialog"
-            aria-label={label}
-            initial={reduce ? false : { opacity: 0, y: -6, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={reduce ? undefined : { opacity: 0, y: -4, scale: 0.99 }}
-            transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
-          >
-            {typeof children === 'function' ? children({ close: () => setOpen(false) }) : children}
-          </motion.div>
-        )}
-      </AnimatePresence>
+    const onPointerDown = (event) => {
+      const inTrigger = wrapRef.current?.contains(event.target);
+      const inPanel = panelRef.current?.contains(event.target);
+      if (!inTrigger && !inPanel) setOpen(false);
+    };
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.stopPropagation();
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', onPointerDown, true);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown, true);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open]);
+
+  const toggle = () => {
+    if (portal && !open) setRect(wrapRef.current?.getBoundingClientRect() ?? null);
+    setOpen((v) => !v);
+  };
+
+  const panelStyle =
+    portal && rect
+      ? {
+          position: 'fixed',
+          top: rect.bottom + 6,
+          ...(align === 'end' ? { right: window.innerWidth - rect.right } : { left: rect.left }),
+          ...(width ? { width } : null),
+        }
+      : width
+        ? { width }
+        : undefined;
+
+  const panel = open && (
+    <motion.div
+      ref={panelRef}
+      className={`pop pop-${align}`}
+      style={panelStyle}
+      role="dialog"
+      aria-label={label}
+      initial={reduce ? false : { opacity: 0, y: -6, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={reduce ? undefined : { opacity: 0, y: -4, scale: 0.99 }}
+      transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+    >
+      {typeof children === 'function' ? children({ close: () => setOpen(false) }) : children}
+    </motion.div>
+  );
+
+  return (
+    <div className="pop_wrap" ref={wrapRef}>
+      {trigger({ open, toggle, close: () => setOpen(false) })}
+
+      {portal
+        ? createPortal(<AnimatePresence>{panel}</AnimatePresence>, document.body)
+        : <AnimatePresence>{panel}</AnimatePresence>}
     </div>
   );
 }

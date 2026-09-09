@@ -139,7 +139,7 @@ export function AnalyticsPanel({ analytics }) {
               label={b.bucket}
               value={b.rate}
               scale={Math.max(...analytics.byConfirmation.map((x) => x.rate))}
-              tone={b.bucket === 'Confirmed' ? 'ok' : 'danger'}
+              tone={['Confirmed', 'Completed'].includes(b.bucket) ? 'ok' : 'danger'}
               right={percent(b.rate)}
             />
           ))}
