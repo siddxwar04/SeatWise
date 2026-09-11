@@ -44,7 +44,12 @@ RUN npx prisma generate
 USER node
 EXPOSE 4000
 
+# Railway (and most PaaS hosts) assign the port at runtime via $PORT, so the
+# healthcheck can't hardcode 4000 — it has to read whatever the app actually
+# bound to.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD node -e "fetch('http://localhost:4000/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+  CMD node -e "fetch('http://localhost:'+(process.env.PORT||4000)+'/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
-CMD ["node", "src/index.js"]
+# Apply pending migrations before serving traffic, so a deploy never leaves
+# the app running against a schema it doesn't match.
+CMD ["sh", "-c", "npx prisma migrate deploy && node src/index.js"]

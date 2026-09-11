@@ -374,6 +374,16 @@ The refresh-token cookie is `httpOnly` + `SameSite=strict`, so it only survives 
 
 If a host doesn't run the web Docker image as-is (e.g. a static-only host), reproduce the same effect with that host's rewrite/proxy feature: forward `/api/*` and `/health` to the API's origin so the browser never leaves the web origin.
 
+### Railway
+
+Both `apps/api/railway.json` and `apps/web/railway.json` are config-as-code for two separate Railway services built from this one repo. For each service, set **Root Directory** to `/` (repo root — the Dockerfiles need the workspace lockfile) and point **Config-as-code path** at the matching `railway.json`.
+
+- Railway assigns the listening port at runtime via `$PORT` — both containers already read it (the API falls back to `API_PORT`/4000, nginx falls back to 80), so nothing else to configure there.
+- The API container runs `prisma migrate deploy` before `node src/index.js` on every boot, so pending migrations apply automatically on each deploy.
+- Postgres **must** ship the `pgvector` extension (used by the AI concierge's embedding column). Railway's stock Postgres template doesn't include it — deploy `pgvector/pgvector:pg16` as a Docker-image service instead (same image `docker-compose.yml` uses) and point `DATABASE_URL` at it.
+- Set `WEB_ORIGIN` on the API service to the web service's public Railway URL, and `API_URL` on the web service to the API service's URL (its Railway private-network address, e.g. `http://api.railway.internal:PORT`, avoids an extra public hop).
+- `JWT_ACCESS_SECRET` (and `REDIS_URL` if you add Railway's Redis plugin) still need to be set as real values — see the environment table above.
+
 ---
 
 ## Docker

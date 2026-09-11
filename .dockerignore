@@ -1,0 +1,13 @@
+.git
+node_modules
+**/node_modules
+apps/web/dist
+apps/web/node_modules
+apps/api/node_modules
+legacy
+docs
+*.md
+.env
+.env.test
+.claude
+.github

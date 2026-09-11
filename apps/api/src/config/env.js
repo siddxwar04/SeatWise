@@ -17,6 +17,10 @@ const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     API_PORT: z.coerce.number().int().positive().default(4000),
+    // Railway (and most PaaS hosts) assign the port at runtime and inject it
+    // as PORT — the process must bind to that, not to API_PORT, or the
+    // platform's proxy can never reach it.
+    PORT: z.coerce.number().int().positive().optional(),
     WEB_ORIGIN: z.string().url().default('http://localhost:5173'),
 
     DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
@@ -88,3 +92,6 @@ export const env = parsed.data;
 
 export const isProduction = env.NODE_ENV === 'production';
 export const isTest = env.NODE_ENV === 'test';
+
+/** The port to actually bind to: platform-assigned PORT wins over API_PORT. */
+export const port = env.PORT ?? env.API_PORT;

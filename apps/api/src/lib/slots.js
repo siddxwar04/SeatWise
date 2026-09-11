@@ -106,12 +106,13 @@ export function leadTimeDays(startsAt, now = new Date()) {
 export function validateBookingTime(dateStr, timeStr, now = new Date()) {
   const slots = generateSlots();
   if (!slots.includes(timeStr)) {
+    const lastSeating = slots[slots.length - 1];
     return `We seat guests every ${env.SLOT_MINUTES} minutes between ${String(
       env.RESTAURANT_OPEN_HOUR,
     ).padStart(
       2,
       '0',
-    )}:00 and ${String(env.RESTAURANT_CLOSE_HOUR).padStart(2, '0')}:00. Please pick one of the listed times.`;
+    )}:00 and ${lastSeating} (last seating, so your ${env.DINING_DURATION_MINUTES}-minute reservation finishes before we close at ${String(env.RESTAURANT_CLOSE_HOUR).padStart(2, '0')}:00). Please pick one of the listed times.`;
   }
 
   const { startsAt } = bookingInterval(dateStr, timeStr);

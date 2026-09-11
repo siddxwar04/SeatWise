@@ -42,5 +42,9 @@ RUN npm run build
 FROM nginx:1.27-alpine AS production
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
 COPY apps/web/nginx.conf.template /etc/nginx/templates/default.conf.template
+# Railway assigns the port at runtime via $PORT and envsubst (the base image's
+# entrypoint) needs it defined to render the template; 80 is just the local /
+# docker-compose fallback when nothing overrides it.
+ENV PORT=80
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

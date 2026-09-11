@@ -1,5 +1,5 @@
 import { createApp } from './app.js';
-import { env } from './config/env.js';
+import { port } from './config/env.js';
 import { logger } from './lib/logger.js';
 import { disconnectPrisma, prisma } from './lib/prisma.js';
 import { disconnectRedis, getRedis } from './lib/redis.js';
@@ -13,8 +13,8 @@ async function main() {
   getRedis();
 
   const app = createApp();
-  const server = app.listen(env.API_PORT, () => {
-    logger.info(`TastyFood API listening on http://localhost:${env.API_PORT}`);
+  const server = app.listen(port, () => {
+    logger.info(`TastyFood API listening on port ${port}`);
   });
 
   /**
