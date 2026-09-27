@@ -11,7 +11,7 @@ name: seatwise
 services:
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: tastyfood-postgres
+    container_name: seatwise-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-seatwise}
@@ -39,7 +39,7 @@ services:
   #   npm run test:concurrency
   postgres-test:
     image: pgvector/pgvector:pg16
-    container_name: tastyfood-postgres-test
+    container_name: seatwise-postgres-test
     profiles: ['test']
     restart: unless-stopped
     environment:
@@ -61,7 +61,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: tastyfood-redis
+    container_name: seatwise-redis
     restart: unless-stopped
     # Cache-first configuration: bounded memory, LRU eviction, no persistence.
     # Losing this data is a cache miss, not data loss.
@@ -79,7 +79,7 @@ services:
       context: .
       dockerfile: apps/api/Dockerfile
       target: development
-    container_name: tastyfood-api
+    container_name: seatwise-api
     restart: unless-stopped
     env_file: .env
     environment:
@@ -103,7 +103,7 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile
       target: development
-    container_name: tastyfood-web
+    container_name: seatwise-web
     restart: unless-stopped
     environment:
       VITE_API_URL: http://localhost:${API_PORT:-4000}
@@ -118,9 +118,10 @@ services:
   ml:
     build:
       context: ./services/ml
-    container_name: tastyfood-ml
+    container_name: seatwise-ml
     restart: unless-stopped
-    # Opt-in until Phase 7 builds it: `docker compose --profile ml up`.
+    # Opt-in: the FastAPI scoring service is a planned Path B swap (see TECH-STACK.md)
+    # and does not exist yet. Run with `docker compose --profile ml up` once it does.
     # Without this, `docker compose up` would fail on a missing build context.
     profiles: ['ml']
     ports:

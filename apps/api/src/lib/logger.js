@@ -8,7 +8,7 @@ import { env, isProduction, isTest } from '../config/env.js';
  */
 export const logger = pino({
   level: isTest ? 'silent' : isProduction ? 'info' : 'debug',
-  base: { service: 'tastyfood-api', env: env.NODE_ENV },
+  base: { service: 'seatwise-api', env: env.NODE_ENV },
   redact: {
     paths: [
       'req.headers.authorization',

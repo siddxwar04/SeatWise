@@ -11,13 +11,13 @@ import { isProduction, isTest } from '../config/env.js';
  * leaking a new one on every file save.
  */
 export const prisma =
-  globalThis.__tastyfoodPrisma ??
+  globalThis.__seatwisePrisma ??
   new PrismaClient({
     log: isTest ? [] : isProduction ? ['error'] : ['error', 'warn'],
   });
 
 if (!isProduction) {
-  globalThis.__tastyfoodPrisma = prisma;
+  globalThis.__seatwisePrisma = prisma;
 }
 
 export async function disconnectPrisma() {

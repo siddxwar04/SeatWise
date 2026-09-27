@@ -75,7 +75,7 @@ export function createApp() {
   app.use('/api', generalLimiter);
 
   app.get('/api', (_req, res) => {
-    res.json({ name: 'TastyFood API', version: '2.0.0' });
+    res.json({ name: 'SeatWise API', version: '2.0.0' });
   });
 
   app.use('/api/auth', authRouter);

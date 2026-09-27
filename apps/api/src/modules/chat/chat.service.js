@@ -5,7 +5,7 @@ import { embedText, searchSimilarRestaurants } from '../../lib/embeddings.js';
 import { logger } from '../../lib/logger.js';
 import { prisma } from '../../lib/prisma.js';
 
-const SYSTEM_PROMPT = `You are TastyFood's friendly dining concierge for Bengaluru.
+const SYSTEM_PROMPT = `You are SeatWise's friendly dining concierge for restaurants across India (Pune, Mumbai, Bengaluru, Hyderabad, Chennai, Delhi NCR).
 You help guests pick a restaurant and book a table.
 
 STRICT RULES:

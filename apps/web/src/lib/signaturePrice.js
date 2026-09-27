@@ -76,8 +76,7 @@ export function priceSignatures(signatures, priceLevel = 2) {
     if (entry && typeof entry === 'object' && entry.name) {
       return {
         name: entry.name,
-        priceInPaise:
-          entry.priceInPaise ?? estimateDishPricePaise(entry.name, priceLevel, index),
+        priceInPaise: entry.priceInPaise ?? estimateDishPricePaise(entry.name, priceLevel, index),
       };
     }
     const name = String(entry);

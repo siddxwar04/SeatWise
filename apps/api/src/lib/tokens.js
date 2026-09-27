@@ -31,8 +31,8 @@ export function signAccessToken(user) {
   return jwt.sign({ email: user.email, role: user.role }, env.JWT_ACCESS_SECRET, {
     subject: user.id,
     expiresIn: env.ACCESS_TOKEN_TTL,
-    issuer: 'tastyfood',
-    audience: 'tastyfood-web',
+    issuer: 'seatwise',
+    audience: 'seatwise-web',
   });
 }
 
@@ -43,8 +43,8 @@ export function signAccessToken(user) {
 export function verifyAccessToken(token) {
   try {
     return jwt.verify(token, env.JWT_ACCESS_SECRET, {
-      issuer: 'tastyfood',
-      audience: 'tastyfood-web',
+      issuer: 'seatwise',
+      audience: 'seatwise-web',
     });
   } catch {
     return null;
@@ -69,7 +69,7 @@ export function hashRefreshToken(token) {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
 
-export const REFRESH_COOKIE_NAME = 'tf_refresh';
+export const REFRESH_COOKIE_NAME = 'sw_refresh';
 
 /**
  * SameSite=strict blocks the cookie on any cross-site request, which is what

@@ -35,11 +35,12 @@ Express (routes → controllers → services → Prisma)
 
 ## Tier 2 — Differentiators (later)
 
-| Phase | Item                                                              | Status                 |
-| ----- | ----------------------------------------------------------------- | ---------------------- |
-| 6     | JS logistic regression no-show → overbooking EV + waitlist assign | **Shipped**            |
-| 7     | OpenAI RAG concierge                                              | **Shipped**            |
-| 8     | Email confirmations, SSE slots, CI, ADRs, deploy                  | Partial (email exists) |
+| Phase | Item                                                              | Status      |
+| ----- | ----------------------------------------------------------------- | ----------- |
+| 6     | JS logistic regression no-show → overbooking EV + waitlist assign | **Shipped** |
+| 7     | OpenAI RAG concierge                                              | **Shipped** |
+| 8     | Email confirmations, CI, deploy config (Railway / Docker)         | **Shipped** |
+| 9     | SSE live slots, ADRs                                              | Later       |
 
 ---
 

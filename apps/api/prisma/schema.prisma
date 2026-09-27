@@ -1,4 +1,4 @@
-// TastyFood — data model
+// SeatWise — data model
 //
 // The legacy app split its data across two MySQL databases (`user_auth` for
 // users, `tastyfood` for reservations), which made it impossible to relate a

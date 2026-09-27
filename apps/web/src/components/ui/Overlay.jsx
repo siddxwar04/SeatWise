@@ -85,9 +85,11 @@ export function Dropdown({ trigger, children, align = 'start', label, width, por
     <div className="pop_wrap" ref={wrapRef}>
       {trigger({ open, toggle, close: () => setOpen(false) })}
 
-      {portal
-        ? createPortal(<AnimatePresence>{panel}</AnimatePresence>, document.body)
-        : <AnimatePresence>{panel}</AnimatePresence>}
+      {portal ? (
+        createPortal(<AnimatePresence>{panel}</AnimatePresence>, document.body)
+      ) : (
+        <AnimatePresence>{panel}</AnimatePresence>
+      )}
     </div>
   );
 }

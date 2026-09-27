@@ -169,32 +169,35 @@ const STARTER_TABLES = [
 export async function createRestaurant(input, ownerUserId) {
   const slug = await uniqueSlug(slugify(input.name));
 
-  const restaurant = await prisma.$transaction(async (tx) => {
-    const created = await tx.restaurant.create({
-      data: {
-        slug,
-        name: input.name,
-        address: input.address,
-        phone: input.phone,
-        cuisine: input.cuisine ?? 'Indian',
-        priceLevel: input.priceLevel ?? 2,
-        city: input.city,
-        area: input.area,
-        tagline: input.tagline ?? null,
-        about: input.about ?? null,
-      },
-    });
+  const restaurant = await prisma.$transaction(
+    async (tx) => {
+      const created = await tx.restaurant.create({
+        data: {
+          slug,
+          name: input.name,
+          address: input.address,
+          phone: input.phone,
+          cuisine: input.cuisine ?? 'Indian',
+          priceLevel: input.priceLevel ?? 2,
+          city: input.city,
+          area: input.area,
+          tagline: input.tagline ?? null,
+          about: input.about ?? null,
+        },
+      });
 
-    await tx.restaurantAdmin.create({
-      data: { userId: ownerUserId, restaurantId: created.id },
-    });
+      await tx.restaurantAdmin.create({
+        data: { userId: ownerUserId, restaurantId: created.id },
+      });
 
-    await tx.restaurantTable.createMany({
-      data: STARTER_TABLES.map((table) => ({ ...table, restaurantId: created.id })),
-    });
+      await tx.restaurantTable.createMany({
+        data: STARTER_TABLES.map((table) => ({ ...table, restaurantId: created.id })),
+      });
 
-    return created;
-  }, { timeout: 10_000, maxWait: 5_000 });
+      return created;
+    },
+    { timeout: 10_000, maxWait: 5_000 },
+  );
 
   logger.info({ restaurantId: restaurant.id, ownerUserId, slug }, 'restaurant self-registered');
   return { ...restaurant, signatures: [], signatureDishes: [] };

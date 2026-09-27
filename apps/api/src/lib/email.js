@@ -27,7 +27,7 @@ export async function sendEmail(to, subject, html) {
   }
 
   try {
-    const from = env.MAIL_FROM || 'TastyFood <onboarding@resend.dev>';
+    const from = env.MAIL_FROM || 'SeatWise <onboarding@resend.dev>';
     const result = await resend.emails.send({ from, to, subject, html });
     if (result.error) {
       logger.error({ err: result.error, to, subject }, 'resend API error');
@@ -52,7 +52,7 @@ function escapeHtml(value) {
 function layout(title, body) {
   return `<!doctype html><html><body style="font-family:Arial,sans-serif;color:#1c1917;line-height:1.5;padding:24px;background:#faf7f2">
   <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:16px;padding:28px;border:1px solid #ebe3d9">
-    <p style="margin:0 0 8px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#e85d04;font-weight:700">TastyFood</p>
+    <p style="margin:0 0 8px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#e85d04;font-weight:700">SeatWise</p>
     <h1 style="margin:0 0 16px;font-size:22px">${escapeHtml(title)}</h1>
     ${body}
     <p style="margin:24px 0 0;font-size:12px;color:#8a7b6e">Questions? Reply to this email or call the restaurant.</p>
@@ -109,11 +109,11 @@ export async function sendPasswordReset({ to, guestName, resetUrl }) {
   const html = layout(
     'Reset your password',
     `<p>Hi ${escapeHtml(guestName || 'there')},</p>
-     <p>We received a request to reset your TastyFood password. This link expires in 1 hour.</p>
+     <p>We received a request to reset your SeatWise password. This link expires in 1 hour.</p>
      <p style="margin:24px 0"><a href="${escapeHtml(resetUrl)}" style="display:inline-block;background:#e85d04;color:#fff;text-decoration:none;padding:12px 20px;border-radius:999px;font-weight:700">Reset password</a></p>
      <p>If you did not request this, you can safely ignore this email — your password will not change.</p>`,
   );
-  return sendEmail(to, 'Reset your TastyFood password', html);
+  return sendEmail(to, 'Reset your SeatWise password', html);
 }
 
 export async function sendWaitlistAvailable({

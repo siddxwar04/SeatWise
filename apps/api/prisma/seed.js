@@ -55,7 +55,8 @@ function signaturePricePaise(name, priceLevel = 2, index = 0) {
   const n = name.toLowerCase();
   let band = 'plate';
   if (/\b(menu|course|tasting|omakase|for two|for the table)\b/.test(n)) band = 'tasting';
-  else if (/\b(coffee|chai|brew|soda|highball|beer|wine|sol\s?kadi|filter)\b/.test(n)) band = 'drink';
+  else if (/\b(coffee|chai|brew|soda|highball|beer|wine|sol\s?kadi|filter)\b/.test(n))
+    band = 'drink';
   else if (/\b(bread|bun|toast|dessert|phirni|kunafa|slice|cake|biscuit)\b/.test(n)) band = 'sweet';
   else if (/\b(platter|shoulder|biryani|sharing|chops|catch)\b/.test(n)) band = 'share';
 
@@ -569,7 +570,8 @@ function parseFixtureTables(spec, zones) {
 
   for (const group of groups) {
     for (let i = 0; i < group.count; i += 1) {
-      const zone = group.seats >= 8 ? mappedZones[0] : mappedZones[zoneIndex++ % mappedZones.length];
+      const zone =
+        group.seats >= 8 ? mappedZones[0] : mappedZones[zoneIndex++ % mappedZones.length];
       counters[zone] = (counters[zone] ?? 0) + 1;
       const prefix = ZONE_LABEL_PREFIX[zone] ?? 'T';
       tables.push({ label: `${prefix}${counters[zone]}`, capacity: group.seats, zone });
@@ -613,7 +615,11 @@ const MARKET_VENUES = [
     tagline: 'Twelve seats around the pass. The menu is whatever came in this morning.',
     about:
       'One counter, twelve stools, two services a night. There is no printed menu — the team cooks what the morning delivery justified and tells you about each plate as it lands.',
-    signatures: ['Whatever the boat brought', 'Cultured butter and sourdough', 'Brown-butter kulfi'],
+    signatures: [
+      'Whatever the boat brought',
+      'Cultured butter and sourdough',
+      'Brown-butter kulfi',
+    ],
     type: 'counter',
     walkIn: false,
     tables: '6x2',

@@ -63,11 +63,7 @@ const envSchema = z
 
     RESEND_API_KEY: z.string().optional(),
 
-    SMTP_HOST: z.string().optional(),
-    SMTP_PORT: z.coerce.number().int().positive().optional(),
-    SMTP_USER: z.string().optional(),
-    SMTP_PASS: z.string().optional(),
-    MAIL_FROM: z.string().default('TastyFood <no-reply@tastyfood.local>'),
+    MAIL_FROM: z.string().default('SeatWise <no-reply@seatwise.local>'),
   })
   .refine((e) => e.RESTAURANT_CLOSE_HOUR > e.RESTAURANT_OPEN_HOUR, {
     message: 'RESTAURANT_CLOSE_HOUR must be after RESTAURANT_OPEN_HOUR',

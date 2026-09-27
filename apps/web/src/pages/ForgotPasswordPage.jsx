@@ -57,9 +57,7 @@ export function ForgotPasswordPage() {
             </p>
             {devResetUrl && (
               <div className="note note-warn">
-                <p>
-                  Email sending is not configured on this deployment. Use this link directly:
-                </p>
+                <p>Email sending is not configured on this deployment. Use this link directly:</p>
                 <p>
                   <Link to={devResetUrl.replace(window.location.origin, '')}>{devResetUrl}</Link>
                 </p>

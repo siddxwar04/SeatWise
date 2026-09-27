@@ -296,7 +296,7 @@ export async function sendReminder(reservationId, restaurantId) {
   const result = await sendHighRiskReminder({
     to,
     guestName: reservation.guestName,
-    restaurantName: venue?.name || 'TastyFood',
+    restaurantName: venue?.name || 'SeatWise',
     date: local.date,
     time: local.time,
     partySize: reservation.partySize,
@@ -588,7 +588,8 @@ export async function getRiskQueue(restaurantId, dateStr) {
     return {
       ...reservation,
       time: local.time,
-      leadTimeDays: reservation.leadTimeHours == null ? 0 : Math.round(reservation.leadTimeHours / 24),
+      leadTimeDays:
+        reservation.leadTimeHours == null ? 0 : Math.round(reservation.leadTimeHours / 24),
       band,
       action,
       exposurePaise: Math.round((reservation.noShowRisk ?? 0) * reservation.partySize * spend),

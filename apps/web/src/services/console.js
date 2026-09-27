@@ -9,7 +9,13 @@ import { assignTables, naiveAssign } from '../lib/assignment.js';
 import { todayISO } from '../lib/format.js';
 import { overbookingPlan } from '../lib/overbooking.js';
 import { expectedLossPaise, riskBand } from '../lib/risk.js';
-import { analyticsFor, floorState, serviceBook, slotGrid, waitlistFor } from '../data/serviceBook.js';
+import {
+  analyticsFor,
+  floorState,
+  serviceBook,
+  slotGrid,
+  waitlistFor,
+} from '../data/serviceBook.js';
 import { getVenue, VENUES } from '../data/venues.js';
 import { delay, LIVE_API, ServiceError, store } from './config.js';
 
@@ -283,7 +289,10 @@ export async function getOverbooking(slug, date = todayISO()) {
 function withWaitedMinutes(entry) {
   return {
     ...entry,
-    waitedMinutes: Math.max(0, Math.round((Date.now() - new Date(entry.createdAt).getTime()) / 60_000)),
+    waitedMinutes: Math.max(
+      0,
+      Math.round((Date.now() - new Date(entry.createdAt).getTime()) / 60_000),
+    ),
   };
 }
 

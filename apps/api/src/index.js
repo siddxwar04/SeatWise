@@ -14,7 +14,7 @@ async function main() {
 
   const app = createApp();
   const server = app.listen(port, () => {
-    logger.info(`TastyFood API listening on port ${port}`);
+    logger.info(`SeatWise API listening on port ${port}`);
   });
 
   /**

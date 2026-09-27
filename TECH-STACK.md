@@ -9,7 +9,7 @@ Definitive list for the **Node rebuild**. An earlier draft targeted Java/Spring/
 **Frontend:** React 18 + Vite + the existing CSS design system  
 **Backend:** Node.js + Express + Prisma  
 **Data:** PostgreSQL 16 (+ pgvector when Phase 7 lands), Redis 7 optional  
-**Infra:** Docker Compose, GitHub Actions (planned), Railway/Render
+**Infra:** Docker Compose, GitHub Actions CI, Railway/Render
 
 ---
 
