@@ -435,7 +435,7 @@ These are the next five things I would ship, in this order:
 4. **Cross-venue availability is still fixture-side.** Diner search does not yet ask Postgres “who can seat 4 at 20:00 tonight?” across the city. Booking a specific venue does.
 5. **Owner console writes are demo-complete, API-partial.** Risk, overbooking, and assignment run in the browser against a generated book. The live API covers reservations, waitlist, and host status; the yield panels are the next backend slice.
 
------
+---
 ## License
 
 MIT
