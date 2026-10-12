@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>SeatWise — Project guide, pitch, and interview answers</title>
+<style>
+  @page { size: A4; margin: 16mm 15mm 18mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Calibri, Arial, sans-serif;
+    color: #1c1c22;
+    font-size: 11pt;
+    line-height: 1.45;
+    margin: 0;
+  }
+  h1 { font-size: 22pt; margin: 0 0 4px; letter-spacing: -0.3px; }
+  h2 { font-size: 15pt; margin: 22px 0 8px; color: #3b2f8a; page-break-after: avoid; border-bottom: 1.5px solid #e4e0f5; padding-bottom: 3px; }
+  h3 { font-size: 12.5pt; margin: 14px 0 4px; page-break-after: avoid; }
+  p { margin: 6px 0 8px; }
+  ul, ol { margin: 4px 0 10px; padding-left: 18px; }
+  li { margin: 3px 0; }
+  .kicker { color: #6b6288; font-size: 10pt; letter-spacing: 0.08em; text-transform: uppercase; margin: 0 0 8px; }
+  .lede { font-size: 12.5pt; }
+  .box { background: #f6f4fb; border-left: 4px solid #5b4cdb; padding: 10px 12px; margin: 10px 0 14px; page-break-inside: avoid; }
+  .pitch { background: #f3faf4; border-left: 4px solid #1f7a3a; }
+  .warn { background: #fff8ee; border-left: 4px solid #c47b12; }
+  .q { font-weight: 650; margin-bottom: 2px; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 10.2pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #ddd8ea; padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: #efeafc; }
+  code { font-family: Consolas, monospace; font-size: 9.5pt; background: #f3f1f8; padding: 0 3px; }
+  .cover { page-break-after: always; padding-top: 28mm; }
+  .small { color: #555; font-size: 10pt; }
+  .footer-note { margin-top: 18px; font-size: 9.5pt; color: #666; }
+</style>
+</head>
+<body>
+
+<section class="cover">
+  <p class="kicker">Final-year project · Interview brief</p>
+  <h1>SeatWise</h1>
+  <p class="lede">A multi-city restaurant reservation marketplace that also tells the owner which tables are about to go empty — and what to do about it.</p>
+  <div class="box pitch">
+    <strong>One sentence.</strong> Diners search and book across six Indian cities. Restaurant owners get a no-show risk score, a safe overbooking recommendation, and a waitlist seating plan — the same idea airlines use, applied to a dining room.
+  </div>
+  <p><strong>Stack:</strong> React 18 + Vite, Express, Prisma, PostgreSQL 16 (pgvector), optional Redis, JWT auth, OpenAI RAG concierge.</p>
+  <p><strong>Demo login (no database needed):</strong></p>
+  <ul>
+    <li>Diner — <code>diner@seatwise.app</code> / <code>demo1234</code></li>
+    <li>Owner — <code>owner@seatwise.app</code> / <code>demo1234</code> (opens the console)</li>
+  </ul>
+  <p class="small">Run: <code>npm install</code> then <code>npm run dev:web</code> → http://localhost:5173</p>
+</section>
+
+<h2>1. The real-life problem</h2>
+<p>A table that is reserved but empty at 8:15 pm is not a small inconvenience. The kitchen bought for that cover, the server is standing, and the walk-in at the door is turned away. Indian restaurants commonly see a <strong>10–20% no-show rate</strong>. On a roughly ₹3,700 average check, that is hundreds of rupees per empty seat, against typical restaurant net margins of about 3–5%.</p>
+<p><strong>Example.</strong> Olive &amp; Grove in Koregaon Park has 40 covers at 8 pm. Eight parties do not come. That is about ₹30,000 of food and labour planned for people who never sat down — and the family waiting outside was told “we are fully booked.”</p>
+<p>Existing booking sites solve the diner’s problem (find a table). They barely solve the owner’s problem (protect the table). SeatWise does both.</p>
+
+<h2>2. What the product is</h2>
+<p>SeatWise is two products in one app:</p>
+<ol>
+  <li><strong>Marketplace for diners</strong> — search 34 restaurants across Pune, Mumbai, Bengaluru, Hyderabad, Chennai, and Delhi NCR. Filter by cuisine, neighbourhood, price band (₹ to ₹₹₹₹), party size, and “available tonight.” Book a slot, join a waitlist, or ask in plain English.</li>
+  <li><strong>Yield console for owners</strong> — tonight’s book, a ranked no-show risk queue with reasons, an overbooking plan, floor and waitlist assignment, and 30-day analytics.</li>
+</ol>
+<p>There are two ways to run it. <strong>Demo mode</strong> (default) uses generated data so a reviewer can click everything without Postgres. <strong>Live API mode</strong> uses Express, PostgreSQL, JWT, and optional OpenAI. Screens call the same service functions either way.</p>
+
+<h2>3. Interview pitch</h2>
+<h3>30 seconds</h3>
+<div class="box pitch">
+  “SeatWise is a restaurant booking platform I built after auditing a PHP prototype that scored 2.5 out of 10 — SQL injection, XSS, and two databases that could not even join a guest to a reservation. I rebuilt it in React, Express, and PostgreSQL. Diners book across six cities. Owners see which bookings are likely to no-show, how many extra covers they can safely sell, and which waiting party should take the freed table. The risk model is a published logistic regression, so a host can see <em>why</em> a booking is 70% risk, not just a colour.”
+</div>
+<h3>Two minutes (use this if they say “walk me through it”)</h3>
+<ol>
+  <li><strong>Problem.</strong> A reserved empty table is lost revenue and a turned-away walk-in. Flat “overbook by 10%” is how you seat three parties of four into two tables and get a 1-star review.</li>
+  <li><strong>Diner flow.</strong> Search Pune, party of 4, 8 pm, Mediterranean. Open Olive &amp; Grove. See signature dishes with prices (Miso banana bread — ₹180). Hold the slot for five minutes. Confirm. Get a reference like SW-4KQ7MB.</li>
+  <li><strong>Owner flow.</strong> Sign in as owner. Tonight’s book shows Aditya Sharma, party of 2, 52% high risk — booked far ahead, unconfirmed, first-timer, Saturday prime time. Action: call or send a reminder. Confirmation is the strongest protective signal in the model.</li>
+  <li><strong>Overbooking.</strong> I do not sum probabilities and round down. Each booking is its own Bernoulli trial. The number of no-shows is a Poisson-binomial. I sell the largest extra covers that keep the chance of turning someone away under 5%.</li>
+  <li><strong>Engineering.</strong> Double-booking uses <code>SELECT … FOR UPDATE</code> plus a Postgres exclusion constraint. Host edits (seated / no-show) use optimistic version checks. Allergen “no peanuts” is a SQL filter, not an LLM guess. Refresh tokens are hashed, httpOnly, and rotated.</li>
+</ol>
+
+<h2>4. Architecture (say this out loud)</h2>
+<p>Browser (React/Vite) → Vite <code>/api</code> proxy → Express (routes → controllers → services → Prisma) → PostgreSQL with pgvector. Redis is optional for cache and rate limits; the API still runs if Redis is down. OpenAI is used only for embeddings (<code>text-embedding-3-small</code>) and chat (<code>gpt-4o-mini</code>).</p>
+<p>Money is stored in <strong>paise</strong> (integer), never floats, so a bill cannot become ₹1,249.999. Prices on screen use Indian grouping: ₹1,200.</p>
+
+<h2>5. Features, one by one</h2>
+
+<h3>5.1 Discover and search</h3>
+<p><strong>What it does.</strong> City switcher, text search, cuisine, area, price band, party size, time window (±90 minutes — “8 pm” means dinner, not only the exact slot), and quick filters: tonight, walk-in, counter, outdoor, group.</p>
+<p><strong>Real example.</strong> “Italian in Koregaon Park for 2 at 8.” Forno Nove stays. Kite &amp; String (only 2-tops, Kalyani Nagar, small plates) drops if the party is 6, because two joined tables still cannot seat them honestly. The card says when tables must be combined instead of pretending a six-top exists.</p>
+<p><strong>Ranking.</strong> Exact time match, then closeness, then rating, then editorial “hard to get,” then distance. No paid placement.</p>
+
+<h3>5.2 Venue page and signature prices</h3>
+<p>Each restaurant has a tagline, about text, zones (main room, outdoor, counter, private), slots, and signature dishes with rupee prices. A ₹ café’s dishes are cheaper than a ₹₹₹₹ omakase. Live API joins those names to real <code>MenuItem.priceInPaise</code> rows.</p>
+<p><strong>Example.</strong> Sourdough Society, Koramangala: “Miso banana bread — ₹180”, “Cold brew, house roast — ₹220”, “Six-seat evening menu — ₹1,800”.</p>
+
+<h3>5.3 Booking with a real hold</h3>
+<p>Choosing a slot opens a sheet: time, guests, seating preference, name, phone, special requests. A countdown (about five minutes) matches the hold the API takes on a table. If it expires, confirm is disabled — the urgency is real, not a fake banner.</p>
+<p><strong>Example.</strong> Book Curry Culture Lab, Monday 9 pm, 2 guests, Main Room, name and phone required. Prepaid tasting menus show the deposit and the cancellation window (48 hours) before you confirm.</p>
+<p>Validation matches the server: empty name → “Tell the restaurant who to expect.” Bad phone → “A reachable number, please.”</p>
+
+<h3>5.4 Waitlist</h3>
+<p>If the room is full, the guest joins a queue. The quoted wait is computed with the <em>same</em> seating algorithm the host floor uses, so the guest and the host do not see different numbers.</p>
+<p><strong>Example.</strong> Party of 2, free 2-top exists → seated now, wait 0. Party of 6 behind two smaller parties, next 6-top turns in 25 minutes → position and quote come from that packing, not a random “45 minutes.”</p>
+
+<h3>5.5 My bookings and login gates</h3>
+<p><code>/bookings</code> and <code>/console</code> require login. A diner who opens <code>/console</code> is sent home. A logged-out user is sent to login and returned afterward. Demo sessions are labelled in the UI so a reviewer knows it is not fake production security.</p>
+
+<h3>5.6 Auth</h3>
+<p>Register, login, logout, forgot password, reset password. Live mode: short-lived JWT in memory (not localStorage — one XSS must not become permanent account takeover), refresh token as an httpOnly <code>SameSite=strict</code> cookie, stored only as a hash, rotated on every use. Logout deletes the row. Passwords are bcrypt. Every body is Zod-validated. Rate limits on login and AI.</p>
+<p><strong>Example.</strong> Access token expires in 15 minutes. Three API calls 401 at once share one refresh, because three parallel refreshes would invalidate each other and look like token theft.</p>
+
+<h3>5.7 Owner console — Tonight’s book</h3>
+<p>List of today’s reservations: time, guest, party, status, no-show risk, actions Seat / No-show / Cancel / Remind. “No-show rate so far” is blank (<strong>—</strong>) until at least five bookings are already Completed or No-show. That is deliberate: 1 no-show out of 1 booking would display as 100% and lie to the host.</p>
+<p><strong>Example on screen.</strong> 6 pm, Aditya Sharma, 2 guests, Confirmed, 52% High risk, Remind. Siddharth Rao 36% Watch. Pooja Desai 4% Low risk — leave her alone.</p>
+<p>Tiles: bookings today, covers, high-risk count, and “exposure tonight” — expected rupees at risk if nobody calls those high-risk parties.</p>
+
+<h3>5.8 Risk queue</h3>
+<p>Same bookings, sorted by probability, with the top reason (“Booked 40 days ahead”, “Not confirmed”, “First-time guest”). Bands are operational, not statistical:</p>
+<table>
+  <tr><th>Band</th><th>Probability</th><th>What staff do</th></tr>
+  <tr><td>Low</td><td>under 20%</td><td>Do nothing</td></tr>
+  <tr><td>Watch</td><td>20–50%</td><td>Send a reminder</td></tr>
+  <tr><td>High</td><td>50% and above</td><td>Phone call, or hold a card</td></tr>
+</table>
+<p>Scores are clamped between 2% and 92% so staff never treat a model as certainty.</p>
+
+<h3>5.9 The no-show model (know the formula)</h3>
+<p><code>P(no-show) = sigmoid(bias + weights · features)</code>, bias ≈ −2.05. Features:</p>
+<ul>
+  <li><strong>Lead time as log(1+days)</strong> — today vs three weeks matters a lot; two months vs three months barely does. A linear “days” term would make a 90-day booking 90× riskier, which restaurants do not see.</li>
+  <li><strong>Party size, negative weight</strong> — bigger parties show up more (occasion, social cost). The <em>money</em> lost if they flake is handled in the cost model, not by inflating the probability.</li>
+  <li><strong>Confirmation answered</strong> — strongest protection (about −1.15 log-odds).</li>
+  <li><strong>Prior no-shows</strong> — strongest risk (+0.95 each).</li>
+  <li><strong>Prior visits</strong> — help, but cap at 12. Loyalty saturates.</li>
+  <li><strong>First-time guest, weekend, prime time (7–9 pm)</strong> — raise risk.</li>
+  <li><strong>Prepaid or card hold</strong> — lower risk. Money changes behaviour more than a reminder.</li>
+</ul>
+<p><strong>Worked examples the coefficients were set to match:</strong></p>
+<ul>
+  <li>Booking A — 3 months out, party of 2, unconfirmed, first-timer, Saturday 8 pm → about <strong>70%</strong>.</li>
+  <li>Booking B — booked yesterday, party of 4, SMS confirmed, 10 clean visits → about <strong>5%</strong>.</li>
+</ul>
+<div class="box warn">
+  <strong>Say this before they ask.</strong> The <em>form</em> is real logistic regression. The <em>weights are hand-set</em> to those two scenarios, not trained on a restaurant’s history. Swapping in fitted weights later changes constants only. I do not claim a trained ML model.
+</div>
+
+<h3>5.10 Overbooking</h3>
+<p>Airlines sell 110 seats on a 100-seat plane because they know the <em>distribution</em> of no-shows, not because 10 feels lucky.</p>
+<p><strong>Counter-example you should tell.</strong> Two bookings, each 40% likely to no-show. Expected no-shows = 0.8. <code>floor(0.8) = 0</code> looks safe, but there is a 36% chance <em>nobody</em> no-shows. If you had sold one extra cover on that logic on a full room, you turn a guest away. SeatWise computes the exact Poisson-binomial (dynamic programming, fine at &lt;40 bookings a slot) and only recommends extra covers while P(all of them show and you have no seat) stays under <strong>5%</strong>.</p>
+<p>The API’s simpler version is <code>floor(sum of probabilities)</code>, cached ~20 seconds. The console version is the stricter distribution. If asked which is “the” algorithm, say the console is the one you defend; the API slice is the cheaper approximation.</p>
+
+<h3>5.11 Floor and waitlist assignment</h3>
+<p>Not “first empty table.” Largest party first (they have the fewest options), then the smallest table that fits, same zone only. If nothing fits, two tables in the <em>same</em> zone can be combined and the UI says so — someone must move furniture. A swap pass then reduces wasted seats.</p>
+<p><strong>Example.</strong> Free tables: one 2-top and one 6-top. Walk-in of 3. The 2-top is too small. Putting them on the 6-top wastes 3 seats a later party of 4 needed. The algorithm prefers the tightest legal fit across the whole queue, and will not seat a terrace booking indoors.</p>
+
+<h3>5.12 Analytics and the cost calculator</h3>
+<p>30-day occupancy, a day×hour heatmap of no-show rate, and slices by lead time, party size, and whether the guest confirmed. <code>/for-restaurants</code> lets you change covers and no-show percent and watch lost revenue move. That page is the sales pitch to a restaurant, using the same formula as the console.</p>
+
+<h3>5.13 Ask AI concierge</h3>
+<p><strong>Live mode (RAG):</strong> question → embedding → pgvector cosine search, top 5 restaurants → gpt-4o-mini may recommend <em>only</em> from that retrieved context → reply plus venue cards. If embeddings were never generated, the API says so instead of inventing restaurants.</p>
+<p><strong>Demo mode:</strong> a local intent parser (budget, cuisine, area, party, tonight, outdoor). It is not pretending to be GPT. Say that clearly.</p>
+<p><strong>Example.</strong> “Date night under ₹1500, outdoor, Koregaon Park.” Retrieved venues only. Peanut allergy is <em>not</em> decided by the model — the menu query excludes dishes whose allergen tags overlap, in SQL.</p>
+
+<h3>5.14 Menu, money, and owner edits</h3>
+<p>Menu items live in Postgres: name, description, price in paise, category, allergens, dietary tags, availability. Owners can create and update prices through the menu API. Allergen exclusion is <code>NOT allergens hasSome [...]</code>.</p>
+
+<h2>6. Why the rebuild exists</h2>
+<p>The <code>legacy/</code> folder is the original PHP prototype (audit 2.5/10), kept only for before/after comparison. Defects: SQL injection, XSS, split databases so a user row could not be related to a reservation. The Node app puts users, restaurants, tables, and reservations in one schema, validates every input, and escapes through Prisma.</p>
+
+<h2>7. Design decisions they will poke</h2>
+<table>
+  <tr><th>Decision</th><th>Why</th></tr>
+  <tr><td>Pessimistic lock on booking</td><td>Two guests want the last table. <code>SELECT … FOR UPDATE</code> on candidate tables, overlap check, then a Postgres exclusion constraint if the app is wrong. Scoped by restaurant, so Pune and Mumbai do not block each other. Second request gets 409.</td></tr>
+  <tr><td>Optimistic lock on host status</td><td>Two hosts tapping “seated” is an accident, not a race for a scarce seat. <code>UPDATE … WHERE version = n</code>. Mixing the two on purpose is the point.</td></tr>
+  <tr><td>Allergens in SQL</td><td>“No peanuts” is a constraint. An LLM is slow and can be wrong. The concierge may talk about food; it does not clear a dish.</td></tr>
+  <tr><td>Refresh token rotation</td><td>Stolen refresh token dies on next legitimate use. Access token never sits in localStorage.</td></tr>
+  <tr><td>Hand-set logistic weights</td><td>The UI needs rank + explanation. Fitted weights drop in later without rewriting the console.</td></tr>
+  <tr><td>Poisson-binomial, not floor(Σp)</td><td>Expected value hides the “everyone shows up” tail.</td></tr>
+  <tr><td>Demo mode separate from live API</td><td>A reviewer can judge the product without Docker. Live mode is the same screens hitting Express.</td></tr>
+</table>
+
+<h2>8. Honest limitations (say them first)</h2>
+<ul>
+  <li>No-show coefficients are published, not trained on production history.</li>
+  <li>No error tracker or distributed tracing yet — logs only.</li>
+  <li>RAG runs in the request path. Under heavy load it can time out; a queue would be the next step. There is an hourly cap.</li>
+  <li>City-wide “who can seat 4 at 8 tonight?” search is still on demo availability, not one SQL query across every venue. Booking one chosen venue is real in live mode.</li>
+  <li>Some owner yield panels are complete in the browser demo; the live API covers reservations, waitlist, host status, and a simpler overbooking number.</li>
+</ul>
+<p>Owning these is stronger than being caught.</p>
+
+<h2>9. Cross questions and answers</h2>
+
+<p class="q">Q. Is this machine learning?</p>
+<p>It is the <em>model form</em> of logistic regression, evaluated in JavaScript, with coefficients set so two research scenarios land near 70% and 5%. I would retrain on a venue’s own completed vs no-show rows and replace the constants. I do not call it a trained model.</p>
+
+<p class="q">Q. Why not just use ChatGPT to predict no-shows?</p>
+<p>A probability that changes every call cannot drive overbooking or a phone-call policy. Logistic regression is deterministic, fast, and explainable term by term. The LLM is only the concierge, and only over retrieved venues.</p>
+
+<p class="q">Q. Why is party size a negative coefficient? Bigger tables hurt more.</p>
+<p>They hurt more in <em>rupees</em>, which is party size × check × probability, in the exposure tile. Empirically, large parties cancel less often because someone has coordinated the group. Putting that damage into the probability would double-count it.</p>
+
+<p class="q">Q. Walk through Booking A to ~70%.</p>
+<p>Start at bias −2.05 (low base rate). Add log lead time for ~90 days, first-time guest +0.7, weekend +0.25, prime time +0.2. Do not subtract confirmation. Sigmoid of that sum, clamped, is about 0.7. Booking B subtracts a large confirmation weight and prior visits, so it collapses near 0.05.</p>
+
+<p class="q">Q. Why Poisson-binomial instead of a normal approximation?</p>
+<p>A slot has tens of bookings, small probabilities, and the dangerous tail is “zero no-shows.” Normal approximation is worst exactly there. DP is O(n²) and n is under 40.</p>
+
+<p class="q">Q. What if all three extra parties show up?</p>
+<p>That probability is what the 5% tolerance caps. Above that, the recommendation is zero extra covers. The product would rather leave a table empty than bounce a guest.</p>
+
+<p class="q">Q. How do you stop double booking?</p>
+<p>Transaction. Lock candidate tables with <code>FOR UPDATE</code>. Pick the smallest table that fits and does not overlap. Commit. A Postgres exclusion constraint on table + time range is the backstop if two requests slip through. Conflict → 409. Locks are per restaurant.</p>
+
+<p class="q">Q. Why not lock the whole restaurant row?</p>
+<p>That would serialise every booking in the building, including tables that do not overlap. Locking only candidate tables keeps other zones bookable.</p>
+
+<p class="q">Q. Optimistic vs pessimistic — when?</p>
+<p>Pessimistic when two customers compete for one scarce seat. Optimistic when two staff edit status; the loser retries. Using pessimistic everywhere would slow the floor. Using optimistic on the last table would lose bookings.</p>
+
+<p class="q">Q. Where is the JWT stored? Why not localStorage?</p>
+<p>Access token is in a JS variable. Refresh token is an httpOnly cookie. localStorage is readable by any script; this codebase’s history included XSS, so a stolen localStorage token would have been permanent.</p>
+
+<p class="q">Q. What is refresh rotation?</p>
+<p>Each refresh issues a new random token, stores its hash, and invalidates the old one. Reuse of an old token is treated as theft and the session family can be killed. Logout deletes the hash, so “log out” actually ends the session.</p>
+
+<p class="q">Q. How do you prevent email enumeration on forgot-password?</p>
+<p>The API always answers “if that email exists, a reset link is on its way,” whether or not the account is real. Reset tokens are hashed, expire, and are single use.</p>
+
+<p class="q">Q. Why is allergen filtering not in the prompt?</p>
+<p>A safety filter must be complete and repeatable. SQL <code>NOT hasSome</code> either excludes the dish or it does not. An LLM can miss a peanut in a sauce description. The assistant may mention dietary preferences; the menu query enforces them.</p>
+
+<p class="q">Q. Can the chatbot invent a restaurant?</p>
+<p>In live RAG, no. The prompt is grounded on the top-5 pgvector hits. Empty index returns an explicit “generate embeddings” message. Demo mode uses the fixture list, also not free-form invention of venues outside the catalogue.</p>
+
+<p class="q">Q. Why pgvector?</p>
+<p>The catalogue is small enough to embed per restaurant (name, area, vibe, menu, prices) and search by cosine similarity inside Postgres. No separate vector database to operate.</p>
+
+<p class="q">Q. What if Redis is down?</p>
+<p>Cache and some rate limits degrade. Booking correctness does not depend on Redis; it depends on Postgres locks and the exclusion constraint.</p>
+
+<p class="q">Q. Why paise not rupees as a float?</p>
+<p>Binary floats cannot represent 0.1 exactly. A confirmation screen should never show ₹1,249.999. Integer paise, format with <code>Intl</code> / <code>en-IN</code> at the edge.</p>
+
+<p class="q">Q. Why does no-show rate show a dash?</p>
+<p>The tile is today’s realised rate: no-shows divided by (completed + no-shows). Until five bookings have actually finished, the sample is too small. Confirmed future parties are predictions in the risk column, not in that percentage.</p>
+
+<p class="q">Q. How is search relevance not “whoever pays”?</p>
+<p>Score is availability at the requested time, rating, a small editorial boost, and distance. There is no sponsored slot.</p>
+
+<p class="q">Q. Time zones?</p>
+<p>A booking date is the venue’s calendar date, not the browser’s UTC conversion. India is fixed at UTC+330. That avoids “your table was yesterday” for anyone west of the restaurant.</p>
+
+<p class="q">Q. How would you test the double-book?</p>
+<p>A concurrency test fires many parallel creates at one slot against real Postgres. Exactly one succeeds; the rest get a conflict. I can describe that test; I do not need to pretend I load-tested production traffic.</p>
+
+<p class="q">Q. What would you build next?</p>
+<p>Fit the logistic weights on real outcomes. Add tracing so a host sees “risk queue empty because scoring failed.” Put concierge calls on a queue. One cross-venue availability query. Finish yield writes on the live API so the console is not demo-only for overbooking math.</p>
+
+<p class="q">Q. Why a monolith API instead of microservices?</p>
+<p>One team, one deploy, one database transaction that must lock tables and insert a reservation together. Splitting booking and inventory would make the double-book bug easier, not harder.</p>
+
+<p class="q">Q. GDPR / privacy of guest phone numbers?</p>
+<p>Phone is collected because the venue may need to call a high-risk party. It is not shown with the risk score to other diners. Access tokens are not in localStorage. I would add retention limits and a delete-account path before a real launch. I have not claimed production compliance.</p>
+
+<p class="q">Q. What was the hardest bug?</p>
+<p>The booking sheet could not accept typing. A five-minute countdown re-rendered every 250 ms, which recreated <code>onClose</code>, which re-ran the dialog focus effect and stole focus from the inputs. Fix: keep <code>onClose</code> in a ref and run the focus effect only when the sheet opens.</p>
+
+<p class="q">Q. Show me you understand the legacy audit.</p>
+<p>PHP app, score 2.5/10. SQL built by string concatenation, XSS in rendered fields, and reservations in a different database from users — so you could not ask “what did this guest book?”. The new schema is one Postgres database, Prisma parameterised queries, and React text nodes instead of raw HTML injection.</p>
+
+<h2>10. Demo script (4 minutes)</h2>
+<ol>
+  <li>Open Discover. Switch city to Pune. Filter Mediterranean or search “olive.” Open Olive &amp; Grove. Point at signature prices.</li>
+  <li>Pick 8 pm, party of 2, confirm a booking. Show the reference.</li>
+  <li>Log out. Open <code>/bookings</code> — redirected to login. That is the guard.</li>
+  <li>Sign in as <code>owner@seatwise.app</code> / <code>demo1234</code>. Land on the console.</li>
+  <li>Tonight’s book: point at a high-risk row and the Remind action. Explain the dash on no-show rate.</li>
+  <li>Risk queue: read the top driver out loud.</li>
+  <li>Overbooking: “extra covers only while walk-away risk stays under 5%.”</li>
+  <li>Floor: largest party, tightest table, same zone.</li>
+  <li>Optional: <code>/for-restaurants</code> calculator. Optional: Ask AI with “outdoor seating in Koregaon Park.”</li>
+</ol>
+
+<h2>11. Numbers worth memorising</h2>
+<table>
+  <tr><th>Item</th><th>Value</th></tr>
+  <tr><td>Cities / venues in the demo market</td><td>6 cities, 34 restaurants</td></tr>
+  <tr><td>High-risk threshold</td><td>≥ 50% → call; ≥ 20% → remind</td></tr>
+  <tr><td>Overbooking tolerance</td><td>P(turning someone away) &lt; 5%</td></tr>
+  <tr><td>Score clamp</td><td>2% to 92%</td></tr>
+  <tr><td>Access token</td><td>about 15 minutes, memory only</td></tr>
+  <tr><td>Refresh token</td><td>about 7 days, hashed, rotated, httpOnly</td></tr>
+  <tr><td>Slot hold</td><td>about 5 minutes</td></tr>
+  <tr><td>Worked risks</td><td>~70% far-out unconfirmed; ~5% confirmed regular</td></tr>
+  <tr><td>Industry pain</td><td>10–20% no-shows; ~3–5% net margin</td></tr>
+  <tr><td>Legacy audit</td><td>2.5 / 10 PHP prototype</td></tr>
+</table>
+
+<p class="footer-note">SeatWise interview guide. Figures match the code in <code>apps/web/src/lib/risk.js</code>, <code>overbooking.js</code>, <code>assignment.js</code>, and the README design-decisions section. Demo data is generated; live mode needs Postgres, migrations, and an OpenAI key only for the concierge.</p>
+
+</body>
+</html>
