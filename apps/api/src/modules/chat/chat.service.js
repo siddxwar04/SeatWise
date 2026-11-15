@@ -35,8 +35,8 @@ ABOUT SEATWISE (the only source for product answers):
 OUTPUT FORMAT — always:
 - First line, exactly one of:  SCOPE: dining   |   SCOPE: product   |   SCOPE: off_topic
 - off_topic: write the SCOPE line and nothing else.
-- product: 1–2 short paragraphs. No restaurant recommendations.
-- dining: 2–4 short, warm paragraphs, then a last line exactly like
+- product: at most 3 short sentences. No restaurant recommendations.
+- dining: at most 2 or 3 restaurants, one short sentence each saying why it fits (cuisine, area, price, seating). No greeting, no closing line, no repeating the question. Then a last line exactly like
   RECOMMENDED_IDS: id1,id2
   using the UUID ids from the context.
 
@@ -110,7 +110,7 @@ async function generateReply(history, userMessage, contextBlock) {
     temperature: 0.3,
     // A concierge answer is a few short paragraphs. A low ceiling also caps
     // what a successful jailbreak could ever get out of it.
-    max_tokens: 450,
+    max_tokens: 300,
     messages,
   });
 
