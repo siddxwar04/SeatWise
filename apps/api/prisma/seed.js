@@ -1250,6 +1250,19 @@ const VENUE_ADMINS = [
   },
 ];
 
+/**
+ * True for localhost and single-label hosts (docker-compose service names such
+ * as "postgres"). Anything with a dotted hostname is treated as hosted.
+ */
+function isLocalDatabase() {
+  try {
+    const { hostname } = new URL(process.env.DATABASE_URL ?? '');
+    return hostname === 'localhost' || hostname === '127.0.0.1' || !hostname.includes('.');
+  } catch {
+    return false;
+  }
+}
+
 async function main() {
   console.log('Seeding SeatWise…');
 
@@ -1259,6 +1272,16 @@ async function main() {
   // real deployment never inherits the documented defaults.
   const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? 'Admin@12345';
   const userPassword = process.env.SEED_USER_PASSWORD ?? 'Guest@12345';
+
+  // The defaults above are published in the README. Refuse to create a global
+  // ADMIN with one of them on anything that looks like a hosted database.
+  const usingDefaults = !process.env.SEED_ADMIN_PASSWORD || !process.env.SEED_USER_PASSWORD;
+  if (usingDefaults && (process.env.NODE_ENV === 'production' || !isLocalDatabase())) {
+    throw new Error(
+      'Refusing to seed with the documented default passwords. ' +
+        'Set SEED_ADMIN_PASSWORD and SEED_USER_PASSWORD and run the seed again.',
+    );
+  }
 
   const platformAdmin = await prisma.user.upsert({
     where: { email: 'admin@seatwise.local' },

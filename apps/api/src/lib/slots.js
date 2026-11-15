@@ -103,7 +103,12 @@ export function leadTimeDays(startsAt, now = new Date()) {
  * Every reason a requested time can be refused, in one place.
  * Returns null when the slot is acceptable, or a human-readable string.
  */
-export function validateBookingTime(dateStr, timeStr, now = new Date()) {
+export function validateBookingTime(
+  dateStr,
+  timeStr,
+  now = new Date(),
+  { minLeadMinutes = env.MIN_LEAD_TIME_MINUTES } = {},
+) {
   const slots = generateSlots();
   if (!slots.includes(timeStr)) {
     const lastSeating = slots[slots.length - 1];
@@ -119,11 +124,14 @@ export function validateBookingTime(dateStr, timeStr, now = new Date()) {
 
   // Audit finding #19: the legacy form accepted bookings in the past, at 4 AM,
   // and 50 years out.
-  const minStart = now.getTime() + env.MIN_LEAD_TIME_MINUTES * MINUTE_MS;
+  // `minLeadMinutes: 0` is the waitlist case: a table that frees up 40 minutes
+  // before the seating is exactly what the queue is for. Never in the past.
+  const minStart = now.getTime() + minLeadMinutes * MINUTE_MS;
   if (startsAt.getTime() < minStart) {
-    return env.MIN_LEAD_TIME_MINUTES >= 60
-      ? `Please book at least ${Math.round(env.MIN_LEAD_TIME_MINUTES / 60)} hour(s) ahead.`
-      : `Please book at least ${env.MIN_LEAD_TIME_MINUTES} minutes ahead.`;
+    if (minLeadMinutes === 0) return 'That seating has already started.';
+    return minLeadMinutes >= 60
+      ? `Please book at least ${Math.round(minLeadMinutes / 60)} hour(s) ahead.`
+      : `Please book at least ${minLeadMinutes} minutes ahead.`;
   }
 
   const maxStart = now.getTime() + env.MAX_ADVANCE_BOOKING_DAYS * 86_400_000;

@@ -74,6 +74,65 @@ function describe(intent) {
   return parts;
 }
 
+/**
+ * Scope. The concierge answers two kinds of question — "where should I eat"
+ * and "how does SeatWise work" — and declines everything else. The live API
+ * enforces the same rule server-side (see chat.service.js); this is the demo
+ * equivalent so the two modes behave alike.
+ */
+export const OFF_TOPIC_REPLY =
+  'I can only help with finding a restaurant, booking a table, or explaining how SeatWise works. ' +
+  'Try something like “Italian for two tonight under ₹1500” or “How does the waitlist work?”';
+
+const PRODUCT_ANSWERS = [
+  {
+    test: /wait\s?list|queue|fully booked|sold out/,
+    reply:
+      'If a restaurant is full, open its page and click “Join waitlist”. You get a place in the line and a rough waiting time, and you are told when a table opens.',
+  },
+  {
+    test: /cancel|change my booking|my bookings|reference|booking code/,
+    reply:
+      'Every booking gets a reference code — keep it as your proof of booking. If you are signed in, open “My bookings” to see or cancel a booking before you are seated.',
+  },
+  {
+    test: /how (do|can|to)\b.*\b(book|reserve)|make a (booking|reservation)|need an account|sign ?up/,
+    reply:
+      'Pick a restaurant, click one of the free times, and fill the short form: number of guests, where you would like to sit, your name and phone. You do not need an account.',
+  },
+  {
+    test: /no[- ]?show|overbook|owner|console|risk|restaurant owners?|empty tables?/,
+    reply:
+      'For restaurants, the problem is guests who book and never turn up, leaving tables empty. The owner console scores each booking’s no-show risk, shows who to remind first, recommends how many extra bookings are safe to accept, and suggests the best table for waiting parties.',
+  },
+  {
+    test: /what (is|does) seat\s?wise|about seat\s?wise|who are you|what can you do|how does (this|it|seat\s?wise) work|what problem|which gap/,
+    reply:
+      'SeatWise is a table-booking website. Diners search every restaurant in a city at once and book a free table in a few clicks. Restaurants use it to avoid empty tables when guests do not turn up. Ask me for a place to eat — for example “outdoor table for 6 tonight”.',
+  },
+];
+
+const DINING_WORDS =
+  /\b(eat|eating|food|foodie|restaurants?|tables?|book|booking|reserve|reservation|dinner|lunch|brunch|breakfast|supper|cuisine|menu|dish(es)?|seat(ing)?|hungry|drinks?|cocktails?|bar|cafe|café|bakery|dine|dining|date night|veg|vegetarian|vegan|biryani|pizza|sushi|kebab|dosa|somewhere|place to)\b/;
+
+const OFF_TOPIC_WORDS =
+  /\b(code|coding|program|programming|python|javascript|java|c\+\+|sql|function|algorithm|script|html|css|essay|poem|homework|equation|solve|calculate|translate|capital of|president|weather|stock|recipe|how to cook)\b/;
+
+/** 'product' | 'dining' | 'off_topic' — which of its two jobs, if either, this message is. */
+export function classifyScope(message, intent) {
+  const text = message.toLowerCase();
+  if (PRODUCT_ANSWERS.some((a) => a.test.test(text))) return 'product';
+
+  const dining =
+    DINING_WORDS.test(text) ||
+    Boolean(intent.cuisine || intent.area || intent.outdoor || intent.counter || intent.walkIn);
+
+  // "write code for 2 numbers" parses a party of 2 — weak signals such as party
+  // size or the word "now" never make a message a dining request on their own.
+  if (OFF_TOPIC_WORDS.test(text) && !dining) return 'off_topic';
+  return dining || intent.budget ? 'dining' : 'off_topic';
+}
+
 export async function ask(message, history = [], { city = 'pune' } = {}) {
   if (LIVE_API) {
     const data = await chatApi.send(message, history);
@@ -83,6 +142,15 @@ export async function ask(message, history = [], { city = 'pune' } = {}) {
   await delay(760);
 
   const intent = parseIntent(message, city);
+
+  const scope = classifyScope(message, intent);
+  if (scope === 'off_topic') return { reply: OFF_TOPIC_REPLY, venues: [], intent: null };
+  if (scope === 'product') {
+    const text = message.toLowerCase();
+    const answer = PRODUCT_ANSWERS.find((a) => a.test.test(text));
+    return { reply: answer.reply, venues: [], intent: null };
+  }
+
   const quick = [
     intent.tonight && 'tonight',
     intent.outdoor && 'outdoor',

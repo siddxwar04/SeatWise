@@ -56,3 +56,6 @@ desktop.ini
 
 # Docker volumes
 docker/data/
+
+# Local-only demo recording
+demo-video/

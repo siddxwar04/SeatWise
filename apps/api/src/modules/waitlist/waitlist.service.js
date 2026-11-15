@@ -219,6 +219,9 @@ export async function applyWaitlistAssignments(restaurantId, options = {}) {
           },
           null,
           'WALK_IN',
+          // The host is seating someone already queueing — the 60-minute
+          // booking lead time is for strangers, not for them.
+          { waiveLeadTime: true },
         );
         await prisma.waitlistEntry.update({
           where: { id: assignment.party.id },

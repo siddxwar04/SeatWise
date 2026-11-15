@@ -81,6 +81,7 @@ const TABLE_INCLUDE = {
   table: {
     select: { label: true, zone: true, capacity: true, restaurantId: true },
   },
+  restaurant: { select: { slug: true, name: true } },
 };
 
 export function riskFeaturesFor({ startsAt, partySize, status, priorBookings, priorNoShows }) {
@@ -110,17 +111,46 @@ async function invalidateSlotCaches(restaurantId) {
  * `input.restaurantId` is required — bookings are never cross-venue.
  * `input.tableId` pins allocation (waitlist apply) instead of running best-fit.
  */
-export async function createReservation(input, actor = null, channel = 'WEB') {
+export async function createReservation(input, actor = null, channel = 'WEB', options = {}) {
   if (!input.restaurantId) {
     throw new BadRequestError('Restaurant is required to make a booking.');
   }
 
-  const timeProblem = validateBookingTime(input.date, input.time);
-  if (timeProblem) throw new BadRequestError(timeProblem);
-
   const { startsAt, endsAt } = bookingInterval(input.date, input.time);
   const serviceDate = serviceDateFor(input.date);
   const restaurantId = input.restaurantId;
+
+  /**
+   * The minimum lead time is waived for the waitlist: for a host converting a
+   * waiting party (`options.waiveLeadTime`), and for a guest we emailed about
+   * this exact seating. Otherwise a table that frees up inside the last hour
+   * could never be given to the people queueing for it.
+   */
+  let notifiedEntry = null;
+  let timeProblem = validateBookingTime(input.date, input.time);
+  if (timeProblem) {
+    const now = new Date();
+    const lateProblem = validateBookingTime(input.date, input.time, now, { minLeadMinutes: 0 });
+    if (!lateProblem) {
+      if (options.waiveLeadTime) {
+        timeProblem = null;
+      } else if (input.guestPhone) {
+        notifiedEntry = await prisma.waitlistEntry.findFirst({
+          where: {
+            restaurantId,
+            status: 'NOTIFIED',
+            requestedDate: serviceDate,
+            requestedTime: input.time,
+            guestPhone: input.guestPhone,
+          },
+          select: { id: true },
+        });
+        if (notifiedEntry) timeProblem = null;
+      }
+    }
+  }
+  if (timeProblem) throw new BadRequestError(timeProblem);
+
   const leadTimeHours = (startsAt.getTime() - Date.now()) / 3_600_000;
 
   const MAX_REFERENCE_ATTEMPTS = 3;
@@ -138,7 +168,7 @@ export async function createReservation(input, actor = null, channel = 'WEB') {
            * disjoint candidate sets and both accept.
            */
           const locked = await tx.$queryRaw`
-            SELECT id, label, capacity
+            SELECT id, label, capacity, zone::text AS zone
             FROM restaurant_tables
             WHERE restaurant_id = ${restaurantId}::uuid
               AND is_active = true
@@ -179,7 +209,10 @@ export async function createReservation(input, actor = null, channel = 'WEB') {
                 `We do not have a table that seats ${input.partySize}. Please call us and we will arrange something.`,
               );
             }
-            table = selectBestFitTable(candidates, busy);
+            // A seating preference is a preference, not a filter: take the
+            // best fit in the requested zone if one is free, else any zone.
+            const preferred = input.zone ? candidates.filter((t) => t.zone === input.zone) : [];
+            table = selectBestFitTable(preferred, busy) ?? selectBestFitTable(candidates, busy);
 
             if (!table) {
               const extra = summariseOverbooking(slotBookings);
@@ -242,6 +275,13 @@ export async function createReservation(input, actor = null, channel = 'WEB') {
             await tx.user.update({
               where: { id: actor.id },
               data: { priorBookings: { increment: 1 } },
+            });
+          }
+
+          if (notifiedEntry) {
+            await tx.waitlistEntry.update({
+              where: { id: notifiedEntry.id },
+              data: { status: 'CONVERTED' },
             });
           }
 

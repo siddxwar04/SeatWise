@@ -8,7 +8,7 @@ import { TextField } from '../components/ui/Field.jsx';
 import { Icon } from '../components/ui/Icon.jsx';
 import { Logo } from '../components/layout/Logo.jsx';
 import { ApiError } from '../lib/api.js';
-import { ServiceError } from '../services/config.js';
+import { LIVE_API, ServiceError } from '../services/config.js';
 
 /**
  * Sign in.
@@ -101,24 +101,28 @@ export function LoginPage() {
           </p>
         </form>
 
-        <div className="auth_demo">
-          <p className="auth_demo_label">
-            <Icon name="sparkles" /> No backend is deployed — sign in with a demo account
-          </p>
-          {DEMO_ACCOUNTS.map((account) => (
-            <button
-              key={account.email}
-              type="button"
-              className="auth_demo_card"
-              onClick={() => fillDemo(account)}
-            >
-              <span className="auth_demo_role">{account.label}</span>
-              <strong>{account.email}</strong>
-              <span className="auth_demo_blurb">{account.blurb}</span>
-            </button>
-          ))}
-          <p className="auth_demo_hint">Password for both: demo1234</p>
-        </div>
+        {/* Demo accounts only exist in the fixture session; against the real
+            API they would just return 401. */}
+        {!LIVE_API && (
+          <div className="auth_demo">
+            <p className="auth_demo_label">
+              <Icon name="sparkles" /> No backend is deployed — sign in with a demo account
+            </p>
+            {DEMO_ACCOUNTS.map((account) => (
+              <button
+                key={account.email}
+                type="button"
+                className="auth_demo_card"
+                onClick={() => fillDemo(account)}
+              >
+                <span className="auth_demo_role">{account.label}</span>
+                <strong>{account.email}</strong>
+                <span className="auth_demo_blurb">{account.blurb}</span>
+              </button>
+            ))}
+            <p className="auth_demo_hint">Password for both: demo1234</p>
+          </div>
+        )}
       </div>
     </div>
   );

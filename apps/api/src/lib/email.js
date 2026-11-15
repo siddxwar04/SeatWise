@@ -69,9 +69,9 @@ export async function sendBookingConfirmation({
   reference,
 }) {
   const html = layout(
-    'You are booked',
+    'We have your booking',
     `<p>Hi ${escapeHtml(guestName)},</p>
-     <p>Your table at <strong>${escapeHtml(restaurantName)}</strong> is confirmed.</p>
+     <p>Your booking request at <strong>${escapeHtml(restaurantName)}</strong> has been received. The restaurant will confirm it shortly.</p>
      <ul>
        <li><strong>When:</strong> ${escapeHtml(date)} at ${escapeHtml(time)}</li>
        <li><strong>Party:</strong> ${escapeHtml(partySize)}</li>
@@ -79,7 +79,7 @@ export async function sendBookingConfirmation({
      </ul>
      <p>We look forward to hosting you.</p>`,
   );
-  return sendEmail(to, `Booking confirmed — ${restaurantName}`, html);
+  return sendEmail(to, `Booking received — ${restaurantName}`, html);
 }
 
 export async function sendHighRiskReminder({
@@ -128,7 +128,8 @@ export async function sendWaitlistAvailable({
 }) {
   const url =
     bookUrl ||
-    `${env.WEB_ORIGIN}/?restaurant=${encodeURIComponent(restaurantSlug)}&date=${encodeURIComponent(date)}&time=${encodeURIComponent(time)}#reserve`;
+    // The venue page opens its booking sheet on ?time= (see VenuePage.jsx).
+    `${env.WEB_ORIGIN}/r/${encodeURIComponent(restaurantSlug)}?time=${encodeURIComponent(time)}`;
   const html = layout(
     'A table just opened up',
     `<p>Hi ${escapeHtml(guestName)},</p>

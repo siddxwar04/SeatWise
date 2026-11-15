@@ -28,9 +28,13 @@ export function VenuePage() {
   // A card in search can deep-link straight to a slot via ?time=.
   useEffect(() => {
     const requested = searchParams.get('time');
-    if (requested && data?.venue.slots.some((s) => s.time === requested)) {
-      setSheetTime(requested);
-    }
+    if (!requested || !data) return;
+    // `lateTimes` are seatings inside the lead time — only reachable from a
+    // waitlist email, and the API decides whether this guest may take one.
+    const bookable =
+      data.venue.slots.some((s) => s.time === requested) ||
+      (data.venue.lateTimes ?? []).includes(requested);
+    if (bookable) setSheetTime(requested);
   }, [searchParams, data]);
 
   if (status === 'loading') {

@@ -133,27 +133,46 @@ export async function createMenuItem(restaurantId, data) {
   return toPublicMenuItem(item);
 }
 
-export async function updateMenuItem(id, data) {
+/**
+ * Every write below is scoped by restaurantId as well as id. The route
+ * middleware already checks membership; scoping the statement itself means a
+ * mistake there cannot turn into a cross-venue write.
+ */
+async function scopedWrite(write) {
+  try {
+    return await write();
+  } catch (err) {
+    // P2025: no row matched (id, restaurantId).
+    if (err?.code === 'P2025') throw new NotFoundError('That dish is not on the menu.');
+    throw err;
+  }
+}
+
+export async function updateMenuItem(restaurantId, id, data) {
   const { price, ...rest } = data;
-  const item = await prisma.menuItem.update({
-    where: { id },
-    data: {
-      ...rest,
-      ...(price !== undefined ? { priceInPaise: Math.round(price * 100) } : {}),
-    },
-  });
+  const item = await scopedWrite(() =>
+    prisma.menuItem.update({
+      where: { id, restaurantId },
+      data: {
+        ...rest,
+        ...(price !== undefined ? { priceInPaise: Math.round(price * 100) } : {}),
+      },
+    }),
+  );
   await invalidatePrefix(CACHE_KEYS.menuPrefix(item.restaurantId));
   return toPublicMenuItem(item);
 }
 
-export async function deleteMenuItem(id) {
-  const item = await prisma.menuItem.delete({ where: { id } });
+export async function deleteMenuItem(restaurantId, id) {
+  const item = await scopedWrite(() => prisma.menuItem.delete({ where: { id, restaurantId } }));
   await invalidatePrefix(CACHE_KEYS.menuPrefix(item.restaurantId));
 }
 
 /** Soft toggle — "86 the lava cake" without losing its row and its history. */
-export async function setAvailability(id, isAvailable) {
-  const item = await prisma.menuItem.update({ where: { id }, data: { isAvailable } });
+export async function setAvailability(restaurantId, id, isAvailable) {
+  const item = await scopedWrite(() =>
+    prisma.menuItem.update({ where: { id, restaurantId }, data: { isAvailable } }),
+  );
   await invalidatePrefix(CACHE_KEYS.menuPrefix(item.restaurantId));
   return toPublicMenuItem(item);
 }

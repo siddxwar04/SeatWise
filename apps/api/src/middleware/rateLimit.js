@@ -1,4 +1,4 @@
-import rateLimit from 'express-rate-limit';
+import rateLimit, { MemoryStore } from 'express-rate-limit';
 import { RedisStore } from 'rate-limit-redis';
 import { env, isTest } from '../config/env.js';
 import { TooManyRequestsError } from '../errors/AppError.js';
@@ -53,14 +53,77 @@ export function normaliseIp(rawIp) {
   return `${prefix}::/64`;
 }
 
+/**
+ * Limiters are created at import time, before Redis has connected, so the
+ * choice of store cannot be made once up front — it would always be "memory".
+ * This store decides per request: Redis while it is ready, the in-memory
+ * counters otherwise (and whenever a Redis command fails mid-flight).
+ */
+class RedisOrMemoryStore {
+  // Counters may live in Redis, so they are not local to this process.
+  localKeys = false;
+
+  constructor(prefix) {
+    this.prefix = `rl:${prefix}:`;
+    this.memory = new MemoryStore();
+    this.redis = null;
+    this.options = null;
+  }
+
+  init(options) {
+    this.options = options;
+    this.memory.init(options);
+  }
+
+  redisStore() {
+    if (!isRedisReady()) return null;
+    if (!this.redis) {
+      const client = getRedis();
+      this.redis = new RedisStore({
+        prefix: this.prefix,
+        sendCommand: (...args) => client.call(...args),
+      });
+      this.redis.init(this.options);
+      // The store loads its Lua scripts in the constructor. If Redis drops in
+      // that instant the promises reject with nobody awaiting them; the store
+      // reloads them on the next command, so the rejection is safe to swallow.
+      this.redis.incrementScriptSha?.catch(() => {});
+      this.redis.getScriptSha?.catch(() => {});
+    }
+    return this.redis;
+  }
+
+  async run(method, key) {
+    const redis = this.redisStore();
+    if (redis) {
+      try {
+        return await redis[method](key);
+      } catch {
+        // Fall through — a Redis blip must not take the API down.
+      }
+    }
+    return this.memory[method](key);
+  }
+
+  increment(key) {
+    return this.run('increment', key);
+  }
+
+  decrement(key) {
+    return this.run('decrement', key);
+  }
+
+  resetKey(key) {
+    return this.run('resetKey', key);
+  }
+
+  shutdown() {
+    this.memory.shutdown();
+  }
+}
+
 function buildStore(prefix) {
-  if (!isRedisReady()) return undefined;
-  const client = getRedis();
-  if (!client) return undefined;
-  return new RedisStore({
-    prefix: `rl:${prefix}:`,
-    sendCommand: (...args) => client.call(...args),
-  });
+  return new RedisOrMemoryStore(prefix);
 }
 
 function createLimiter({ name, windowMs, max, message, keyGenerator }) {

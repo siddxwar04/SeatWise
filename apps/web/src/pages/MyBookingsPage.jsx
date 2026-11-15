@@ -27,7 +27,7 @@ export function MyBookingsPage() {
 
     setCancellingRef(booking.reference);
     try {
-      await cancelBooking(booking.reference);
+      await cancelBooking(booking.reference, booking.id);
       toast.success('Reservation cancelled.');
       reload();
     } catch (err) {

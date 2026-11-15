@@ -12,7 +12,7 @@ import { CITIES, getCity } from '../data/cities.js';
 import { ratingBreakdown, reviewsFor } from '../data/people.js';
 import { floorState, waitlistFor } from '../data/serviceBook.js';
 import { getVenue, VENUES, venuesInCity } from '../data/venues.js';
-import { reservationApi, waitlistApi } from '../lib/api.js';
+import { ApiError, getAccessToken, reservationApi, waitlistApi } from '../lib/api.js';
 import { delay, LIVE_API, ServiceError, store } from './config.js';
 
 /* ─────────────────────────────────────────────────────────────── search ── */
@@ -154,8 +154,14 @@ export async function listCities() {
 export async function getVenueDetail(slug) {
   await delay(280);
 
-  const venue = getVenue(slug);
-  if (!venue) throw new ServiceError('That restaurant is no longer listed.', { code: 'NOT_FOUND' });
+  const fixture = getVenue(slug);
+  if (!fixture) {
+    throw new ServiceError('That restaurant is no longer listed.', { code: 'NOT_FOUND' });
+  }
+
+  // Venue copy is still fixture-side, but the bookable times must be the
+  // server's: it only accepts its own slot grid, lead time and last seating.
+  const venue = LIVE_API ? { ...fixture, ...(await liveSlots(slug)) } : fixture;
 
   const similar = VENUES.filter(
     (v) => v.slug !== venue.slug && (v.cuisine === venue.cuisine || v.area === venue.area),
@@ -170,6 +176,45 @@ export async function getVenueDetail(slug) {
     similar,
     city: getCity(venue.city),
   };
+}
+
+/**
+ * Today's slots from the reservations API, in the fixture slot shape.
+ * `waitlistTimes` are the seatings that are full rather than past — the only
+ * ones worth queueing for.
+ */
+async function liveSlots(slug) {
+  const [{ slots }, rules] = await Promise.all([
+    reservationApi.availability(slug, todayISO(), 2),
+    reservationApi.rules(),
+  ]);
+  return {
+    slots: slots
+      .filter((s) => s.available)
+      .map((s) => ({ time: s.time, best: false, scarce: s.tablesFree === 1 })),
+    waitlistTimes: slots.filter((s) => s.unavailableReason === 'Fully booked').map((s) => s.time),
+    // Inside the booking lead time: closed to the public, but the API still
+    // accepts a guest the waitlist emailed about that seating.
+    lateTimes: slots.filter((s) => s.withinLeadTime).map((s) => s.time),
+    maxPartySize: rules.maxPartySize,
+  };
+}
+
+/** Zones the API's tables can be in; fixture-only ones are not sent. */
+const API_ZONES = ['INDOOR', 'OUTDOOR', 'PRIVATE', 'BAR'];
+
+/**
+ * Every page of the signed-in user's reservations. The endpoint caps a page
+ * at 50, and stopping at the first page silently hid older bookings.
+ */
+async function fetchAllMine(params = {}) {
+  const all = [];
+  for (let page = 1; page <= 20; page += 1) {
+    const data = await reservationApi.mine({ ...params, pageSize: '50', page: String(page) });
+    all.push(...data.reservations);
+    if (page >= (data.pagination?.totalPages ?? 1)) break;
+  }
+  return all;
 }
 
 /**
@@ -241,6 +286,59 @@ function readBookings() {
   return store.read(BOOKINGS_KEY, null) ?? seedBookings();
 }
 
+/* Live mode ---------------------------------------------------------------- */
+
+const LIVE_BOOKINGS_KEY = 'live-bookings';
+
+/** API reservation → the record shape the pages already render. */
+function fromApiReservation(reservation) {
+  return {
+    id: reservation.id,
+    reference: reservation.reference,
+    venueSlug: reservation.restaurant?.slug ?? null,
+    venueName: reservation.restaurant?.name ?? 'Restaurant',
+    date: reservation.date,
+    time: reservation.time,
+    partySize: reservation.partySize,
+    zone: reservation.table?.zone ?? null,
+    status: reservation.status,
+    guest: { name: reservation.guestName, phone: reservation.guestPhone },
+    note: reservation.specialRequests ?? null,
+    prepaidPaise: null,
+    createdAt: reservation.createdAt,
+  };
+}
+
+/**
+ * A guest who books without an account has no endpoint to read the booking
+ * back from, so the confirmation is kept on this device. Signed-in users are
+ * always served from the API instead; this is only the fallback.
+ */
+function rememberLiveBooking(record) {
+  const others = store.read(LIVE_BOOKINGS_KEY, []).filter((b) => b.reference !== record.reference);
+  store.write(LIVE_BOOKINGS_KEY, [record, ...others].slice(0, 20));
+}
+
+/** The API validates by its own field names; the form shows `name` / `phone`. */
+const API_FIELD_TO_FORM = { guestName: 'name', guestPhone: 'phone', guestEmail: 'email' };
+
+function toFormError(err) {
+  if (!(err instanceof ApiError) || !err.details) return err;
+
+  const details = {};
+  let other = null;
+  for (const [field, message] of Object.entries(err.details)) {
+    if (API_FIELD_TO_FORM[field]) details[API_FIELD_TO_FORM[field]] = message;
+    else other ??= message;
+  }
+  // A problem with a field the form has no slot for (time, date, party size)
+  // would otherwise be invisible, so it becomes the toast message.
+  return new ServiceError(typeof other === 'string' ? other : err.message, {
+    code: 'VALIDATION',
+    details,
+  });
+}
+
 /** First-run seed. An empty list is right for a new account and useless in a demo. */
 function seedBookings() {
   const guest = { name: 'You', phone: '+91 98 1234 5678' };
@@ -296,8 +394,8 @@ export async function listMyBookings({ filter = 'upcoming' } = {}) {
   await delay(260);
 
   if (LIVE_API) {
-    const data = await reservationApi.mine(filter === 'upcoming' ? { upcoming: 'true' } : {});
-    return data.reservations.map(publicBooking);
+    const reservations = await fetchAllMine(filter === 'upcoming' ? { upcoming: 'true' } : {});
+    return reservations.map((r) => publicBooking(fromApiReservation(r)));
   }
 
   const today = todayISO();
@@ -332,16 +430,25 @@ export async function createBooking(payload) {
   }
 
   if (LIVE_API) {
-    const created = await reservationApi.create({
-      restaurantSlug: payload.venueSlug,
-      date: payload.date,
-      time: payload.time,
-      partySize: payload.partySize,
-      guestName: payload.guest.name,
-      guestPhone: payload.guest.phone,
-      specialRequests: payload.note ?? undefined,
-    });
-    return publicBooking(created.reservation);
+    let created;
+    try {
+      created = await reservationApi.create({
+        restaurantSlug: payload.venueSlug,
+        date: payload.date,
+        time: payload.time,
+        partySize: payload.partySize,
+        guestName: payload.guest.name.trim(),
+        // "+91 98 1234 5678" is what people type; the API wants it unspaced.
+        guestPhone: payload.guest.phone.replace(/[\s()-]/g, ''),
+        zone: API_ZONES.includes(payload.zone) ? payload.zone : undefined,
+        specialRequests: payload.note ?? undefined,
+      });
+    } catch (err) {
+      throw toFormError(err);
+    }
+    const record = fromApiReservation(created.reservation);
+    rememberLiveBooking(record);
+    return publicBooking(record);
   }
 
   const record = {
@@ -367,17 +474,30 @@ export async function createBooking(payload) {
 
 export async function getBooking(reference) {
   await delay(180);
+
+  if (LIVE_API) {
+    // Signed in: the API is the source of truth (status may have changed).
+    if (getAccessToken()) {
+      const mine = (await fetchAllMine()).find((r) => r.reference === reference);
+      if (mine) return publicBooking(fromApiReservation(mine));
+    }
+    const remembered = store.read(LIVE_BOOKINGS_KEY, []).find((b) => b.reference === reference);
+    if (remembered) return publicBooking(remembered);
+    throw new ServiceError('No booking with that reference.', { code: 'NOT_FOUND' });
+  }
+
   const found = readBookings().find((b) => b.reference === reference);
   if (!found) throw new ServiceError('No booking with that reference.', { code: 'NOT_FOUND' });
   return publicBooking(found);
 }
 
-export async function cancelBooking(reference) {
+/** `id` is the API's reservation id — the cancel route is keyed on it, not the reference. */
+export async function cancelBooking(reference, id) {
   await delay(420);
 
   if (LIVE_API) {
-    await reservationApi.cancel(reference);
-    return getBooking(reference);
+    const data = await reservationApi.cancel(id);
+    return publicBooking(fromApiReservation(data.reservation));
   }
 
   const next = readBookings().map((b) =>
@@ -395,13 +515,28 @@ export async function cancelBooking(reference) {
  * algorithm the host floor runs — a guest and a host seeing different numbers is
  * how trust in a waitlist dies.
  */
-export async function joinWaitlist({ venueSlug, partySize, zone = null }) {
+export async function joinWaitlist({ venueSlug, partySize, zone = null, guest, time }) {
   await delay(480);
 
   const venue = getVenue(venueSlug);
   if (!venue) throw new ServiceError('Restaurant not found.', { code: 'NOT_FOUND' });
 
-  if (LIVE_API) return waitlistApi.join({ restaurantSlug: venueSlug, partySize, zone });
+  if (LIVE_API) {
+    try {
+      const data = await waitlistApi.join({
+        restaurantSlug: venueSlug,
+        partySize,
+        date: todayISO(),
+        time,
+        guestName: guest?.name?.trim() ?? '',
+        guestPhone: (guest?.phone ?? '').replace(/[\s()-]/g, ''),
+        guestEmail: guest?.email?.trim() ?? '',
+      });
+      return { live: true, message: data.message };
+    } catch (err) {
+      throw toFormError(err);
+    }
+  }
 
   const ahead = waitlistFor(venue, todayISO());
   const floor = floorState(venue, todayISO());

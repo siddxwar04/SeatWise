@@ -67,6 +67,11 @@ export async function getDayAvailability(restaurantId, dateStr, partySize) {
     const { startsAt, endsAt } = bookingInterval(dateStr, time);
 
     const rejection = validateBookingTime(dateStr, time, now);
+    // Refused only because it is inside the lead time. Still bookable by a
+    // guest the waitlist has notified, so the client needs to tell it apart
+    // from a seating that is over.
+    const withinLeadTime =
+      Boolean(rejection) && !validateBookingTime(dateStr, time, now, { minLeadMinutes: 0 });
 
     let tablesFree = 0;
     if (!rejection) {
@@ -90,6 +95,7 @@ export async function getDayAvailability(restaurantId, dateStr, partySize) {
       time,
       available,
       tablesFree,
+      withinLeadTime,
       overbooking: extra,
       unavailableReason: rejection ?? (available ? null : 'Fully booked'),
     };

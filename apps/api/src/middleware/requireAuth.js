@@ -122,9 +122,10 @@ export function requireRestaurantAdmin(options = {}) {
 
       let ref = readRestaurantRef(req);
 
-      // PATCH/DELETE /menu/:id — the item itself carries restaurantId, so the
-      // client does not have to re-send the venue on every edit.
-      if (!ref.restaurantId && !ref.restaurantSlug && resolveFromMenuItemId && req.params?.id) {
+      // PATCH/DELETE /menu/:id — the item itself is the only trusted source of
+      // its venue. A client-supplied ?restaurant= is ignored here: otherwise an
+      // admin of venue A could name their own venue and edit venue B's item.
+      if (resolveFromMenuItemId && req.params?.id) {
         const item = await prisma.menuItem.findUnique({
           where: { id: req.params.id },
           select: { restaurantId: true },

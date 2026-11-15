@@ -22,6 +22,11 @@ const envSchema = z
     // platform's proxy can never reach it.
     PORT: z.coerce.number().int().positive().optional(),
     WEB_ORIGIN: z.string().url().default('http://localhost:5173'),
+    /**
+     * Proxies between the browser and this process. 1 fits a single platform
+     * proxy; a Vercel rewrite in front of Render/Railway adds another hop.
+     */
+    TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(1),
 
     DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
     REDIS_URL: z.string().default('redis://localhost:6379'),

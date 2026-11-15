@@ -203,8 +203,11 @@ export async function updateStatus(
       else logger.warn({ reservationId, time: local.time }, 'seated overbook with no free table');
     }
 
-    const row = await tx.reservation.update({
-      where: { id: reservationId },
+    // The version is part of the WHERE clause, so the check and the write are
+    // one statement: if another admin's update landed after the read above,
+    // this matches zero rows instead of overwriting their decision.
+    const { count } = await tx.reservation.updateMany({
+      where: { id: reservationId, version: current.version },
       data: {
         status: nextStatus,
         version: { increment: 1 },
@@ -215,6 +218,15 @@ export async function updateStatus(
           ? { noShowRisk: scored.noShowRisk, riskModelVersion: scored.riskModelVersion }
           : {}),
       },
+    });
+    if (count === 0) {
+      throw new ConflictError(
+        'Someone else updated this booking while you were viewing it. Refresh and try again.',
+      );
+    }
+
+    const row = await tx.reservation.findUnique({
+      where: { id: reservationId },
       include: {
         table: {
           select: { label: true, zone: true, capacity: true, restaurantId: true },

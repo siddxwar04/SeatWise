@@ -51,6 +51,8 @@ export const createReservationSchema = z.object({
   partySize,
   date: isoDate,
   time: slotTime,
+  /** Seating preference — honoured when a table in that zone is free. */
+  zone: z.enum(['INDOOR', 'OUTDOOR', 'PRIVATE', 'BAR']).optional(),
   specialRequests: z
     .string()
     .trim()

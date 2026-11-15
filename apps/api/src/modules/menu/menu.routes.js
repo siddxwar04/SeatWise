@@ -98,7 +98,9 @@ menuRouter.patch(
   validate({ params: menuIdParamSchema, body: updateMenuItemSchema }),
   requireRestaurantAdmin({ resolveFromMenuItemId: true }),
   asyncHandler(async (req, res) => {
-    res.json({ item: await menuService.updateMenuItem(req.params.id, req.body) });
+    res.json({
+      item: await menuService.updateMenuItem(req.restaurant.id, req.params.id, req.body),
+    });
   }),
 );
 
@@ -108,7 +110,13 @@ menuRouter.patch(
   validate({ params: menuIdParamSchema, body: availabilityBodySchema }),
   requireRestaurantAdmin({ resolveFromMenuItemId: true }),
   asyncHandler(async (req, res) => {
-    res.json({ item: await menuService.setAvailability(req.params.id, req.body.isAvailable) });
+    res.json({
+      item: await menuService.setAvailability(
+        req.restaurant.id,
+        req.params.id,
+        req.body.isAvailable,
+      ),
+    });
   }),
 );
 
@@ -118,7 +126,7 @@ menuRouter.delete(
   validate({ params: menuIdParamSchema }),
   requireRestaurantAdmin({ resolveFromMenuItemId: true }),
   asyncHandler(async (req, res) => {
-    await menuService.deleteMenuItem(req.params.id);
+    await menuService.deleteMenuItem(req.restaurant.id, req.params.id);
     res.status(204).send();
   }),
 );

@@ -27,6 +27,11 @@ export function toPublicReservation(reservation) {
     channel: reservation.channel,
     specialRequests: reservation.specialRequests,
     restaurantId: reservation.restaurantId ?? reservation.table?.restaurantId ?? null,
+    // Present when the query included the venue — lets "My bookings" name the
+    // restaurant without a second round trip.
+    restaurant: reservation.restaurant
+      ? { slug: reservation.restaurant.slug, name: reservation.restaurant.name }
+      : null,
     table: reservation.table
       ? { label: reservation.table.label, zone: reservation.table.zone }
       : null,
@@ -37,6 +42,7 @@ export function toPublicReservation(reservation) {
 
 const PUBLIC_INCLUDE = {
   table: { select: { label: true, zone: true, capacity: true, restaurantId: true } },
+  restaurant: { select: { slug: true, name: true } },
 };
 
 /**

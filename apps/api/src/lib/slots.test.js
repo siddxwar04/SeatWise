@@ -1,5 +1,32 @@
 import { describe, expect, it } from 'vitest';
-import { bookingInterval, generateSlots, intervalsOverlap, localToUtc } from './slots.js';
+import {
+  bookingInterval,
+  generateSlots,
+  intervalsOverlap,
+  localToUtc,
+  validateBookingTime,
+} from './slots.js';
+
+describe('validateBookingTime lead time', () => {
+  // 19:00 IST on the day of service.
+  const now = localToUtc('2026-08-05', '19:00');
+
+  it('refuses a seating inside the lead time for an ordinary booking', () => {
+    expect(validateBookingTime('2026-08-05', '19:30', now, { minLeadMinutes: 60 })).toMatch(
+      /at least 1 hour/,
+    );
+  });
+
+  it('allows the same seating when the lead time is waived for the waitlist', () => {
+    expect(validateBookingTime('2026-08-05', '19:30', now, { minLeadMinutes: 0 })).toBeNull();
+  });
+
+  it('never allows a seating that has already started, waived or not', () => {
+    expect(validateBookingTime('2026-08-05', '18:30', now, { minLeadMinutes: 0 })).toMatch(
+      /already started/,
+    );
+  });
+});
 
 describe('generateSlots', () => {
   it('starts at open and stops so a full dining window still fits', () => {

@@ -26,8 +26,10 @@ export function createApp() {
 
   // Behind Railway/Render/Nginx the client IP arrives in X-Forwarded-For.
   // Rate limiting is worthless without this — every request would appear to
-  // come from the proxy.
-  app.set('trust proxy', 1);
+  // come from the proxy. The value is the number of proxies in front of the
+  // API: too low and every user shares the last proxy's address (and one
+  // rate-limit bucket); too high and clients can spoof their IP.
+  app.set('trust proxy', env.TRUST_PROXY_HOPS);
   app.disable('x-powered-by');
 
   app.use(

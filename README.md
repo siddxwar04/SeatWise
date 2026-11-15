@@ -436,6 +436,7 @@ These are the next five things I would ship, in this order:
 5. **Owner console writes are demo-complete, API-partial.** Risk, overbooking, and assignment run in the browser against a generated book. The live API covers reservations, waitlist, and host status; the yield panels are the next backend slice.
 
 ---
+
 ## License
 
 MIT

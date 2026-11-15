@@ -147,6 +147,11 @@ export function BookingSheet({ venue, date, open, initialTime, onClose }) {
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
               >
+                {/* A waitlist link can open a seating that is no longer on
+                    the public grid; it still has to be selectable. */}
+                {initialTime && !venue.slots.some((s) => s.time === initialTime) && (
+                  <option value={initialTime}>{formatTime(initialTime)}</option>
+                )}
                 {venue.slots.map((s) => (
                   <option key={s.time} value={s.time}>
                     {formatTime(s.time)}
@@ -156,7 +161,14 @@ export function BookingSheet({ venue, date, open, initialTime, onClose }) {
             )}
           </Field>
           <Field label="Guests">
-            {() => <Stepper value={party} onChange={setParty} max={venue.maxTableSeats + 4} />}
+            {() => (
+              <Stepper
+                value={party}
+                onChange={setParty}
+                // Live mode: never offer more than the API will accept.
+                max={Math.min(venue.maxTableSeats + 4, venue.maxPartySize ?? Infinity)}
+              />
+            )}
           </Field>
         </div>
 
