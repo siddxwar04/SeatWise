@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { DEMO_ACCOUNTS } from '../services/session.js';
+import { DEMO_ACCOUNTS, demoAvailable } from '../services/session.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { Button } from '../components/ui/Button.jsx';
@@ -18,12 +18,27 @@ import { LIVE_API, ServiceError } from '../services/config.js';
  * Signing in as the demo owner is how the console — the part of the product
  * the research brief is actually about — becomes reachable at all.
  */
+const LIVE_DEMO_ROLES = [
+  {
+    role: 'diner',
+    label: 'Diner',
+    action: 'Try as a diner',
+    blurb: 'Search, book a table, see your bookings',
+  },
+  {
+    role: 'owner',
+    label: 'Restaurant owner',
+    action: 'Try as an owner',
+    blurb: 'Tonight’s book, risk queue, overbooking, floor',
+  },
+];
+
 export function LoginPage() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
-  const { login } = useAuth();
+  const { login, demoLogin } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -60,6 +75,36 @@ export function LoginPage() {
 
   const fillDemo = (account) => {
     setForm({ email: account.email, password: account.password });
+  };
+
+  // Live mode: real one-click accounts, if the API has them switched on.
+  const [liveDemo, setLiveDemo] = useState(false);
+  const [demoBusy, setDemoBusy] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    demoAvailable().then((enabled) => {
+      if (!cancelled) setLiveDemo(enabled);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const tryDemo = async (role) => {
+    if (demoBusy) return;
+    setDemoBusy(role);
+    try {
+      const { user } = await demoLogin(role);
+      toast.success(`Signed in as ${user.username}.`);
+      navigate(role === 'owner' ? '/console' : destination, { replace: true });
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.message : 'Could not start the demo. Please try again.',
+      );
+    } finally {
+      setDemoBusy(null);
+    }
   };
 
   return (
@@ -101,8 +146,33 @@ export function LoginPage() {
           </p>
         </form>
 
-        {/* Demo accounts only exist in the fixture session; against the real
-            API they would just return 401. */}
+        {LIVE_API && liveDemo && (
+          <div className="auth_demo">
+            <p className="auth_demo_label">
+              <Icon name="sparkles" /> Just looking? Try it without an account
+            </p>
+            {LIVE_DEMO_ROLES.map((demo) => (
+              <button
+                key={demo.role}
+                type="button"
+                className="auth_demo_card"
+                onClick={() => tryDemo(demo.role)}
+                disabled={demoBusy !== null}
+              >
+                <span className="auth_demo_role">{demo.label}</span>
+                <strong>{demoBusy === demo.role ? 'Signing in…' : demo.action}</strong>
+                <span className="auth_demo_blurb">{demo.blurb}</span>
+              </button>
+            ))}
+            <p className="auth_demo_hint">
+              Shared demo accounts on sample data. Book as the diner at Forno Nove, then open the
+              owner view to see it arrive.
+            </p>
+          </div>
+        )}
+
+        {/* Fixture accounts only exist in the local demo session; against the
+            real API they would just return 401. */}
         {!LIVE_API && (
           <div className="auth_demo">
             <p className="auth_demo_label">

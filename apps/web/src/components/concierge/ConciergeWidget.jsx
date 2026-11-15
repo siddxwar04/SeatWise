@@ -8,6 +8,9 @@ import { IconButton } from '../ui/Button.jsx';
 import { Icon } from '../ui/Icon.jsx';
 import { priceBand } from '../../lib/format.js';
 
+const formatDistance = (meters) =>
+  meters < 1000 ? `${Math.round(meters / 10) * 10} m` : `${(meters / 1000).toFixed(1)} km`;
+
 const WELCOME =
   'Ask me for a restaurant in a sentence — "cozy Italian for a date night under ₹1500" or "outdoor table for 6 tonight."';
 
@@ -47,7 +50,7 @@ export function ConciergeWidget() {
       const data = await ask(text, history, { city: citySlug });
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: data.reply, venues: data.venues },
+        { role: 'assistant', content: data.reply, venues: data.venues, nearby: data.nearby },
       ]);
     } catch {
       setMessages((prev) => [
@@ -117,6 +120,35 @@ export function ConciergeWidget() {
                           <Icon name="arrow-right" />
                         </Link>
                       ))}
+                    </div>
+                  )}
+                  {msg.nearby?.results?.length > 0 && (
+                    <div className="bubble_nearby">
+                      <p className="bubble_nearby_title">
+                        Real places near {msg.nearby.place}
+                        <span>Not on SeatWise yet — contact them directly</span>
+                      </p>
+                      {msg.nearby.results.map((place) => (
+                        <a
+                          key={`${place.name}-${place.distanceMeters}`}
+                          href={place.mapUrl}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          className="bubble_venue bubble_place"
+                        >
+                          <Icon name="pin" />
+                          <div>
+                            <strong>{place.name}</strong>
+                            <span>
+                              {[place.cuisine ?? place.kind, formatDistance(place.distanceMeters)]
+                                .filter(Boolean)
+                                .join(' · ')}
+                            </span>
+                          </div>
+                          <Icon name="arrow-right" />
+                        </a>
+                      ))}
+                      <p className="bubble_nearby_credit">{msg.nearby.attribution}</p>
                     </div>
                   )}
                 </div>

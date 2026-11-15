@@ -42,7 +42,7 @@ function toPublicUser(user) {
  * Issues an access token and persists a hashed refresh token as a session row.
  * Called on register, login, and every refresh.
  */
-async function issueSession(user, context = {}) {
+export async function issueSession(user, context = {}) {
   const refreshToken = generateRefreshToken();
 
   await prisma.refreshToken.create({

@@ -1,6 +1,7 @@
 import { isProduction } from '../../config/env.js';
 import { asyncHandler } from '../../lib/asyncHandler.js';
 import { REFRESH_COOKIE_NAME, refreshCookieOptions } from '../../lib/tokens.js';
+import * as demoService from '../demo/demo.service.js';
 import * as authService from './auth.service.js';
 
 /**
@@ -35,6 +36,16 @@ export const register = asyncHandler(async (req, res) => {
 
 export const login = asyncHandler(async (req, res) => {
   const session = await authService.login(req.body, requestContext(req));
+  sendSession(res, session);
+});
+
+/** Tells the sign-in page whether to offer the one-click demo accounts. */
+export const demoStatus = asyncHandler(async (_req, res) => {
+  res.json({ enabled: demoService.isDemoEnabled() });
+});
+
+export const demoLogin = asyncHandler(async (req, res) => {
+  const session = await demoService.demoLogin(req.body.role, requestContext(req));
   sendSession(res, session);
 });
 

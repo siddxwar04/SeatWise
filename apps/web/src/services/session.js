@@ -117,6 +117,23 @@ export async function login({ email, password }) {
   return { user: session.user, managedVenues: await managedFor(session.user) };
 }
 
+/** Whether the live API offers one-click demo accounts. Never throws. */
+export async function demoAvailable() {
+  if (!LIVE_API) return false;
+  try {
+    return (await authApi.demoStatus()).enabled === true;
+  } catch {
+    return false;
+  }
+}
+
+/** Signs in as the shared demo diner or demo owner (live API only). */
+export async function demoLogin(role) {
+  const session = await authApi.demoLogin(role);
+  setAccessToken(session.accessToken);
+  return { user: session.user, managedVenues: await fetchManaged() };
+}
+
 export async function register({ username, email, password, confirmPassword }) {
   if (LIVE_API) {
     const session = await authApi.register({ username, email, password, confirmPassword });

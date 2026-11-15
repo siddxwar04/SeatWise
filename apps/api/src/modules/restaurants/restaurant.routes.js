@@ -4,6 +4,7 @@ import { asyncHandler } from '../../lib/asyncHandler.js';
 import { requireAuth } from '../../middleware/requireAuth.js';
 import { writeLimiter } from '../../middleware/rateLimit.js';
 import { validate } from '../../middleware/validate.js';
+import { blockDemoWrites } from '../demo/demo.service.js';
 import { createRestaurantSchema } from './restaurant.schemas.js';
 import * as restaurantService from './restaurant.service.js';
 
@@ -36,6 +37,7 @@ restaurantRouter.get(
 restaurantRouter.post(
   '/',
   requireAuth,
+  blockDemoWrites,
   writeLimiter,
   validate({ body: createRestaurantSchema }),
   asyncHandler(async (req, res) => {

@@ -1,7 +1,9 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import { authLimiter, refreshLimiter } from '../../middleware/rateLimit.js';
 import { requireAuth } from '../../middleware/requireAuth.js';
 import { validate } from '../../middleware/validate.js';
+import { blockDemoWrites } from '../demo/demo.service.js';
 import * as controller from './auth.controller.js';
 import {
   changePasswordSchema,
@@ -20,6 +22,15 @@ authRouter.post('/register', authLimiter, validate({ body: registerSchema }), co
 authRouter.post('/login', authLimiter, validate({ body: loginSchema }), controller.login);
 
 authRouter.post('/refresh', refreshLimiter, controller.refresh);
+
+// One-click demo accounts for reviewers. 404s unless DEMO_LOGIN_ENABLED=true.
+authRouter.get('/demo', controller.demoStatus);
+authRouter.post(
+  '/demo',
+  refreshLimiter,
+  validate({ body: z.object({ role: z.enum(['diner', 'owner']) }) }),
+  controller.demoLogin,
+);
 
 authRouter.post(
   '/forgot-password',
@@ -45,6 +56,7 @@ authRouter.get('/me', requireAuth, controller.me);
 authRouter.patch(
   '/me',
   requireAuth,
+  blockDemoWrites,
   validate({ body: updateProfileSchema }),
   controller.updateProfile,
 );
@@ -52,6 +64,7 @@ authRouter.patch(
 authRouter.post(
   '/change-password',
   requireAuth,
+  blockDemoWrites,
   authLimiter,
   validate({ body: changePasswordSchema }),
   controller.changePassword,

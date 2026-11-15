@@ -136,7 +136,13 @@ export function classifyScope(message, intent) {
 export async function ask(message, history = [], { city = 'pune' } = {}) {
   if (LIVE_API) {
     const data = await chatApi.send(message, history);
-    return { reply: data.reply, venues: data.restaurants ?? [], intent: null };
+    return {
+      reply: data.reply,
+      venues: data.restaurants ?? [],
+      // Real places from OpenStreetMap near a location the guest named.
+      nearby: data.nearby ?? null,
+      intent: null,
+    };
   }
 
   await delay(760);

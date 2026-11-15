@@ -59,3 +59,6 @@ docker/data/
 
 # Local-only demo recording
 demo-video/
+
+# Personal interview prep — local only
+INTERVIEW-GUIDE.md

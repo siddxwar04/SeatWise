@@ -114,6 +114,9 @@ export const authApi = {
   register: (data) => api.post('/auth/register', data),
   login: (data) => api.post('/auth/login', data),
   logout: () => api.post('/auth/logout'),
+  /** One-click reviewer accounts — see the API's modules/demo. */
+  demoStatus: () => api.get('/auth/demo'),
+  demoLogin: (role) => api.post('/auth/demo', { role }),
   me: () => api.get('/auth/me'),
   updateProfile: (data) => api.patch('/auth/me', data),
   changePassword: (data) => api.post('/auth/change-password', data),

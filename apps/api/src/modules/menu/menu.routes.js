@@ -3,6 +3,7 @@ import { asyncHandler } from '../../lib/asyncHandler.js';
 import { optionalAuth, requireAuth, requireRestaurantAdmin } from '../../middleware/requireAuth.js';
 import { validate } from '../../middleware/validate.js';
 import { isRestaurantAdmin, resolveRestaurant } from '../restaurants/restaurant.service.js';
+import { blockDemoWrites } from '../demo/demo.service.js';
 import * as menuService from './menu.service.js';
 import {
   availabilityBodySchema,
@@ -82,6 +83,7 @@ menuRouter.get(
 menuRouter.post(
   '/',
   requireAuth,
+  blockDemoWrites,
   validate({ body: createMenuItemSchema }),
   requireRestaurantAdmin(),
   asyncHandler(async (req, res) => {
@@ -95,6 +97,7 @@ menuRouter.post(
 menuRouter.patch(
   '/:id',
   requireAuth,
+  blockDemoWrites,
   validate({ params: menuIdParamSchema, body: updateMenuItemSchema }),
   requireRestaurantAdmin({ resolveFromMenuItemId: true }),
   asyncHandler(async (req, res) => {
@@ -123,6 +126,7 @@ menuRouter.patch(
 menuRouter.delete(
   '/:id',
   requireAuth,
+  blockDemoWrites,
   validate({ params: menuIdParamSchema }),
   requireRestaurantAdmin({ resolveFromMenuItemId: true }),
   asyncHandler(async (req, res) => {

@@ -28,6 +28,15 @@ const envSchema = z
      */
     TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(1),
 
+    /**
+     * One-click demo accounts on the sign-in page (see modules/demo). Off unless
+     * asked for: a deployment should not grow public accounts by accident.
+     */
+    DEMO_LOGIN_ENABLED: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((v) => v === 'true'),
+
     DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
     REDIS_URL: z.string().default('redis://localhost:6379'),
 

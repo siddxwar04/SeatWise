@@ -95,7 +95,7 @@ export function Footer() {
           <p className="foot_mode">
             <Icon name="info" />
             {LIVE_API
-              ? 'Connected to the SeatWise API.'
+              ? 'Live demo — restaurants and guests are sample data. Bookings you make are real records in the database, but no real restaurant receives them.'
               : 'Running on generated demo data — restaurants, guests and reviews are invented.'}
           </p>
         </div>

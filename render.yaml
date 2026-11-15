@@ -20,6 +20,9 @@ services:
         value: 2
       - key: AI_RATE_LIMIT_PER_HOUR
         value: 20
+      # One-click "Try as diner / owner" on the sign-in page, for reviewers.
+      - key: DEMO_LOGIN_ENABLED
+        value: true
       # Asked for when the Blueprint is created:
       - key: DATABASE_URL # Neon connection string, ending ?sslmode=require
         sync: false

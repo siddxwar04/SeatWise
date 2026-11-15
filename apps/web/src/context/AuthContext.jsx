@@ -43,6 +43,13 @@ export function AuthProvider({ children }) {
     return result;
   }, []);
 
+  const demoLogin = useCallback(async (role) => {
+    const result = await session.demoLogin(role);
+    setUser(result.user);
+    setManagedVenues(result.managedVenues ?? []);
+    return result;
+  }, []);
+
   const register = useCallback(async (data) => {
     const result = await session.register(data);
     setUser(result.user);
@@ -66,6 +73,7 @@ export function AuthProvider({ children }) {
       user,
       loading,
       login,
+      demoLogin,
       register,
       logout,
       managedVenues,
@@ -75,7 +83,7 @@ export function AuthProvider({ children }) {
         user?.role === 'ADMIN' || user?.role === 'RESTAURANT_ADMIN' || managedVenues.length > 0,
       isDemo: Boolean(user?.demo),
     }),
-    [user, loading, login, register, logout, managedVenues],
+    [user, loading, login, demoLogin, register, logout, managedVenues],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
