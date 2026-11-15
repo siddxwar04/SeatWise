@@ -78,7 +78,8 @@ function assertConfigured() {
 
 function parseRecommendedIds(reply, allowedIds) {
   const allowed = new Set(allowedIds.map((id) => id.toLowerCase()));
-  const match = reply.match(/RECOMMENDED_IDS:\s*([0-9a-fA-F,-]+)/i);
+  // The model often writes "id1, id2" — spaces after commas are allowed.
+  const match = reply.match(/RECOMMENDED_IDS:\s*([0-9a-fA-F,\s-]+)/i);
   if (!match) return [];
 
   return match[1]
@@ -88,8 +89,9 @@ function parseRecommendedIds(reply, allowedIds) {
     .map((id) => allowedIds.find((a) => a.toLowerCase() === id) ?? id);
 }
 
-function stripRecommendedLine(reply) {
-  return reply.replace(/\n*RECOMMENDED_IDS:\s*[0-9a-fA-F,-]+\s*$/i, '').trim();
+/** Removes the machine-readable line (and anything after it) from what the guest sees. */
+export function stripRecommendedLine(reply) {
+  return reply.replace(/\s*RECOMMENDED_IDS:[\s\S]*$/i, '').trim();
 }
 
 async function generateReply(history, userMessage, contextBlock) {

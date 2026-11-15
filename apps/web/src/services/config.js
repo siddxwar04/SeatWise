@@ -16,7 +16,17 @@
  *     so they are fixture-only and say so at the call site.
  */
 
-export const LIVE_API = import.meta.env.VITE_LIVE_API === 'true';
+/**
+ * A production build talks to the real API unless it is explicitly told not to.
+ *
+ * This used to be opt-in (`VITE_LIVE_API=true`), which meant a deploy that simply
+ * forgot the variable shipped the demo: fixture logins, "No backend is deployed"
+ * on the sign-in page, bookings that never left the browser. Demo mode is now the
+ * thing you ask for — `VITE_LIVE_API=false` — and the default only in local
+ * development and tests.
+ */
+const liveFlag = import.meta.env.VITE_LIVE_API;
+export const LIVE_API = liveFlag === 'true' || (liveFlag !== 'false' && import.meta.env.PROD);
 
 /**
  * Simulated latency.

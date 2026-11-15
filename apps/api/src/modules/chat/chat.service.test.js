@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { parseScope } from './chat.service.js';
+import { parseScope, stripRecommendedLine } from './chat.service.js';
+
+describe('stripRecommendedLine', () => {
+  it('hides the id line even when the model puts spaces after the commas', () => {
+    const raw = 'Forno Nove fits your budget.  \nRECOMMENDED_IDS: a3fe51b4-999b, 81a02dd7-cac1';
+    expect(stripRecommendedLine(raw)).toBe('Forno Nove fits your budget.');
+  });
+});
 
 describe('concierge scope guard', () => {
   it('passes a dining reply through without its label', () => {
