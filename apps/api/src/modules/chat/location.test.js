@@ -9,11 +9,12 @@ describe('how the concierge treats a named location', () => {
     expect(locationKnown(null)).toBe(false);
   });
 
-  it('real places found: they are listed and marked as not bookable', () => {
+  it('real places found: the model is told they will be shown, and that they are not bookable', () => {
     const block = locationBlock({ status: 'ok', place: 'Koregaon Park', results: [place] });
     expect(block).toContain('LOCATION: the guest asked about Koregaon Park.');
     expect(block).toContain('NOT SeatWise partners');
-    expect(block).toContain('- Toscano (Italian), 550 m away');
+    // The app renders the list; the model is never given names to repeat.
+    expect(block).not.toContain('Toscano');
   });
 
   it.each(['unavailable', 'empty'])(

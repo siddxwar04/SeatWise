@@ -58,7 +58,11 @@ describe('toNearbyResults', () => {
     expect(results[0].cuisine).toBe('Pizza, Italian');
     expect(results[2].kind).toBe('Cafe');
     expect(results[0]).not.toHaveProperty('matchesCuisine');
-    expect(results[1].mapUrl).toContain('google.com/maps');
+    // Name as the search, map centred on the place — not coordinates in the text.
+    expect(
+      results[1].mapUrl.startsWith('https://www.google.com/maps/search/Near%20Curry/@18.537'),
+    ).toBe(true);
+    expect(results[1].mapUrl.endsWith(',73.8939,17z')).toBe(true);
   });
 
   it('never returns more than five places', () => {

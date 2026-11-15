@@ -124,6 +124,15 @@ export function distanceMeters(a, b) {
   return Math.round(6_371_000 * 2 * Math.asin(Math.sqrt(h)));
 }
 
+/**
+ * A Google Maps link that searches for the place by name with the map centred
+ * on its coordinates. Putting the coordinates inside the search text does not
+ * work — Maps then looks for a place literally named "Cafe 18.52,73.85".
+ */
+export function mapLink(name, lat, lon) {
+  return `https://www.google.com/maps/search/${encodeURIComponent(name)}/@${lat},${lon},17z`;
+}
+
 function prettyCuisine(raw) {
   if (!raw) return null;
   return raw
@@ -155,7 +164,7 @@ export function toNearbyResults(elements, origin, hints = []) {
         phone: tags.phone ?? tags['contact:phone'] ?? null,
         website: tags.website ?? tags['contact:website'] ?? null,
         distanceMeters: distanceMeters(origin, { lat, lon }),
-        mapUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${tags.name} ${lat},${lon}`)}`,
+        mapUrl: mapLink(tags.name, lat, lon),
         matchesCuisine: hints.some((hint) => cuisineRaw.includes(hint)),
       };
     })
