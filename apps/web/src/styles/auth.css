@@ -19,8 +19,28 @@
 
 @media (max-width: 820px) {
   .auth_split {
-    grid-template-columns: 1fr;
+    /* minmax(0, …) lets the column shrink below the card's 400px; a bare 1fr
+       would not, and the page would scroll sideways on a phone. */
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
     max-width: 400px;
+  }
+
+  /* Same reason, for pages where the card sits directly in the wrapper
+     (register, forgot password, reset password). */
+  .auth_wrapper {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .auth_card {
+    width: 100%;
+    max-width: 400px;
+    padding: var(--s-6);
+  }
+
+  /* Keep the hint clear of the floating Ask AI button. */
+  .auth_demo {
+    margin-bottom: var(--s-12, 48px);
   }
 }
 

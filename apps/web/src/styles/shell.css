@@ -263,6 +263,16 @@
   .city_btn span {
     display: none;
   }
+
+  /* Signed in, the avatar joins the row and the menu button was pushed off the
+     edge of a phone screen. Tighten the spacing so everything stays on. */
+  .nav_inner {
+    gap: var(--s-2);
+  }
+
+  .nav_left {
+    gap: var(--s-2);
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════ drawer ══ */

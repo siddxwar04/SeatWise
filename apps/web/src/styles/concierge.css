@@ -224,6 +224,22 @@
   color: var(--text-faint);
 }
 
+.bubble_nearby_note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-2);
+  margin-top: var(--s-3);
+  padding-top: var(--s-3);
+  border-top: 1px dashed var(--border-faint);
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+}
+
+.bubble_nearby_note svg {
+  flex: none;
+  margin-top: 1px;
+}
+
 .concierge_prompts {
   display: flex;
   flex-wrap: wrap;

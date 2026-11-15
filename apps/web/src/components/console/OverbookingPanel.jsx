@@ -9,13 +9,22 @@ import { Icon } from '../ui/Icon.jsx';
 export function OverbookingPanel({ plan }) {
   return (
     <div className="stack">
-      {plan.highlights.length > 0 && (
+      {plan.recoverableCovers > 0 ? (
         <div className="note note-brand">
           <Icon name="sparkles" />
           <span>
             Tonight the model recommends selling {plan.recoverableCovers} more covers than the room
             technically holds, worth roughly {rupees(plan.recoverablePaise)} if they show — while
             keeping the chance of turning a real party away under 5%.
+          </span>
+        </div>
+      ) : (
+        <div className="note">
+          <Icon name="info" />
+          <span>
+            Nothing to overbook right now. Overbooking only applies once a seating is full; until
+            then an extra party is simply a normal booking. A recommendation appears here as soon as
+            a seating fills up.
           </span>
         </div>
       )}
@@ -59,8 +68,12 @@ export function OverbookingPanel({ plan }) {
                       </span>
                     )}
                   </td>
-                  <td className="num" style={{ fontWeight: 700 }}>
-                    {slot.recommendedExtra}
+                  <td className="num" style={{ fontWeight: slot.hasRoom ? 400 : 700 }}>
+                    {slot.hasRoom ? (
+                      <span style={{ color: 'var(--text-muted)' }}>Room left</span>
+                    ) : (
+                      slot.recommendedExtra
+                    )}
                   </td>
                   <td className="num">
                     {slot.recommendedExtra === 0

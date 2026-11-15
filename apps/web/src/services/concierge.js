@@ -84,6 +84,37 @@ export const OFF_TOPIC_REPLY =
   'I can only help with finding a restaurant, booking a table, or explaining how SeatWise works. ' +
   'Try something like “Italian for two tonight under ₹1500” or “How does the waitlist work?”';
 
+/** Greetings and thanks get a friendly line, not a refusal. Mirrors the API. */
+const SMALL_TALK = [
+  {
+    test: /^(hi+|hey+|hello+|hii+|yo|hola|namaste|good (morning|afternoon|evening)|greetings)( there| seatwise)?$/,
+    reply:
+      'Hi! I can help you find a restaurant and book a table. Tell me what you feel like — for example “Italian for two tonight under ₹1500”.',
+  },
+  {
+    test: /^(thanks|thank you|thankyou|thx|ty|great|nice|cool|ok|okay|perfect|awesome)( so much| a lot| very much)?$/,
+    reply: 'You’re welcome! Tell me if you’d like another suggestion.',
+  },
+  {
+    test: /^(bye|goodbye|see you|good night|cya)$/,
+    reply: 'Goodbye — enjoy your meal!',
+  },
+  {
+    test: /^(help|what can you do|who are you|how (do|can) (you|i) (help|use (this|you)))$/,
+    reply:
+      'I’m the SeatWise concierge. Ask me for a place to eat (“outdoor table for 6 tonight”), a spot in an area, or how SeatWise works (“how does the waitlist work?”).',
+  },
+];
+
+export function smallTalkReply(message) {
+  const text = String(message ?? '')
+    .toLowerCase()
+    .replace(/[^\p{L}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return SMALL_TALK.find((entry) => entry.test.test(text))?.reply ?? null;
+}
+
 const PRODUCT_ANSWERS = [
   {
     test: /wait\s?list|queue|fully booked|sold out/,
@@ -146,6 +177,9 @@ export async function ask(message, history = [], { city = 'pune' } = {}) {
   }
 
   await delay(760);
+
+  const greeting = smallTalkReply(message);
+  if (greeting) return { reply: greeting, venues: [], intent: null };
 
   const intent = parseIntent(message, city);
 

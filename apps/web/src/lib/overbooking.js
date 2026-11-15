@@ -113,14 +113,20 @@ export function recommendOverbooking({
   // The largest option still inside tolerance. Options are monotone in `extra`,
   // so this is the frontier, not a search.
   const safe = options.filter((o) => o.withinTolerance);
-  const recommendedExtra = safe.length ? safe[safe.length - 1].extra : 0;
-  const naive = Math.floor(expectedNoShows / avgPartySize);
+
+  // Overbooking means selling *more than the room holds*. While another party
+  // still fits, taking it is an ordinary booking, and calling it overbooking
+  // would report every quiet slot as a recommendation to oversell.
+  const hasRoom = spareCovers >= avgPartySize;
+  const recommendedExtra = hasRoom || !safe.length ? 0 : safe[safe.length - 1].extra;
+  const naive = hasRoom ? 0 : Math.floor(expectedNoShows / avgPartySize);
 
   return {
     held,
     expectedNoShows,
     standardDeviation: Math.sqrt(variance),
     spareCovers,
+    hasRoom,
     recommendedExtra,
     /**
      * What `floor(Σ p)` would have said. Shown side by side in the console

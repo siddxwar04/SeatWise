@@ -100,7 +100,7 @@ export function ServicePanel({ service, onChanged }) {
                       </span>
                     )}
                   </td>
-                  <td>{guests(booking.partySize)}</td>
+                  <td className="num">{guests(booking.partySize)}</td>
                   <td>
                     <StatusBadge status={booking.status} />
                   </td>

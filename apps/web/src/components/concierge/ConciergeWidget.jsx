@@ -151,6 +151,13 @@ export function ConciergeWidget() {
                       <p className="bubble_nearby_credit">{msg.nearby.attribution}</p>
                     </div>
                   )}
+                  {/* Nothing to list: say why, rather than leaving a silent gap. */}
+                  {msg.nearby?.note && !msg.nearby.results?.length && (
+                    <p className="bubble_nearby_note">
+                      <Icon name="info" />
+                      {msg.nearby.note}
+                    </p>
+                  )}
                 </div>
               ))}
               {sending && (

@@ -6,7 +6,7 @@
 
 import { adminApi, dashboardApi, restaurantApi } from '../lib/api.js';
 import { assignTables, naiveAssign } from '../lib/assignment.js';
-import { todayISO } from '../lib/format.js';
+import { minutesOf, todayISO } from '../lib/format.js';
 import { overbookingPlan } from '../lib/overbooking.js';
 import { expectedLossPaise, riskBand } from '../lib/risk.js';
 import {
@@ -234,15 +234,30 @@ export async function getOverbooking(slug, date = todayISO()) {
       tablesData.tables.reduce((sum, t) => sum + t.capacity, 0) || venue.seats || 40;
     const grid = slotGrid({ hours: venue.hours ?? DEFAULT_HOURS });
 
-    // No slot-grouping endpoint yet: bookings carry the exact HH:MM they were
-    // booked into (the same grid the booking form offers), so a direct time
-    // match reproduces slot grouping without an interval-overlap query.
+    const seatsAt = Object.fromEntries(tablesData.tables.map((t) => [t.label, t.capacity]));
+
+    // A new party at this time would clash with any booking whose sitting
+    // overlaps it — the same rule the booking engine applies — so those are
+    // the bookings that make up the slot, not only the ones starting on the dot.
     const slotsInput = grid.map((time) => {
-      const slotBookings = service.reservations.filter((b) => b.time === time);
+      const start = minutesOf(time);
+      const slotBookings = service.reservations.filter((b) => {
+        const length = (new Date(b.endsAt) - new Date(b.startsAt)) / 60_000 || 90;
+        return Math.abs(minutesOf(b.time) - start) < length;
+      });
       return {
         time,
         capacityCovers,
-        bookedCovers: slotBookings.reduce((sum, b) => sum + b.partySize, 0),
+        // Seats committed, not heads: two guests at a four-top take the whole
+        // table. A booking with no table yet (already overbooked) counts its
+        // party. This is what makes "full" mean "no table left".
+        bookedCovers: Math.min(
+          capacityCovers + slotBookings.filter((b) => !b.table).length,
+          slotBookings.reduce(
+            (sum, b) => sum + (b.table ? (seatsAt[b.table.label] ?? b.partySize) : b.partySize),
+            0,
+          ),
+        ),
         bookings: slotBookings,
       };
     });

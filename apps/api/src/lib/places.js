@@ -220,9 +220,35 @@ async function restaurantsAround(origin, hints, wantCafe) {
   return toNearbyResults(elements, origin, hints);
 }
 
+const ATTRIBUTION = '© OpenStreetMap contributors';
+
+/**
+ * What the guest is told when there is nothing to list. A silent gap would
+ * leave them guessing whether the area is empty or the lookup simply failed.
+ */
+export const NEARBY_NOTES = {
+  unavailable: (place) => `Couldn't load real places near ${place} right now.`,
+  empty: (place) => `No restaurants are mapped near ${place} yet.`,
+  not_found: (place) => `Couldn't find “${place}” on the map — try a nearby area name.`,
+};
+
+const nothing = (status, place) => ({
+  status,
+  place,
+  results: [],
+  note: NEARBY_NOTES[status](place),
+  attribution: ATTRIBUTION,
+});
+
 /**
  * Real places near whatever location the message mentions.
- * Returns null when no place is named, it cannot be found, or a lookup fails.
+ *
+ * Returns null when no place is named. Otherwise always an object whose
+ * `status` says what happened, so the caller can degrade honestly:
+ *   ok          — `results` has up to five places
+ *   empty       — the place exists but nothing is mapped around it
+ *   not_found   — the place name was not recognised
+ *   unavailable — the map service was slow or down
  */
 export async function findNearbyPlaces(message) {
   const place = extractPlace(message);
@@ -230,7 +256,7 @@ export async function findNearbyPlaces(message) {
 
   try {
     const origin = await cached(`geo:${place.toLowerCase()}`, () => geocode(place));
-    if (!origin) return null;
+    if (!origin) return nothing('not_found', place);
 
     const hints = cuisineHints(message);
     const wantCafe = /\b(cafes?|cafés?|coffee)\b/i.test(message);
@@ -238,15 +264,11 @@ export async function findNearbyPlaces(message) {
       `near:${origin.lat.toFixed(3)},${origin.lon.toFixed(3)}:${hints[0] ?? ''}:${wantCafe}`,
       () => restaurantsAround(origin, hints, wantCafe),
     );
-    if (results.length === 0) return null;
+    if (results.length === 0) return nothing('empty', origin.label);
 
-    return {
-      place: origin.label,
-      results,
-      attribution: '© OpenStreetMap contributors',
-    };
+    return { status: 'ok', place: origin.label, results, note: null, attribution: ATTRIBUTION };
   } catch (err) {
     logger.warn({ err: err.message, place }, 'nearby places lookup failed');
-    return null;
+    return nothing('unavailable', place);
   }
 }
