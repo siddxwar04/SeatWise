@@ -8,6 +8,51 @@
 
 SeatWise is a **multi-city restaurant reservation marketplace** with a **restaurant-owner console**. Diners search, filter, book, and join a waitlist. Owners get no-show risk scores, expected-value overbooking, floor assignment, and analytics.
 
+**Live demo:** https://seat-wise-three.vercel.app — the sign-in page has one-click diner and owner demo accounts.
+
+---
+
+## Demo
+
+![Short silent preview of the SeatWise demo video](docs/media/seatwise-preview.gif)
+
+### Videos
+
+Click a thumbnail to watch (GitHub plays the file in the browser, with sound).
+
+| Full showcase — 1 min 37 s                                                                                                                            | Highlight cut — 45 s                                                                                        |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| [![Watch the full SeatWise showcase video](docs/media/showcase-poster.jpg)](docs/media/seatwise-showcase.mp4)                                         | [![Watch the SeatWise highlight video](docs/media/highlight-poster.jpg)](docs/media/seatwise-highlight.mp4) |
+| Narrated walkthrough: search, booking with no double-booking, the AI concierge, the owner console, and what runs on real Postgres versus sample data. | The short version: the product in 45 seconds.                                                               |
+
+### Screenshots — diner side
+
+| Discover                                                                                                           | Search results with live slots                                                                                             |
+| ------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| ![SeatWise Discover page for Pune with search rail, filter chips and curated picks](docs/screenshots/discover.jpg) | ![Restaurant cards with bookable time slots beside an availability map](docs/screenshots/discover-results.jpg)             |
+| **Venue page**                                                                                                     | **Booking sheet**                                                                                                          |
+| ![Forno Nove venue page with available times, seating types and signature dishes](docs/screenshots/venue.jpg)      | ![Booking sheet for Forno Nove with time, guests, seating preference and a five-minute hold](docs/screenshots/booking.jpg) |
+| **Ask AI concierge**                                                                                               | **Landing**                                                                                                                |
+| ![Ask SeatWise panel listing real places near Koregaon Park](docs/screenshots/concierge.jpg)                       | ![SeatWise landing page: Every table, one search](docs/screenshots/landing.jpg)                                            |
+
+### Screenshots — owner console
+
+| Tonight’s book                                                                                                                       | Risk queue                                                                                                                       |
+| ------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| ![Owner console listing tonight’s bookings with a no-show risk score and host actions per row](docs/screenshots/console-tonight.jpg) | ![Risk queue ranking bookings by predicted no-show probability, with the reason and exposure](docs/screenshots/console-risk.jpg) |
+
+![Overbooking by slot: booked covers, capacity, expected no-shows, recommended extra covers and the chance of turning a party away](docs/screenshots/console-overbooking.jpg)
+
+_Overbooking — recommended extra covers per slot, kept under a 5% chance of turning a party away._
+
+### On a phone
+
+<p>
+  <img src="docs/screenshots/phone-discover.jpg" alt="SeatWise Discover page on a phone" width="260" />
+  &nbsp;&nbsp;
+  <img src="docs/screenshots/phone-venue.jpg" alt="SeatWise venue page on a phone" width="260" />
+</p>
+
 ---
 
 ## Two ways to run it
@@ -72,17 +117,7 @@ flowchart LR
 
 - 34 restaurants across 6 cities (Pune, Mumbai, Bengaluru, Hyderabad, Chennai, Delhi NCR)
 - Search, cuisine / area / price filters, “available tonight”, party size, time
-
-<!-- SCREENSHOT: diner search results page -->
-<!-- alt: SeatWise diner search showing filtered restaurant cards, cuisine and area chips, and tonight’s availability in Pune -->
-<!-- caption: Discover — city, filters, and honest availability -->
-
 - Venue page with slots, hold timer, confirm booking, waitlist
-
-<!-- SCREENSHOT: diner booking confirmation -->
-<!-- alt: SeatWise booking sheet after a successful reservation, with confirmation code and hold that has converted into a booking -->
-<!-- caption: Booking confirmed — reference, time, and party size -->
-
 - My bookings (login required)
 - Dark / light / system theme
 
@@ -92,11 +127,6 @@ Sign in as the demo owner. Tabs:
 
 1. **Tonight’s book** — confirm, seat, no-show, cancel
 2. **Risk queue** — highest predicted no-show first, with feature-level reasons
-
-<!-- SCREENSHOT: owner console risk queue -->
-<!-- alt: SeatWise owner console risk queue ranking tonight’s bookings by predicted no-show probability with feature-level reasons and call/remind actions -->
-<!-- caption: Owner console — risk queue with the why, not just the score -->
-
 3. **Overbooking** — extra covers from the no-show distribution, not a flat %
 4. **Floor & waitlist** — occupancy, waitlist, tightest-fit seating vs first-fit
 5. **Analytics** — 30-day occupancy, heatmap, lead time / party size slices
@@ -136,6 +166,7 @@ Needs `OPENAI_API_KEY`. Optional for everything else.
 apps/web             React SPA — marketplace + owner console
 apps/api             Express API, Prisma schema, migrations, seed
 scripts/             embeddings, photo download, test-Postgres wait
+docs/                architecture diagram, screenshots, demo videos
 docker-compose.yml   Postgres (pgvector) + Redis + api + web
 .github/workflows/ci.yml
 ```
@@ -406,10 +437,6 @@ Image: `pgvector/pgvector:pg16`.
 4. `/for-restaurants#calculator` — change covers, watch lost revenue
 5. With the API up: two clients, one slot — second request is **409**
 6. With embeddings generated: Ask AI → venue cards from retrieved context
-
-<!-- SCREENSHOT: RAG concierge recommending venues -->
-<!-- alt: SeatWise Ask AI panel returning venue cards from retrieved catalogue context rather than a free-form LLM guess -->
-<!-- caption: Concierge — recommendations grounded in pgvector retrieval -->
 
 ---
 
